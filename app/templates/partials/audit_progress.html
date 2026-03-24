@@ -1,0 +1,92 @@
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-gray-900">{{ run.pages_discovered }}</div>
+        <div class="text-xs text-gray-500 mt-1">Pages Discovered</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-blue-600">{{ run.pages_crawled }}</div>
+        <div class="text-xs text-gray-500 mt-1">Pages Crawled</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-red-500">{{ run.pages_failed }}</div>
+        <div class="text-xs text-gray-500 mt-1">Pages Failed</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-purple-600">{{ vendor_count }}</div>
+        <div class="text-xs text-gray-500 mt-1">Vendors Detected</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div class="bg-red-50 border border-red-100 rounded-xl p-4">
+        <div class="text-2xl font-bold text-red-600">{{ issue_counts.get("critical", 0) }}</div>
+        <div class="text-xs text-red-500 mt-1">Critical Issues</div>
+    </div>
+    <div class="bg-orange-50 border border-orange-100 rounded-xl p-4">
+        <div class="text-2xl font-bold text-orange-600">{{ issue_counts.get("high", 0) }}</div>
+        <div class="text-xs text-orange-500 mt-1">High Issues</div>
+    </div>
+    <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
+        <div class="text-2xl font-bold text-yellow-600">{{ issue_counts.get("medium", 0) }}</div>
+        <div class="text-xs text-yellow-500 mt-1">Medium Issues</div>
+    </div>
+    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
+        <div class="text-2xl font-bold text-blue-600">{{ issue_counts.get("low", 0) }}</div>
+        <div class="text-xs text-blue-500 mt-1">Low Issues</div>
+    </div>
+</div>
+
+<div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+    <div class="flex items-center justify-between">
+        <div>
+            <span class="text-sm font-medium text-gray-700">Status: </span>
+            {% if run.status.value == "running" %}
+            <span class="inline-flex items-center gap-1 text-sm text-blue-600">
+                <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> Running
+            </span>
+            {% elif run.status.value == "completed" %}
+            <span class="inline-flex items-center gap-1 text-sm text-green-600">
+                <span class="w-2 h-2 bg-green-500 rounded-full"></span> Completed
+            </span>
+            {% elif run.status.value == "pending" %}
+            <span class="inline-flex items-center gap-1 text-sm text-gray-500">
+                <span class="w-2 h-2 bg-gray-400 rounded-full"></span> Pending (waiting for worker)
+            </span>
+            {% elif run.status.value == "failed" %}
+            <span class="inline-flex items-center gap-1 text-sm text-red-600">
+                <span class="w-2 h-2 bg-red-500 rounded-full"></span> Failed
+            </span>
+            {% elif run.status.value == "cancelled" %}
+            <span class="inline-flex items-center gap-1 text-sm text-yellow-600">
+                <span class="w-2 h-2 bg-yellow-500 rounded-full"></span> Cancelled
+            </span>
+            {% endif %}
+        </div>
+        {% if run.status.value in ("pending", "running") %}
+        <button
+            hx-delete="/api/audits/{{ audit_id }}/cancel"
+            hx-confirm="Cancel this audit?"
+            hx-swap="none"
+            hx-on::after-request="window.location.reload()"
+            class="text-xs text-red-600 hover:text-red-800 border border-red-200 hover:border-red-400 px-3 py-1 rounded-lg transition-colors">
+            Cancel Audit
+        </button>
+        {% endif %}
+    </div>
+
+    {% if run.error_message %}
+    <div class="mt-3 bg-red-50 border border-red-200 rounded-lg p-3">
+        <p class="text-xs text-red-700 font-medium">Error:</p>
+        <p class="text-xs text-red-600 mt-1 font-mono">{{ run.error_message }}</p>
+    </div>
+    {% endif %}
+
+    {% if run.started_at %}
+    <div class="mt-3 text-xs text-gray-400">
+        Started: {{ run.started_at.strftime("%b %d, %Y %H:%M:%S") }}
+        {% if run.completed_at %}
+        &mdash; Completed: {{ run.completed_at.strftime("%b %d, %Y %H:%M:%S") }}
+        {% endif %}
+    </div>
+    {% endif %}
+</div>

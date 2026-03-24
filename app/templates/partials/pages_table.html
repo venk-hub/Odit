@@ -1,0 +1,87 @@
+<div>
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-semibold text-gray-700">Pages Crawled ({{ pages|length }})</h2>
+    </div>
+
+    {% if pages %}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Group</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Load</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendors</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Errors</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Failed Req</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for item in pages %}
+                {% set pv = item.visit %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 max-w-xs">
+                        <div class="truncate text-blue-700 text-xs font-mono" title="{{ pv.url }}">
+                            {{ pv.url | replace("https://", "") | replace("http://", "") | truncate(60) }}
+                        </div>
+                        {% if pv.page_title %}
+                        <div class="text-xs text-gray-400 truncate mt-0.5">{{ pv.page_title }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono">
+                            {{ pv.page_group or "/" }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if pv.status_code %}
+                        <span class="text-xs font-medium {% if pv.status_code >= 400 %}text-red-600{% elif pv.status_code >= 300 %}text-yellow-600{% else %}text-green-600{% endif %}">
+                            {{ pv.status_code }}
+                        </span>
+                        {% elif pv.error_message %}
+                        <span class="text-xs text-red-500">Error</span>
+                        {% else %}
+                        <span class="text-xs text-gray-400">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-xs text-gray-500">
+                        {% if pv.load_time_ms %}
+                        {{ "%.0f" | format(pv.load_time_ms) }}ms
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="text-xs font-medium text-purple-600">{{ item.vendor_count }}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if pv.console_error_count > 0 %}
+                        <span class="text-xs font-medium text-red-500">{{ pv.console_error_count }}</span>
+                        {% else %}
+                        <span class="text-xs text-gray-300">0</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if pv.failed_request_count > 0 %}
+                        <span class="text-xs font-medium text-orange-500">{{ pv.failed_request_count }}</span>
+                        {% else %}
+                        <span class="text-xs text-gray-300">0</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        {% if pv.screenshot_path %}
+                        <a href="/api/audits/{{ audit_id }}/exports"
+                            class="text-xs text-gray-400 hover:text-blue-600" title="Has screenshot">
+                            📸
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12 text-gray-400 text-sm">No pages crawled yet.</div>
+    {% endif %}
+</div>

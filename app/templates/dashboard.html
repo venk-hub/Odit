@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Odit - Dashboard{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Audit Dashboard</h1>
+    <a href="/audits/new"
+        class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        New Audit
+    </a>
+</div>
+
+{% if audits %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mode</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pages</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issues</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for item in audits %}
+            {% set run = item.run %}
+            {% set counts = item.issue_counts %}
+            <tr class="hover:bg-gray-50 transition-colors" id="audit-row-{{ run.id }}">
+                <td class="px-4 py-3">
+                    <a href="/audits/{{ run.id }}" class="text-blue-600 hover:text-blue-800 font-medium text-sm truncate max-w-xs block">
+                        {{ run.base_url }}
+                    </a>
+                </td>
+                <td class="px-4 py-3">
+                    <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                        {{ run.mode.value.replace("_", " ").title() }}
+                    </span>
+                </td>
+                <td class="px-4 py-3">
+                    {% if run.status.value == "pending" %}
+                    <span class="inline-flex items-center gap-1 text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                        <span class="w-1.5 h-1.5 bg-gray-400 rounded-full"></span> Pending
+                    </span>
+                    {% elif run.status.value == "running" %}
+                    <span class="inline-flex items-center gap-1 text-xs font-medium bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span> Running
+                    </span>
+                    {% elif run.status.value == "completed" %}
+                    <span class="inline-flex items-center gap-1 text-xs font-medium bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Completed
+                    </span>
+                    {% elif run.status.value == "failed" %}
+                    <span class="inline-flex items-center gap-1 text-xs font-medium bg-red-50 text-red-700 px-2 py-0.5 rounded-full">
+                        <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Failed
+                    </span>
+                    {% elif run.status.value == "cancelled" %}
+                    <span class="inline-flex items-center gap-1 text-xs font-medium bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full">
+                        <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span> Cancelled
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-600">{{ run.pages_crawled }}</td>
+                <td class="px-4 py-3">
+                    <div class="flex items-center gap-1">
+                        {% if counts.get("critical", 0) > 0 %}
+                        <span class="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">{{ counts.critical }} C</span>
+                        {% endif %}
+                        {% if counts.get("high", 0) > 0 %}
+                        <span class="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">{{ counts.high }} H</span>
+                        {% endif %}
+                        {% if counts.get("medium", 0) > 0 %}
+                        <span class="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-medium">{{ counts.medium }} M</span>
+                        {% endif %}
+                        {% if counts.get("low", 0) > 0 %}
+                        <span class="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">{{ counts.low }} L</span>
+                        {% endif %}
+                        {% if not counts %}
+                        <span class="text-xs text-gray-400">—</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-xs text-gray-500">
+                    {{ run.created_at.strftime("%b %d, %Y %H:%M") }}
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <a href="/audits/{{ run.id }}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">View →</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-24">
+    <div class="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+    </div>
+    <h2 class="text-lg font-semibold text-gray-700 mb-1">No audits yet</h2>
+    <p class="text-gray-500 text-sm mb-6">Start your first audit to inspect a website's tracking implementation.</p>
+    <a href="/audits/new"
+        class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg transition-colors">
+        Run your first audit
+    </a>
+</div>
+{% endif %}
+{% endblock %}

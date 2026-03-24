@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Comparison - {{ run.base_url }} - Odit{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <a href="/audits/{{ audit_id }}" class="text-sm text-gray-500 hover:text-blue-600">&larr; Back to Audit</a>
+    <h1 class="text-2xl font-bold text-gray-900 mt-2">Regression Comparison</h1>
+    <p class="text-sm text-gray-500">Compare this audit against a previous one to see what changed.</p>
+</div>
+
+{% if not comparison %}
+<div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm max-w-lg">
+    <h2 class="text-sm font-semibold text-gray-700 mb-4">Run a Comparison</h2>
+    <form hx-post="/api/audits/{{ audit_id }}/compare"
+        hx-ext="json-enc"
+        hx-on::after-request="window.location.reload()"
+        class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Compare Against</label>
+            <select name="compare_audit_id"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">— Select an audit —</option>
+                {% for other in other_runs %}
+                <option value="{{ other.id }}">{{ other.base_url }} — {{ other.created_at.strftime("%b %d %H:%M") }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors text-sm">
+            Run Comparison
+        </button>
+    </form>
+</div>
+{% else %}
+<div class="mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+    <p class="text-sm text-gray-700">{{ comparison.summary }}</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="bg-red-50 border border-red-100 rounded-xl p-4">
+        <div class="text-2xl font-bold text-red-600">{{ comparison.new_issues|length }}</div>
+        <div class="text-xs text-red-500 mt-1">New Issues</div>
+    </div>
+    <div class="bg-green-50 border border-green-100 rounded-xl p-4">
+        <div class="text-2xl font-bold text-green-600">{{ comparison.resolved_issues|length }}</div>
+        <div class="text-xs text-green-500 mt-1">Resolved Issues</div>
+    </div>
+    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
+        <div class="text-2xl font-bold {% if comparison.page_count_change > 0 %}text-green-600{% elif comparison.page_count_change < 0 %}text-red-600{% else %}text-blue-600{% endif %}">
+            {{ "%+d" | format(comparison.page_count_change) }}
+        </div>
+        <div class="text-xs text-blue-500 mt-1">Page Count Change</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-4 py-3 border-b border-red-100 bg-red-50">
+            <h3 class="text-sm font-semibold text-red-700">New Issues ({{ comparison.new_issues|length }})</h3>
+        </div>
+        {% if comparison.new_issues %}
+        <ul class="divide-y divide-gray-50">
+            {% for issue in comparison.new_issues %}
+            <li class="px-4 py-3 flex items-center gap-3">
+                {% if issue.severity == "critical" %}
+                <span class="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></span>
+                {% elif issue.severity == "high" %}
+                <span class="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0"></span>
+                {% else %}
+                <span class="w-2 h-2 bg-yellow-400 rounded-full flex-shrink-0"></span>
+                {% endif %}
+                <span class="text-sm text-gray-800">{{ issue.title }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="px-4 py-6 text-center text-sm text-gray-400">No new issues.</div>
+        {% endif %}
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-4 py-3 border-b border-green-100 bg-green-50">
+            <h3 class="text-sm font-semibold text-green-700">Resolved Issues ({{ comparison.resolved_issues|length }})</h3>
+        </div>
+        {% if comparison.resolved_issues %}
+        <ul class="divide-y divide-gray-50">
+            {% for issue in comparison.resolved_issues %}
+            <li class="px-4 py-3 flex items-center gap-3">
+                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                <span class="text-sm text-gray-800 line-through text-gray-400">{{ issue.title }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="px-4 py-6 text-center text-sm text-gray-400">No resolved issues.</div>
+        {% endif %}
+    </div>
+</div>
+
+{% if comparison.vendor_changes %}
+<div class="mt-6 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="px-4 py-3 border-b border-gray-100">
+        <h3 class="text-sm font-semibold text-gray-700">Vendor Changes</h3>
+    </div>
+    <div class="px-4 py-4 grid grid-cols-3 gap-4 text-sm">
+        <div>
+            <h4 class="text-xs font-medium text-green-600 uppercase mb-2">Added</h4>
+            {% if comparison.vendor_changes.added %}
+            <ul class="space-y-1">
+                {% for v in comparison.vendor_changes.added %}
+                <li class="font-mono text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded">+ {{ v }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <span class="text-gray-400 text-xs">None</span>
+            {% endif %}
+        </div>
+        <div>
+            <h4 class="text-xs font-medium text-red-600 uppercase mb-2">Removed</h4>
+            {% if comparison.vendor_changes.removed %}
+            <ul class="space-y-1">
+                {% for v in comparison.vendor_changes.removed %}
+                <li class="font-mono text-xs text-red-700 bg-red-50 px-2 py-0.5 rounded">- {{ v }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <span class="text-gray-400 text-xs">None</span>
+            {% endif %}
+        </div>
+        <div>
+            <h4 class="text-xs font-medium text-gray-500 uppercase mb-2">Unchanged</h4>
+            {% if comparison.vendor_changes.unchanged %}
+            <ul class="space-y-1">
+                {% for v in comparison.vendor_changes.unchanged %}
+                <li class="font-mono text-xs text-gray-500">{{ v }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <span class="text-gray-400 text-xs">None</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

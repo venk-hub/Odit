@@ -1,0 +1,368 @@
+vendors:
+  - key: google_analytics
+    name: "Google Analytics / GA4"
+    category: analytics
+    signatures:
+      domains:
+        - google-analytics.com
+        - analytics.google.com
+      script_patterns:
+        - gtag/js
+        - google-analytics.com/analytics.js
+        - google-analytics.com/g/collect
+        - googletagmanager.com/gtag/js
+      window_globals:
+        - gtag
+        - dataLayer
+        - ga
+      cookie_patterns:
+        - _ga
+        - _gid
+        - _gat
+
+  - key: google_tag_manager
+    name: "Google Tag Manager"
+    category: tag_manager
+    signatures:
+      domains:
+        - googletagmanager.com
+      script_patterns:
+        - googletagmanager.com/gtm.js
+        - googletagmanager.com/ns.html
+      window_globals:
+        - google_tag_manager
+        - dataLayer
+      cookie_patterns:
+        - _dc_gtm_
+
+  - key: adobe_launch
+    name: "Adobe Launch / Experience Platform Tags"
+    category: tag_manager
+    signatures:
+      domains:
+        - assets.adobedtm.com
+        - launch-uat.adobe.io
+      script_patterns:
+        - assets.adobedtm.com
+        - launch-
+        - adobedtm.com
+      window_globals:
+        - _satellite
+        - adobe
+      cookie_patterns: []
+
+  - key: adobe_analytics
+    name: "Adobe Analytics"
+    category: analytics
+    signatures:
+      domains:
+        - omtrdc.net
+        - sc.omtrdc.net
+        - 2o7.net
+      script_patterns:
+        - omtrdc.net
+        - AppMeasurement.js
+        - AppMeasurement_Module
+      window_globals:
+        - s
+        - s_gi
+        - AppMeasurement
+      cookie_patterns:
+        - s_cc
+        - s_sq
+        - s_vi
+        - s_fid
+
+  - key: tealium
+    name: "Tealium iQ / AudienceStream"
+    category: tag_manager
+    signatures:
+      domains:
+        - tags.tiqcdn.com
+        - collect.tealiumiq.com
+      script_patterns:
+        - tags.tiqcdn.com
+        - utag.js
+        - utag.sync.js
+      window_globals:
+        - utag
+        - utag_data
+      cookie_patterns:
+        - utag_main
+
+  - key: segment
+    name: "Segment"
+    category: analytics
+    signatures:
+      domains:
+        - cdn.segment.com
+        - api.segment.io
+        - cdn.segment.io
+      script_patterns:
+        - cdn.segment.com/analytics.js
+        - cdn.segment.io/analytics.js
+      window_globals:
+        - analytics
+        - AnalyticsBrowser
+      cookie_patterns:
+        - ajs_anonymous_id
+        - ajs_user_id
+
+  - key: rudderstack
+    name: "RudderStack"
+    category: analytics
+    signatures:
+      domains:
+        - cdn.rudderlabs.com
+        - dataplane.rudderstack.com
+      script_patterns:
+        - cdn.rudderlabs.com
+        - rudderanalytics
+      window_globals:
+        - rudderanalytics
+        - RudderAnalytics
+      cookie_patterns:
+        - rl_anonymous_id
+        - rl_user_id
+
+  - key: mixpanel
+    name: "Mixpanel"
+    category: analytics
+    signatures:
+      domains:
+        - cdn.mxpnl.com
+        - api.mixpanel.com
+        - mixpanel.com
+      script_patterns:
+        - cdn.mxpnl.com/libs/mixpanel
+        - mixpanel-2-latest.min.js
+      window_globals:
+        - mixpanel
+      cookie_patterns:
+        - mp_
+        - __mp_opt_in_out_
+
+  - key: amplitude
+    name: "Amplitude"
+    category: analytics
+    signatures:
+      domains:
+        - cdn.amplitude.com
+        - api.amplitude.com
+        - api2.amplitude.com
+      script_patterns:
+        - cdn.amplitude.com/libs
+        - amplitude.min.js
+      window_globals:
+        - amplitude
+      cookie_patterns:
+        - AMP_
+        - amplitude_id
+
+  - key: heap
+    name: "Heap Analytics"
+    category: analytics
+    signatures:
+      domains:
+        - cdn.heapanalytics.com
+        - heapanalytics.com
+      script_patterns:
+        - cdn.heapanalytics.com
+        - heap-
+      window_globals:
+        - heap
+      cookie_patterns:
+        - _hp2_
+        - heap_
+
+  - key: meta_pixel
+    name: "Meta Pixel (Facebook)"
+    category: pixel
+    signatures:
+      domains:
+        - connect.facebook.net
+        - facebook.com/tr
+      script_patterns:
+        - connect.facebook.net/en_US/fbevents.js
+        - connect.facebook.net/signals/fbevents.js
+      window_globals:
+        - fbq
+        - _fbq
+      cookie_patterns:
+        - _fbp
+        - _fbc
+
+  - key: linkedin_insight
+    name: "LinkedIn Insight Tag"
+    category: pixel
+    signatures:
+      domains:
+        - snap.licdn.com
+        - px.ads.linkedin.com
+      script_patterns:
+        - snap.licdn.com/li.lms-analytics
+        - platform.linkedin.com/in.js
+      window_globals:
+        - _linkedin_data_partner_ids
+        - lintrk
+      cookie_patterns:
+        - li_fat_id
+        - lidc
+        - UserMatchHistory
+
+  - key: tiktok_pixel
+    name: "TikTok Pixel"
+    category: pixel
+    signatures:
+      domains:
+        - analytics.tiktok.com
+        - business-api.tiktok.com
+      script_patterns:
+        - analytics.tiktok.com/i18n/pixel/events.js
+        - tiktok_pixel
+      window_globals:
+        - ttq
+        - TiktokAnalyticsObject
+      cookie_patterns:
+        - _ttp
+        - _tt_enable_cookie
+
+  - key: optimizely
+    name: "Optimizely"
+    category: ab_testing
+    signatures:
+      domains:
+        - cdn.optimizely.com
+        - logx.optimizely.com
+      script_patterns:
+        - cdn.optimizely.com/js
+        - optimizely.com/client_storage
+      window_globals:
+        - optimizely
+        - optimizelyDatafile
+      cookie_patterns:
+        - optimizelyEndUserId
+        - optimizelySegments
+        - optimizelyBuckets
+
+  - key: vwo
+    name: "VWO (Visual Website Optimizer)"
+    category: ab_testing
+    signatures:
+      domains:
+        - dev.visualwebsiteoptimizer.com
+        - app.vwo.com
+      script_patterns:
+        - dev.visualwebsiteoptimizer.com/deploy/vwo.js
+        - vwo_async.js
+      window_globals:
+        - VWO
+        - vwoSDK
+      cookie_patterns:
+        - _vwo_uuid
+        - _vwo_
+        - _vis_opt_s
+
+  - key: adobe_target
+    name: "Adobe Target"
+    category: ab_testing
+    signatures:
+      domains:
+        - tt.omtrdc.net
+        - clientcode.tt.omtrdc.net
+      script_patterns:
+        - tt.omtrdc.net/cdn/target
+        - at.js
+      window_globals:
+        - adobe.target
+        - mboxCreate
+      cookie_patterns:
+        - mbox
+        - mboxEdgeCluster
+        - mboxSession
+
+  - key: launchdarkly
+    name: "LaunchDarkly"
+    category: ab_testing
+    signatures:
+      domains:
+        - app.launchdarkly.com
+        - clientsdk.launchdarkly.com
+        - events.launchdarkly.com
+      script_patterns:
+        - clientsdk.launchdarkly.com
+        - ldclient.min.js
+      window_globals:
+        - LDClient
+        - LaunchDarkly
+      cookie_patterns:
+        - ld_device_id
+
+  - key: dynamic_yield
+    name: "Dynamic Yield"
+    category: ab_testing
+    signatures:
+      domains:
+        - cdn.dynamicyield.com
+        - rcom-storage.dynamicyield.com
+      script_patterns:
+        - cdn.dynamicyield.com/api
+        - dynamicyield.com/api
+      window_globals:
+        - DY
+        - DYO
+      cookie_patterns:
+        - _dyid
+        - _dyjsession
+
+  - key: onetrust
+    name: "OneTrust CMP"
+    category: consent
+    signatures:
+      domains:
+        - cdn.cookielaw.org
+        - geolocation.onetrust.com
+      script_patterns:
+        - cdn.cookielaw.org/scripttemplates/otSDKStub.js
+        - cdn.cookielaw.org/consent
+      window_globals:
+        - OneTrust
+        - OnetrustActiveGroups
+        - otStubData
+      cookie_patterns:
+        - OptanonConsent
+        - OptanonAlertBoxClosed
+
+  - key: cookiebot
+    name: "Cookiebot"
+    category: consent
+    signatures:
+      domains:
+        - consent.cookiebot.com
+      script_patterns:
+        - consent.cookiebot.com/uc/cookiebot.js
+      window_globals:
+        - Cookiebot
+        - CookieConsent
+      cookie_patterns:
+        - CookieConsent
+        - CookieConsentBulkSetting
+
+  - key: trustarc
+    name: "TrustArc"
+    category: consent
+    signatures:
+      domains:
+        - consent.trustarc.com
+        - cm.trustarc.com
+      script_patterns:
+        - consent.trustarc.com/notice
+        - cm.trustarc.com/js
+      window_globals:
+        - truste
+        - TrustArc
+        - truste_ccpa
+      cookie_patterns:
+        - notice_behavior
+        - notice_gdpr_prefs
+        - cmapi_cookie_privacy

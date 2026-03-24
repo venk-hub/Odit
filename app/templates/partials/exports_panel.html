@@ -1,0 +1,73 @@
+<div>
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-semibold text-gray-700">Export Artifacts</h2>
+        {% if run.status.value == "completed" %}
+        <span class="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Audit complete — exports ready</span>
+        {% elif run.status.value in ("pending", "running") %}
+        <span class="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Exports generated after audit completes</span>
+        {% endif %}
+    </div>
+
+    {% if artifacts %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {% for artifact in artifacts %}
+        {% set type_icons = {
+            "excel": "📊",
+            "report_html": "🌐",
+            "report_md": "📝",
+            "report_json": "🔧",
+            "screenshot": "📸",
+            "har": "🔍",
+            "json": "📄"
+        } %}
+        <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <div class="flex items-start justify-between">
+                <div>
+                    <div class="text-2xl mb-2">{{ type_icons.get(artifact.artifact_type, "📄") }}</div>
+                    <div class="text-sm font-medium text-gray-800">
+                        {{ artifact.artifact_type.replace("_", " ").title() }}
+                    </div>
+                    {% if artifact.file_size_bytes %}
+                    <div class="text-xs text-gray-400 mt-0.5">
+                        {{ "%.1f" | format(artifact.file_size_bytes / 1024) }} KB
+                    </div>
+                    {% endif %}
+                    <div class="text-xs text-gray-400 mt-0.5">
+                        {{ artifact.created_at.strftime("%b %d %H:%M") }}
+                    </div>
+                </div>
+                <a href="/api/audits/{{ audit_id }}/exports/{{ artifact.id }}/download"
+                    class="inline-flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <div class="text-4xl mb-3">📦</div>
+        <p class="text-sm text-gray-500 mb-2">No export artifacts available yet.</p>
+        {% if run.status.value == "completed" %}
+        <p class="text-xs text-gray-400">The worker generates exports automatically after the audit completes.</p>
+        {% else %}
+        <p class="text-xs text-gray-400">Exports will be available once the audit finishes.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+        <h3 class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Available Export Types</h3>
+        <ul class="text-xs text-gray-500 space-y-1">
+            <li>📊 <strong>Excel Workbook</strong> — Full data export across 9 sheets</li>
+            <li>🌐 <strong>HTML Report</strong> — Styled summary for sharing</li>
+            <li>📝 <strong>Markdown Report</strong> — Text summary for documentation</li>
+            <li>🔧 <strong>JSON Summary</strong> — Machine-readable audit data</li>
+            <li>📸 <strong>Screenshots</strong> — Per-page screenshots</li>
+            <li>🔍 <strong>HAR Files</strong> — Network traffic archives</li>
+        </ul>
+    </div>
+</div>

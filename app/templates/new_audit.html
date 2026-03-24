@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}New Audit - Odit{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <a href="/" class="text-sm text-gray-500 hover:text-blue-600">&larr; Back to Dashboard</a>
+        <h1 class="text-2xl font-bold text-gray-900 mt-2">New Audit</h1>
+        <p class="text-gray-500 text-sm mt-1">Configure and run a tracking audit on a website.</p>
+    </div>
+
+    <form id="audit-form" hx-post="/api/audits" hx-ext="json-enc"
+        hx-on::after-request="handleAuditCreated(event)"
+        class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+
+        <!-- Base URL -->
+        <div>
+            <label for="base_url" class="block text-sm font-medium text-gray-700 mb-1">Base URL <span class="text-red-500">*</span></label>
+            <input type="url" id="base_url" name="base_url" required placeholder="https://example.com"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+
+        <!-- Mode -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Audit Mode</label>
+            <div class="grid grid-cols-2 gap-2">
+                {% for mode_val, mode_label in [("quick_scan","Quick Scan"),("full_crawl","Full Crawl"),("journey_audit","Journey Audit"),("regression_compare","Regression Compare")] %}
+                <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-400 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                    <input type="radio" name="mode" value="{{ mode_val }}" {% if mode_val == "quick_scan" %}checked{% endif %}
+                        class="mt-0.5" onchange="toggleJourneyMode(this.value)" />
+                    <span class="text-sm font-medium text-gray-700">{{ mode_label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Config Row -->
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label for="max_pages" class="block text-sm font-medium text-gray-700 mb-1">Max Pages</label>
+                <input type="number" id="max_pages" name="max_pages" value="50" min="1" max="500"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+                <label for="max_depth" class="block text-sm font-medium text-gray-700 mb-1">Max Depth</label>
+                <input type="number" id="max_depth" name="max_depth" value="3" min="1" max="10"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+        </div>
+
+        <!-- Device + Consent -->
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label for="device_type" class="block text-sm font-medium text-gray-700 mb-1">Device Type</label>
+                <select id="device_type" name="device_type"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="desktop">Desktop</option>
+                    <option value="mobile">Mobile</option>
+                    <option value="both">Both</option>
+                </select>
+            </div>
+            <div>
+                <label for="consent_behavior" class="block text-sm font-medium text-gray-700 mb-1">Consent Behavior</label>
+                <select id="consent_behavior" name="consent_behavior"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="no_interaction">No Interaction</option>
+                    <option value="accept_consent">Accept Consent</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Expected Vendors -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Expected Vendors</label>
+            <p class="text-xs text-gray-500 mb-3">Flag an issue if these vendors are NOT detected.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-52 overflow-y-auto p-1">
+                {% set vendor_list = [
+                    ("google_analytics","Google Analytics"),
+                    ("google_tag_manager","Google Tag Manager"),
+                    ("adobe_launch","Adobe Launch"),
+                    ("adobe_analytics","Adobe Analytics"),
+                    ("tealium","Tealium"),
+                    ("segment","Segment"),
+                    ("rudderstack","RudderStack"),
+                    ("mixpanel","Mixpanel"),
+                    ("amplitude","Amplitude"),
+                    ("heap","Heap"),
+                    ("meta_pixel","Meta Pixel"),
+                    ("linkedin_insight","LinkedIn Insight"),
+                    ("tiktok_pixel","TikTok Pixel"),
+                    ("optimizely","Optimizely"),
+                    ("vwo","VWO"),
+                    ("adobe_target","Adobe Target"),
+                    ("launchdarkly","LaunchDarkly"),
+                    ("dynamic_yield","Dynamic Yield"),
+                    ("onetrust","OneTrust"),
+                    ("cookiebot","Cookiebot"),
+                    ("trustarc","TrustArc"),
+                ] %}
+                {% for v_key, v_name in vendor_list %}
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" name="expected_vendors" value="{{ v_key }}"
+                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    <span class="text-gray-700">{{ v_name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Include / Exclude Patterns -->
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label for="include_patterns" class="block text-sm font-medium text-gray-700 mb-1">Include Patterns</label>
+                <input type="text" id="include_patterns" name="include_patterns_raw"
+                    placeholder="/blog/*, /products/*"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <p class="text-xs text-gray-400 mt-1">Comma-separated glob patterns</p>
+            </div>
+            <div>
+                <label for="exclude_patterns" class="block text-sm font-medium text-gray-700 mb-1">Exclude Patterns</label>
+                <input type="text" id="exclude_patterns" name="exclude_patterns_raw"
+                    placeholder="/admin/*, /login"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <p class="text-xs text-gray-400 mt-1">Comma-separated glob patterns</p>
+            </div>
+        </div>
+
+        <!-- Seed URLs (Journey mode) -->
+        <div id="seed-urls-section" class="hidden">
+            <label for="seed_urls" class="block text-sm font-medium text-gray-700 mb-1">Seed URLs</label>
+            <textarea id="seed_urls" name="seed_urls_raw" rows="4"
+                placeholder="https://example.com/start&#10;https://example.com/checkout"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            <p class="text-xs text-gray-400 mt-1">One URL per line for journey audit mode</p>
+        </div>
+
+        <!-- Regression Compare: pick prior audit -->
+        <div id="regression-section" class="hidden">
+            <label for="comparison_audit_id" class="block text-sm font-medium text-gray-700 mb-1">Compare Against</label>
+            <select id="comparison_audit_id" name="comparison_audit_id"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">— Select a previous audit —</option>
+                {% for prev_run in completed_runs %}
+                <option value="{{ prev_run.id }}">{{ prev_run.base_url }} ({{ prev_run.created_at.strftime("%b %d %H:%M") }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="pt-2">
+            <button type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                <svg class="w-4 h-4 htmx-indicator animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                Run Audit
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function toggleJourneyMode(mode) {
+        const seedSection = document.getElementById('seed-urls-section');
+        const regressionSection = document.getElementById('regression-section');
+        seedSection.classList.toggle('hidden', mode !== 'journey_audit');
+        regressionSection.classList.toggle('hidden', mode !== 'regression_compare');
+    }
+
+    function handleAuditCreated(event) {
+        if (event.detail.successful) {
+            try {
+                const resp = JSON.parse(event.detail.xhr.responseText);
+                window.location.href = '/audits/' + resp.id;
+            } catch (e) {
+                console.error('Error parsing response', e);
+            }
+        } else {
+            try {
+                const err = JSON.parse(event.detail.xhr.responseText);
+                alert('Error: ' + (err.detail || 'Unknown error'));
+            } catch (e) {
+                alert('An error occurred. Status: ' + event.detail.xhr.status);
+            }
+        }
+    }
+
+    // Override HTMX form submission to build JSON with arrays
+    document.getElementById('audit-form').addEventListener('htmx:configRequest', function(evt) {
+        const form = document.getElementById('audit-form');
+        const formData = new FormData(form);
+
+        const expectedVendors = formData.getAll('expected_vendors');
+        const includeRaw = formData.get('include_patterns_raw') || '';
+        const excludeRaw = formData.get('exclude_patterns_raw') || '';
+        const seedRaw = formData.get('seed_urls_raw') || '';
+
+        const include_patterns = includeRaw.split(',').map(s => s.trim()).filter(Boolean);
+        const exclude_patterns = excludeRaw.split(',').map(s => s.trim()).filter(Boolean);
+        const seed_urls = seedRaw.split('\n').map(s => s.trim()).filter(Boolean);
+
+        const comparisonId = formData.get('comparison_audit_id') || null;
+
+        evt.detail.parameters = {
+            base_url: formData.get('base_url'),
+            mode: formData.get('mode'),
+            max_pages: parseInt(formData.get('max_pages')) || 50,
+            max_depth: parseInt(formData.get('max_depth')) || 3,
+            device_type: formData.get('device_type'),
+            consent_behavior: formData.get('consent_behavior'),
+            expected_vendors: expectedVendors,
+            include_patterns: include_patterns,
+            exclude_patterns: exclude_patterns,
+            seed_urls: seed_urls,
+            comparison_audit_id: comparisonId || null,
+        };
+    });
+
+    htmx.config.defaultSwapStyle = 'innerHTML';
+</script>
+{% endblock %}

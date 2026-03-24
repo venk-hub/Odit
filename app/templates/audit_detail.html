@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Audit: {{ run.base_url }} - Odit{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <a href="/" class="text-sm text-gray-500 hover:text-blue-600">&larr; Back to Dashboard</a>
+    <div class="flex items-start justify-between mt-2">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900 truncate max-w-2xl">{{ run.base_url }}</h1>
+            <div class="flex items-center gap-3 mt-1">
+                <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                    {{ run.mode.value.replace("_", " ").title() }}
+                </span>
+                <span class="text-xs text-gray-500">Created {{ run.created_at.strftime("%b %d, %Y %H:%M") }}</span>
+            </div>
+        </div>
+        <div id="status-badge">
+            {% if run.status.value == "pending" %}
+            <span class="inline-flex items-center gap-1.5 text-sm font-medium bg-gray-100 text-gray-600 px-3 py-1 rounded-full">
+                <span class="w-2 h-2 bg-gray-400 rounded-full"></span> Pending
+            </span>
+            {% elif run.status.value == "running" %}
+            <span class="inline-flex items-center gap-1.5 text-sm font-medium bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
+                <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> Running
+            </span>
+            {% elif run.status.value == "completed" %}
+            <span class="inline-flex items-center gap-1.5 text-sm font-medium bg-green-50 text-green-700 px-3 py-1 rounded-full">
+                <span class="w-2 h-2 bg-green-500 rounded-full"></span> Completed
+            </span>
+            {% elif run.status.value == "failed" %}
+            <span class="inline-flex items-center gap-1.5 text-sm font-medium bg-red-50 text-red-700 px-3 py-1 rounded-full">
+                <span class="w-2 h-2 bg-red-500 rounded-full"></span> Failed
+            </span>
+            {% elif run.status.value == "cancelled" %}
+            <span class="inline-flex items-center gap-1.5 text-sm font-medium bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full">
+                <span class="w-2 h-2 bg-yellow-500 rounded-full"></span> Cancelled
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="border-b border-gray-200 mb-6">
+    <nav class="-mb-px flex gap-0" id="tab-nav">
+        {% for tab_id, tab_label in [("progress","Progress"),("summary","Summary"),("pages","Pages"),("issues","Issues"),("vendors","Vendors"),("exports","Exports")] %}
+        <button
+            onclick="showTab('{{ tab_id }}')"
+            id="tab-btn-{{ tab_id }}"
+            class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition-colors
+            {% if tab_id == 'progress' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
+            {{ tab_label }}
+        </button>
+        {% endfor %}
+    </nav>
+</div>
+
+<div id="tab-content">
+    <!-- Progress tab (default) -->
+    <div id="tab-progress"
+        hx-get="/partials/audit-progress/{{ audit_id }}"
+        hx-trigger="load, every 3s [document.getElementById('tab-progress').classList.contains('active-tab')]"
+        hx-swap="innerHTML">
+        <div class="text-center py-8 text-gray-400 text-sm">Loading progress...</div>
+    </div>
+
+    <div id="tab-summary" class="hidden">
+        <div
+            hx-get="/partials/audit-summary/{{ audit_id }}"
+            hx-trigger="intersect once"
+            hx-swap="innerHTML">
+            <div class="text-center py-8 text-gray-400 text-sm">Loading summary...</div>
+        </div>
+    </div>
+
+    <div id="tab-pages" class="hidden">
+        <div
+            hx-get="/audits/{{ audit_id }}/pages"
+            hx-trigger="intersect once"
+            hx-swap="innerHTML">
+            <div class="text-center py-8 text-gray-400 text-sm">Loading pages...</div>
+        </div>
+    </div>
+
+    <div id="tab-issues" class="hidden">
+        <div
+            hx-get="/audits/{{ audit_id }}/issues"
+            hx-trigger="intersect once"
+            hx-swap="innerHTML">
+            <div class="text-center py-8 text-gray-400 text-sm">Loading issues...</div>
+        </div>
+    </div>
+
+    <div id="tab-vendors" class="hidden">
+        <div
+            hx-get="/audits/{{ audit_id }}/vendors"
+            hx-trigger="intersect once"
+            hx-swap="innerHTML">
+            <div class="text-center py-8 text-gray-400 text-sm">Loading vendors...</div>
+        </div>
+    </div>
+
+    <div id="tab-exports" class="hidden">
+        <div
+            hx-get="/audits/{{ audit_id }}/exports"
+            hx-trigger="intersect once"
+            hx-swap="innerHTML">
+            <div class="text-center py-8 text-gray-400 text-sm">Loading exports...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const tabs = ['progress', 'summary', 'pages', 'issues', 'vendors', 'exports'];
+
+    function showTab(tabId) {
+        tabs.forEach(t => {
+            const pane = document.getElementById('tab-' + t);
+            const btn = document.getElementById('tab-btn-' + t);
+            if (t === tabId) {
+                pane.classList.remove('hidden');
+                pane.classList.add('active-tab');
+                btn.classList.add('border-blue-500', 'text-blue-600');
+                btn.classList.remove('border-transparent', 'text-gray-500');
+            } else {
+                pane.classList.add('hidden');
+                pane.classList.remove('active-tab');
+                btn.classList.remove('border-blue-500', 'text-blue-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            }
+        });
+    }
+
+    // Mark progress as active initially
+    document.getElementById('tab-progress').classList.add('active-tab');
+</script>
+{% endblock %}

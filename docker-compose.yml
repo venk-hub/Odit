@@ -1,0 +1,96 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-odit}
+      POSTGRES_USER: ${POSTGRES_USER:-odit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-odit_local_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odit} -d ${POSTGRES_DB:-odit}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  proxy:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      DATA_DIR: /data
+    restart: unless-stopped
+    command:
+      - mitmdump
+      - --listen-host
+      - "0.0.0.0"
+      - --listen-port
+      - "8080"
+      - -s
+      - /addon/mitm_addon.py
+      - --set
+      - ssl_insecure=true
+      - --set
+      - connection_strategy=lazy
+      - --set
+      - confdir=/data/certs
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/app.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-odit}:${POSTGRES_PASSWORD:-odit_local_pass}@postgres:5432/${POSTGRES_DB:-odit}
+      DATA_DIR: /data
+      PROXY_HOST: proxy
+      PROXY_PORT: "8080"
+      APP_PORT: "8000"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      proxy:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-odit}:${POSTGRES_PASSWORD:-odit_local_pass}@postgres:5432/${POSTGRES_DB:-odit}
+      DATA_DIR: /data
+      PROXY_HOST: proxy
+      PROXY_PORT: "8080"
+      USE_PROXY: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

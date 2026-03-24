@@ -1,0 +1,99 @@
+<div>
+    <!-- Filter form -->
+    <form hx-get="/audits/{{ audit_id }}/issues" hx-target="closest div" hx-swap="outerHTML"
+        class="flex items-center gap-3 mb-4 flex-wrap">
+        <select name="severity" onchange="this.form.requestSubmit()"
+            class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">All Severities</option>
+            <option value="critical" {% if filter_severity == "critical" %}selected{% endif %}>Critical</option>
+            <option value="high" {% if filter_severity == "high" %}selected{% endif %}>High</option>
+            <option value="medium" {% if filter_severity == "medium" %}selected{% endif %}>Medium</option>
+            <option value="low" {% if filter_severity == "low" %}selected{% endif %}>Low</option>
+        </select>
+        <select name="category" onchange="this.form.requestSubmit()"
+            class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">All Categories</option>
+            <option value="broken_tracking" {% if filter_category == "broken_tracking" %}selected{% endif %}>Broken Tracking</option>
+            <option value="missing_vendor" {% if filter_category == "missing_vendor" %}selected{% endif %}>Missing Vendor</option>
+            <option value="consent" {% if filter_category == "consent" %}selected{% endif %}>Consent</option>
+            <option value="script_error" {% if filter_category == "script_error" %}selected{% endif %}>Script Error</option>
+            <option value="duplicate_signal" {% if filter_category == "duplicate_signal" %}selected{% endif %}>Duplicate Signal</option>
+            <option value="coverage_gap" {% if filter_category == "coverage_gap" %}selected{% endif %}>Coverage Gap</option>
+        </select>
+        <span class="text-xs text-gray-400 ml-2">{{ issues|length }} issue{% if issues|length != 1 %}s{% endif %}</span>
+    </form>
+
+    {% if issues %}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Severity</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Category</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for issue in issues %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3">
+                        {% if issue.severity == "critical" %}
+                        <span class="inline-flex items-center gap-1 text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                            <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Critical
+                        </span>
+                        {% elif issue.severity == "high" %}
+                        <span class="inline-flex items-center gap-1 text-xs font-medium bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                            <span class="w-1.5 h-1.5 bg-orange-500 rounded-full"></span> High
+                        </span>
+                        {% elif issue.severity == "medium" %}
+                        <span class="inline-flex items-center gap-1 text-xs font-medium bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+                            <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span> Medium
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 text-xs font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                            <span class="w-1.5 h-1.5 bg-blue-400 rounded-full"></span> Low
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="text-xs text-gray-500">{{ issue.category.replace("_", " ").title() }}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <a href="/audits/{{ audit_id }}/issue/{{ issue.id }}"
+                            class="text-sm font-medium text-gray-800 hover:text-blue-600">{{ issue.title }}</a>
+                        <p class="text-xs text-gray-400 mt-0.5 truncate max-w-sm">{{ issue.description[:100] }}{% if issue.description|length > 100 %}...{% endif %}</p>
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if issue.affected_vendor_key %}
+                        <span class="text-xs bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-mono">
+                            {{ issue.affected_vendor_key }}
+                        </span>
+                        {% else %}
+                        <span class="text-xs text-gray-300">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if issue.affected_url %}
+                        <span class="text-xs text-gray-500 font-mono truncate max-w-xs block" title="{{ issue.affected_url }}">
+                            {{ issue.affected_url | truncate(50) }}
+                        </span>
+                        {% else %}
+                        <span class="text-xs text-gray-300">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <a href="/audits/{{ audit_id }}/issue/{{ issue.id }}"
+                            class="text-xs text-blue-600 hover:text-blue-800">Details →</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12 text-gray-400 text-sm">No issues found for this filter.</div>
+    {% endif %}
+</div>

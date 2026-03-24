@@ -1,0 +1,572 @@
+"""
+Crawl engine: orchestrates the full crawl for an AuditRun using Playwright.
+"""
+import os
+import re
+import json
+import time
+import fnmatch
+import logging
+from collections import deque
+from datetime import datetime
+from typing import List, Dict, Set, Optional, Tuple
+from urllib.parse import urlparse, urljoin, urldefrag
+
+from sqlalchemy.orm import Session
+
+from worker.config import get_settings
+from worker.crawler.page_analyzer import (
+    compute_page_group,
+    extract_page_metadata,
+    extract_storage,
+    extract_cookies,
+    extract_script_srcs,
+    extract_window_globals,
+    take_screenshot,
+    extract_links,
+)
+from worker.detectors.vendor_detector import detect_vendors_from_page_data, is_tracking_url, get_vendor_key_for_url
+
+logger = logging.getLogger("odit.worker.engine")
+settings = get_settings()
+
+MAX_RETRIES = 2
+PAGE_TIMEOUT = 30000  # ms
+NAV_TIMEOUT = 30000  # ms
+
+
+def matches_any_pattern(url: str, patterns: List[str]) -> bool:
+    parsed = urlparse(url)
+    path = parsed.path
+    for pat in patterns:
+        if fnmatch.fnmatch(path, pat):
+            return True
+        if pat in path:
+            return True
+    return False
+
+
+def should_visit(
+    url: str,
+    allowed_domains: List[str],
+    include_patterns: List[str],
+    exclude_patterns: List[str],
+    base_url: str,
+) -> bool:
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+    if parsed.netloc not in allowed_domains:
+        return False
+    if exclude_patterns and matches_any_pattern(url, exclude_patterns):
+        return False
+    if include_patterns and not matches_any_pattern(url, include_patterns):
+        return False
+    return True
+
+
+def run_crawl(db: Session, audit_run, audit_config) -> None:
+    """
+    Main crawl function. Crawls the site using Playwright with BFS.
+    All page data is stored in the DB. Artifacts are saved to disk.
+    """
+    from app.models import (
+        AuditRun, PageVisit, NetworkRequest, ConsoleEvent,
+        DetectedVendor, AuditStatus
+    )
+
+    audit_id = str(audit_run.id)
+    base_url = audit_run.base_url
+    parsed_base = urlparse(base_url)
+    base_domain = parsed_base.netloc
+
+    allowed_domains = list(audit_config.allowed_domains or [base_domain])
+    if base_domain not in allowed_domains:
+        allowed_domains.append(base_domain)
+
+    max_pages = audit_config.max_pages
+    max_depth = audit_config.max_depth
+    consent_behavior = audit_config.consent_behavior
+    device_type = audit_config.device_type
+    include_patterns = list(audit_config.include_patterns or [])
+    exclude_patterns = list(audit_config.exclude_patterns or [])
+    seed_urls = list(audit_config.seed_urls or [])
+    mode = audit_run.mode
+
+    # Set up artifact directory
+    artifact_dir = os.path.join(settings.DATA_DIR, "audits", audit_id)
+    screenshots_dir = os.path.join(artifact_dir, "screenshots")
+    har_dir = os.path.join(artifact_dir, "har")
+    os.makedirs(screenshots_dir, exist_ok=True)
+    os.makedirs(har_dir, exist_ok=True)
+
+    # Seed URLs
+    if seed_urls:
+        queue = deque([(url, 0) for url in seed_urls])
+        visited: Set[str] = set(seed_urls)
+    else:
+        queue = deque([(base_url, 0)])
+        visited: Set[str] = {base_url}
+
+    pages_discovered = 1 if not seed_urls else len(seed_urls)
+    pages_crawled = 0
+    pages_failed = 0
+
+    # Update discovered count
+    audit_run.pages_discovered = pages_discovered
+    db.commit()
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        proxy_settings = None
+        if settings.USE_PROXY:
+            proxy_settings = {
+                "server": f"http://{settings.PROXY_HOST}:{settings.PROXY_PORT}",
+            }
+
+        launch_kwargs = {"headless": True}
+        if proxy_settings:
+            launch_kwargs["proxy"] = proxy_settings
+
+        browser = p.chromium.launch(**launch_kwargs)
+
+        try:
+            while queue and pages_crawled < max_pages:
+                # Check for cancellation
+                db.refresh(audit_run)
+                if audit_run.status == AuditStatus.cancelled:
+                    logger.info(f"Audit {audit_id} cancelled, stopping crawl")
+                    break
+
+                url, depth = queue.popleft()
+                logger.info(f"Crawling [{pages_crawled+1}/{max_pages}] depth={depth}: {url}")
+
+                # Set up context with HAR recording
+                har_path = os.path.join(har_dir, f"page_{pages_crawled:04d}.har")
+
+                context_kwargs = {
+                    "ignore_https_errors": True,
+                    "record_har_path": har_path,
+                    "record_har_content": "omit",
+                }
+
+                if device_type == "mobile":
+                    context_kwargs.update({
+                        "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+                        "viewport": {"width": 390, "height": 844},
+                        "device_scale_factor": 3,
+                        "is_mobile": True,
+                    })
+                else:
+                    context_kwargs["viewport"] = {"width": 1440, "height": 900}
+
+                context = browser.new_context(**context_kwargs)
+                page = context.new_page()
+
+                # Collect network events
+                page_requests: List[Dict] = []
+                console_messages: List[Dict] = []
+                redirect_chain: List[str] = []
+
+                def on_response(response):
+                    try:
+                        req = response.request
+                        page_requests.append({
+                            "url": response.url,
+                            "method": req.method,
+                            "status_code": response.status,
+                            "resource_type": req.resource_type,
+                            "request_headers": dict(req.headers),
+                            "response_headers": dict(response.headers),
+                            "failed": response.status >= 400,
+                            "failure_reason": None,
+                        })
+                    except Exception as e:
+                        logger.debug(f"Response handler error: {e}")
+
+                def on_request_failed(request):
+                    try:
+                        page_requests.append({
+                            "url": request.url,
+                            "method": request.method,
+                            "status_code": None,
+                            "resource_type": request.resource_type,
+                            "request_headers": dict(request.headers),
+                            "response_headers": {},
+                            "failed": True,
+                            "failure_reason": request.failure,
+                        })
+                    except Exception as e:
+                        logger.debug(f"Request failed handler error: {e}")
+
+                def on_console(msg):
+                    try:
+                        console_messages.append({
+                            "level": msg.type,
+                            "message": msg.text,
+                            "source_url": msg.location.get("url") if msg.location else None,
+                            "line_number": msg.location.get("lineNumber") if msg.location else None,
+                            "column_number": msg.location.get("columnNumber") if msg.location else None,
+                        })
+                    except Exception as e:
+                        logger.debug(f"Console handler error: {e}")
+
+                page.on("response", on_response)
+                page.on("requestfailed", on_request_failed)
+                page.on("console", on_console)
+
+                page_visit = None
+                error_message = None
+                status_code = None
+                final_url = url
+                load_time_ms = None
+
+                # Attempt navigation with retries
+                for attempt in range(MAX_RETRIES + 1):
+                    try:
+                        t_start = time.time()
+                        response = page.goto(
+                            url,
+                            timeout=NAV_TIMEOUT,
+                            wait_until="domcontentloaded",
+                        )
+                        load_time_ms = (time.time() - t_start) * 1000
+                        status_code = response.status if response else None
+                        final_url = page.url
+
+                        # Handle consent banner if configured
+                        if consent_behavior == "accept_consent":
+                            _try_accept_consent(page)
+
+                        # Wait a bit for JS to fire
+                        page.wait_for_timeout(2000)
+
+                        # Journey audit: execute AI-resolved NL steps on seed pages
+                        journey_instructions = list(getattr(audit_config, "journey_instructions", None) or [])
+                        if mode == "journey_audit" and journey_instructions and depth == 0:
+                            _execute_journey_steps(page, journey_instructions, url)
+
+                        error_message = None
+                        break
+                    except Exception as e:
+                        error_message = str(e)
+                        logger.warning(f"Navigation attempt {attempt+1} failed for {url}: {e}")
+                        if attempt < MAX_RETRIES:
+                            page.wait_for_timeout(1000)
+
+                # Extract page data
+                screenshot_path = None
+                meta = {}
+                storage = {"local_storage_keys": [], "session_storage_keys": []}
+                cookies_data = []
+                script_srcs = []
+                window_globals_found = []
+                discovered_links = []
+
+                if not error_message:
+                    try:
+                        meta = extract_page_metadata(page)
+                    except Exception as e:
+                        logger.warning(f"Meta extraction failed: {e}")
+
+                    try:
+                        storage = extract_storage(page)
+                    except Exception as e:
+                        logger.warning(f"Storage extraction failed: {e}")
+
+                    try:
+                        cookies_data = extract_cookies(context)
+                    except Exception as e:
+                        logger.warning(f"Cookie extraction failed: {e}")
+
+                    try:
+                        script_srcs = extract_script_srcs(page)
+                    except Exception as e:
+                        logger.warning(f"Script extraction failed: {e}")
+
+                    try:
+                        window_globals_found = extract_window_globals(page)
+                    except Exception as e:
+                        logger.warning(f"Window globals extraction failed: {e}")
+
+                    # Screenshot
+                    ss_filename = f"screenshot_{pages_crawled:04d}.png"
+                    ss_path = os.path.join(screenshots_dir, ss_filename)
+                    screenshot_path = take_screenshot(page, ss_path)
+
+                    # Discover links for BFS (only if not at max depth and not journey mode)
+                    if depth < max_depth and mode != "journey_audit":
+                        try:
+                            discovered_links = extract_links(page, base_domain)
+                        except Exception as e:
+                            logger.warning(f"Link extraction failed: {e}")
+
+                # Close context to flush HAR
+                try:
+                    context.close()
+                except Exception:
+                    pass
+
+                # Check if HAR was written
+                har_file_path = har_path if os.path.exists(har_path) else None
+
+                # Compute page group
+                page_group = compute_page_group(final_url or url)
+
+                # Console error count
+                console_error_count = sum(1 for m in console_messages if m["level"] == "error")
+                failed_request_count = sum(1 for r in page_requests if r["failed"])
+
+                # Create PageVisit
+                pv = PageVisit(
+                    audit_run_id=audit_run.id,
+                    url=url,
+                    final_url=final_url,
+                    status_code=status_code,
+                    page_title=meta.get("title"),
+                    meta_description=meta.get("meta_description"),
+                    canonical_url=meta.get("canonical_url"),
+                    page_group=page_group,
+                    load_time_ms=load_time_ms,
+                    screenshot_path=screenshot_path,
+                    har_path=har_file_path,
+                    console_error_count=console_error_count,
+                    failed_request_count=failed_request_count,
+                    cookies=[c["name"] for c in cookies_data],
+                    local_storage_keys=storage["local_storage_keys"],
+                    session_storage_keys=storage["session_storage_keys"],
+                    script_srcs=script_srcs,
+                    redirect_chain=redirect_chain,
+                    crawled_at=datetime.utcnow(),
+                    error_message=error_message,
+                )
+                db.add(pv)
+                db.flush()
+
+                # Store network requests
+                for req_data in page_requests:
+                    req_url = req_data["url"]
+                    is_tracking = is_tracking_url(req_url)
+                    vendor_key = get_vendor_key_for_url(req_url) if is_tracking else None
+
+                    nr = NetworkRequest(
+                        page_visit_id=pv.id,
+                        audit_run_id=audit_run.id,
+                        url=req_url[:2000],
+                        method=req_data["method"],
+                        status_code=req_data["status_code"],
+                        resource_type=req_data.get("resource_type"),
+                        request_headers=req_data.get("request_headers", {}),
+                        response_headers=req_data.get("response_headers", {}),
+                        failed=req_data["failed"],
+                        failure_reason=req_data.get("failure_reason"),
+                        is_tracking_related=is_tracking,
+                        captured_at=datetime.utcnow(),
+                    )
+                    db.add(nr)
+
+                # Store console events
+                for cm in console_messages:
+                    ce = ConsoleEvent(
+                        page_visit_id=pv.id,
+                        audit_run_id=audit_run.id,
+                        level=cm["level"],
+                        message=cm["message"][:2000],
+                        source_url=cm.get("source_url"),
+                        line_number=cm.get("line_number"),
+                        column_number=cm.get("column_number"),
+                        captured_at=datetime.utcnow(),
+                    )
+                    db.add(ce)
+
+                # Detect vendors for this page
+                cookie_names = [c["name"] for c in cookies_data]
+                req_urls = [r["url"] for r in page_requests]
+                page_vendor_matches = detect_vendors_from_page_data(
+                    network_request_urls=req_urls,
+                    script_srcs=script_srcs,
+                    window_globals=window_globals_found,
+                    cookie_names=cookie_names,
+                )
+
+                for vm in page_vendor_matches:
+                    dv = DetectedVendor(
+                        audit_run_id=audit_run.id,
+                        page_visit_id=pv.id,
+                        vendor_key=vm.vendor_key,
+                        vendor_name=vm.vendor_name,
+                        category=vm.category,
+                        detection_method=vm.detection_method,
+                        evidence=vm.evidence,
+                        page_count=1,
+                        detected_at=datetime.utcnow(),
+                    )
+                    db.add(dv)
+
+                if error_message:
+                    pages_failed += 1
+                else:
+                    pages_crawled += 1
+
+                # Enqueue new links
+                for link in discovered_links:
+                    clean_link, _ = urldefrag(link)
+                    if clean_link not in visited and should_visit(
+                        clean_link, allowed_domains, include_patterns, exclude_patterns, base_url
+                    ):
+                        visited.add(clean_link)
+                        queue.append((clean_link, depth + 1))
+                        pages_discovered += 1
+
+                # Update run progress
+                audit_run.pages_discovered = pages_discovered
+                audit_run.pages_crawled = pages_crawled
+                audit_run.pages_failed = pages_failed
+                db.commit()
+
+        finally:
+            browser.close()
+
+    # Aggregate vendors at audit level
+    _aggregate_audit_vendors(db, audit_run)
+    db.commit()
+
+
+def _try_accept_consent(page) -> None:
+    """Try to find and click common consent accept buttons."""
+    selectors = [
+        "button#onetrust-accept-btn-handler",
+        "button.acceptAll",
+        "button[id*='accept']",
+        "button[class*='accept']",
+        "button[id*='Accept']",
+        "a[id*='accept']",
+        "#CybotCookiebotDialogBodyButtonAccept",
+        ".cb-enable",
+        "[data-testid='cookie-accept']",
+    ]
+    for sel in selectors:
+        try:
+            btn = page.query_selector(sel)
+            if btn and btn.is_visible():
+                btn.click(timeout=2000)
+                page.wait_for_timeout(500)
+                return
+        except Exception:
+            continue
+
+
+def _execute_journey_steps(page, instructions: list, page_url: str) -> None:
+    """
+    Convert natural language journey instructions to Playwright actions via Claude
+    and execute them safely. Each step is independently fault-tolerant.
+    """
+    from worker.ai.claude_client import nl_to_playwright_actions
+
+    for instruction in instructions:
+        try:
+            # Get a brief HTML snippet to give Claude context
+            html_snippet = ""
+            try:
+                html_snippet = page.evaluate("() => document.body.innerHTML.slice(0, 2000)")
+            except Exception:
+                pass
+
+            actions = nl_to_playwright_actions(instruction, html_snippet)
+            if not actions:
+                logger.info(f"Journey: no actions generated for instruction '{instruction}'")
+                continue
+
+            logger.info(f"Journey: executing {len(actions)} actions for '{instruction}' on {page_url}")
+            for action in actions:
+                act = action.get("action", "")
+                selector = action.get("selector", "")
+                desc = action.get("description", act)
+                try:
+                    if act == "click" and selector:
+                        page.click(selector, timeout=5000)
+                        page.wait_for_timeout(1000)
+                    elif act == "fill" and selector:
+                        page.fill(selector, action.get("value", ""), timeout=5000)
+                    elif act == "wait_for_selector" and selector:
+                        page.wait_for_selector(selector, timeout=5000)
+                    elif act == "wait_for_timeout":
+                        ms = min(int(action.get("timeout", 1000)), 5000)
+                        page.wait_for_timeout(ms)
+                    elif act == "goto":
+                        target = action.get("url", "")
+                        if target:
+                            page.goto(target, timeout=15000, wait_until="domcontentloaded")
+                            page.wait_for_timeout(1000)
+                    elif act == "scroll":
+                        page.evaluate("window.scrollBy(0, window.innerHeight)")
+                        page.wait_for_timeout(500)
+                    logger.debug(f"Journey action completed: {desc}")
+                except Exception as e:
+                    logger.warning(f"Journey action '{act}' failed (continuing): {e}")
+        except Exception as e:
+            logger.warning(f"Journey step failed for instruction '{instruction}': {e}")
+
+
+def _aggregate_audit_vendors(db: Session, audit_run) -> None:
+    """
+    Aggregate page-level vendor detections to audit-level (page_visit_id=None)
+    with page_count set to how many pages detected it.
+    """
+    from sqlalchemy import func
+    from app.models import DetectedVendor
+
+    # Query page-level vendors grouped by vendor_key
+    rows = (
+        db.query(
+            DetectedVendor.vendor_key,
+            DetectedVendor.vendor_name,
+            DetectedVendor.category,
+            DetectedVendor.detection_method,
+            func.count(DetectedVendor.id).label("page_count"),
+        )
+        .filter(
+            DetectedVendor.audit_run_id == audit_run.id,
+            DetectedVendor.page_visit_id != None,
+        )
+        .group_by(
+            DetectedVendor.vendor_key,
+            DetectedVendor.vendor_name,
+            DetectedVendor.category,
+            DetectedVendor.detection_method,
+        )
+        .all()
+    )
+
+    # Remove any existing audit-level vendors
+    db.query(DetectedVendor).filter(
+        DetectedVendor.audit_run_id == audit_run.id,
+        DetectedVendor.page_visit_id == None,
+    ).delete()
+
+    # Get example evidence for each vendor
+    for row in rows:
+        example = (
+            db.query(DetectedVendor)
+            .filter(
+                DetectedVendor.audit_run_id == audit_run.id,
+                DetectedVendor.vendor_key == row.vendor_key,
+                DetectedVendor.page_visit_id != None,
+            )
+            .first()
+        )
+        evidence = example.evidence if example else {}
+
+        audit_vendor = DetectedVendor(
+            audit_run_id=audit_run.id,
+            page_visit_id=None,
+            vendor_key=row.vendor_key,
+            vendor_name=row.vendor_name,
+            category=row.category,
+            detection_method=row.detection_method,
+            evidence=evidence,
+            page_count=row.page_count,
+            detected_at=datetime.utcnow(),
+        )
+        db.add(audit_vendor)

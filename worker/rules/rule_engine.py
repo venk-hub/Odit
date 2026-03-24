@@ -1,0 +1,490 @@
+"""
+Rule engine: evaluates all issue detection rules against collected audit data.
+"""
+import logging
+from collections import defaultdict
+from datetime import datetime
+from typing import List, Dict, Any, Optional
+from sqlalchemy.orm import Session
+
+logger = logging.getLogger("odit.worker.rules")
+
+TRACKING_RESOURCE_TYPES = {"script", "xhr", "fetch", "image", "other"}
+AB_TESTING_CATEGORIES = {"ab_testing"}
+TRACKING_CATEGORIES = {"analytics", "tag_manager", "pixel", "ab_testing"}
+
+
+def run_all_rules(db: Session, audit_run) -> None:
+    """Run all issue detection rules and persist Issue objects."""
+    from app.models import (
+        PageVisit, NetworkRequest, ConsoleEvent, DetectedVendor, Issue, AuditConfig
+    )
+
+    audit_id = audit_run.id
+    config = db.query(AuditConfig).filter(AuditConfig.id == audit_run.config_id).first()
+
+    # Load all data
+    pages = db.query(PageVisit).filter(PageVisit.audit_run_id == audit_id).all()
+    requests = db.query(NetworkRequest).filter(NetworkRequest.audit_run_id == audit_id).all()
+    console_events = db.query(ConsoleEvent).filter(ConsoleEvent.audit_run_id == audit_id).all()
+    # Audit-level vendors only
+    vendors = (
+        db.query(DetectedVendor)
+        .filter(DetectedVendor.audit_run_id == audit_id, DetectedVendor.page_visit_id == None)
+        .all()
+    )
+    # Page-level vendors
+    page_vendors = (
+        db.query(DetectedVendor)
+        .filter(DetectedVendor.audit_run_id == audit_id, DetectedVendor.page_visit_id != None)
+        .all()
+    )
+
+    issues: List[Issue] = []
+
+    issues.extend(_rule_broken_tracking_request(audit_run, pages, requests, vendors))
+    issues.extend(_rule_failed_script_load(audit_run, pages, requests, vendors))
+    issues.extend(_rule_console_js_errors(audit_run, pages, console_events))
+    issues.extend(_rule_missing_expected_vendor(audit_run, config, vendors))
+    issues.extend(_rule_inconsistent_vendor_coverage(audit_run, pages, page_vendors))
+    issues.extend(_rule_duplicate_pageview_signal(audit_run, pages, requests, page_vendors))
+    issues.extend(_rule_consent_issue_no_interaction(audit_run, config, pages, page_vendors))
+    issues.extend(_rule_ab_vendor_broken(audit_run, pages, requests, vendors))
+    issues.extend(_rule_redirect_tracking_loss(audit_run, pages, page_vendors))
+    issues.extend(_rule_template_inconsistency(audit_run, pages, page_vendors))
+
+    for issue in issues:
+        db.add(issue)
+    db.commit()
+
+    logger.info(f"Rule engine generated {len(issues)} issues for audit {audit_id}")
+
+
+def _make_issue(audit_run, **kwargs) -> "Issue":
+    from app.models import Issue
+    return Issue(
+        audit_run_id=audit_run.id,
+        created_at=datetime.utcnow(),
+        **kwargs,
+    )
+
+
+def _rule_broken_tracking_request(audit_run, pages, requests, vendors) -> list:
+    """Flag 4xx/5xx responses for tracking-related requests."""
+    issues = []
+    vendor_map = {v.vendor_key: v for v in vendors}
+
+    seen_urls = set()
+    for req in requests:
+        if not req.is_tracking_related:
+            continue
+        if req.failed or (req.status_code and req.status_code >= 400):
+            # Deduplicate by URL
+            url_key = req.url[:150]
+            if url_key in seen_urls:
+                continue
+            seen_urls.add(url_key)
+
+            status_str = str(req.status_code) if req.status_code else "failed"
+            issues.append(_make_issue(
+                audit_run,
+                page_visit_id=req.page_visit_id,
+                severity="high",
+                category="broken_tracking",
+                title=f"Broken tracking request ({status_str})",
+                description=f"A tracking network request returned a {status_str} response: {req.url[:200]}",
+                affected_url=req.url[:500],
+                evidence_refs=[{"url": req.url[:300], "status": status_str, "method": req.method}],
+                likely_cause="The tracking endpoint may be misconfigured, blocked, or the tracking tag is sending incorrect parameters.",
+                recommendation="Check the tracking tag configuration and verify the endpoint is reachable. Review any content-security-policy or ad-blocker rules.",
+            ))
+            if len(issues) >= 20:
+                break
+
+    return issues
+
+
+def _rule_failed_script_load(audit_run, pages, requests, vendors) -> list:
+    """Flag failed network requests for .js resources with tracking domains."""
+    issues = []
+    seen = set()
+
+    for req in requests:
+        if not req.failed:
+            continue
+        url = req.url
+        if not (url.endswith(".js") or ".js?" in url or "script" in (req.resource_type or "")):
+            continue
+        if not req.is_tracking_related:
+            continue
+        key = url[:150]
+        if key in seen:
+            continue
+        seen.add(key)
+
+        issues.append(_make_issue(
+            audit_run,
+            page_visit_id=req.page_visit_id,
+            severity="critical",
+            category="script_error",
+            title=f"Tracking script failed to load",
+            description=f"A tracking JavaScript resource failed to load: {url[:200]}",
+            affected_url=url[:500],
+            evidence_refs=[{"url": url[:300], "failure_reason": req.failure_reason or "unknown", "resource_type": req.resource_type}],
+            likely_cause="The script may have been blocked by an ad-blocker, firewall, or the URL may be incorrect.",
+            recommendation="Verify the script URL is correct, test from a clean browser session, and review network/CSP policies.",
+        ))
+        if len(issues) >= 10:
+            break
+
+    return issues
+
+
+def _rule_console_js_errors(audit_run, pages, console_events) -> list:
+    """Flag pages with significant JavaScript console errors."""
+    issues = []
+    error_events = [e for e in console_events if e.level == "error"]
+
+    # Group by page
+    page_errors: Dict[str, list] = defaultdict(list)
+    for e in error_events:
+        page_errors[str(e.page_visit_id)].append(e)
+
+    for page_id, events in page_errors.items():
+        if len(events) >= 3:
+            severity = "high" if len(events) >= 5 else "medium"
+            sample = events[:3]
+            issues.append(_make_issue(
+                audit_run,
+                page_visit_id=events[0].page_visit_id,
+                severity=severity,
+                category="script_error",
+                title=f"Multiple JS errors on page ({len(events)} errors)",
+                description=f"This page generated {len(events)} JavaScript console errors, which may indicate broken tracking implementations.",
+                evidence_refs=[{"level": e.level, "message": e.message[:200], "source": e.source_url} for e in sample],
+                likely_cause="JavaScript errors can prevent tracking tags from initializing or firing correctly.",
+                recommendation="Investigate the console errors listed in the evidence. Fix any tracking-related script errors first.",
+            ))
+
+    return issues
+
+
+def _rule_missing_expected_vendor(audit_run, config, vendors) -> list:
+    """Flag if expected vendors are not detected on any page."""
+    if not config or not config.expected_vendors:
+        return []
+
+    issues = []
+    detected_keys = {v.vendor_key for v in vendors}
+
+    for expected_key in config.expected_vendors:
+        if expected_key not in detected_keys:
+            issues.append(_make_issue(
+                audit_run,
+                severity="high",
+                category="missing_vendor",
+                title=f"Expected vendor not detected: {expected_key}",
+                description=f"The vendor '{expected_key}' was configured as expected but was not detected on any crawled page.",
+                affected_vendor_key=expected_key,
+                evidence_refs=[{"expected_vendor": expected_key, "detected_vendors": list(detected_keys)}],
+                likely_cause="The vendor may not be implemented, may be firing only on specific user interactions, or may be blocked.",
+                recommendation=f"Verify that {expected_key} is properly installed and firing on relevant pages. Check tag manager configurations.",
+            ))
+
+    return issues
+
+
+def _rule_inconsistent_vendor_coverage(audit_run, pages, page_vendors) -> list:
+    """Flag vendors found on some pages in same group but not others."""
+    issues = []
+
+    # Group pages by page_group
+    group_pages: Dict[str, list] = defaultdict(list)
+    for p in pages:
+        if p.page_group:
+            group_pages[p.page_group].append(p)
+
+    # Get vendor keys per page
+    page_vendor_map: Dict[str, set] = defaultdict(set)
+    for pv in page_vendors:
+        page_vendor_map[str(pv.page_visit_id)].add(pv.vendor_key)
+
+    for group, group_page_list in group_pages.items():
+        if len(group_page_list) < 2:
+            continue
+
+        # Find vendors present on some pages but not all
+        all_vendor_sets = [page_vendor_map.get(str(p.id), set()) for p in group_page_list]
+        all_vendors_in_group = set().union(*all_vendor_sets)
+
+        for vendor_key in all_vendors_in_group:
+            pages_with = sum(1 for vs in all_vendor_sets if vendor_key in vs)
+            pages_without = len(group_page_list) - pages_with
+
+            coverage_pct = pages_with / len(group_page_list)
+
+            # Flag if coverage is between 20% and 80% (inconsistent)
+            if 0.2 < coverage_pct < 0.8 and pages_without >= 1:
+                issues.append(_make_issue(
+                    audit_run,
+                    severity="medium",
+                    category="coverage_gap",
+                    title=f"Inconsistent vendor coverage in '{group}': {vendor_key}",
+                    description=(
+                        f"Vendor '{vendor_key}' is detected on {pages_with}/{len(group_page_list)} pages "
+                        f"in the '{group}' template group. This suggests inconsistent implementation."
+                    ),
+                    affected_vendor_key=vendor_key,
+                    evidence_refs=[{
+                        "group": group,
+                        "pages_with_vendor": pages_with,
+                        "total_pages_in_group": len(group_page_list),
+                        "coverage_pct": round(coverage_pct * 100),
+                    }],
+                    likely_cause="The vendor tag may be missing from some page templates or conditionally suppressed.",
+                    recommendation=f"Audit all templates in the '{group}' group and ensure '{vendor_key}' fires consistently.",
+                ))
+
+        if len(issues) >= 15:
+            break
+
+    return issues
+
+
+def _rule_duplicate_pageview_signal(audit_run, pages, requests, page_vendors) -> list:
+    """Flag duplicate pageview signals from the same vendor on the same page."""
+    issues = []
+
+    # For each page, check if the same tracking URL pattern fires multiple times
+    page_req_map: Dict[str, list] = defaultdict(list)
+    for req in requests:
+        if req.is_tracking_related:
+            page_req_map[str(req.page_visit_id)].append(req)
+
+    for page_id, page_reqs in page_req_map.items():
+        # Group by likely vendor domain (first 50 chars of url as proxy)
+        domain_counts: Dict[str, int] = defaultdict(int)
+        domain_urls: Dict[str, list] = defaultdict(list)
+
+        for req in page_reqs:
+            from urllib.parse import urlparse
+            try:
+                domain = urlparse(req.url).netloc
+            except Exception:
+                domain = req.url[:30]
+            domain_counts[domain] += 1
+            domain_urls[domain].append(req.url[:200])
+
+        for domain, count in domain_counts.items():
+            if count >= 3:
+                issues.append(_make_issue(
+                    audit_run,
+                    page_visit_id=next(
+                        (r.page_visit_id for r in page_reqs if domain in r.url), None
+                    ),
+                    severity="medium",
+                    category="duplicate_signal",
+                    title=f"Possible duplicate tracking signals to {domain}",
+                    description=(
+                        f"Found {count} requests to '{domain}' on a single page, "
+                        f"suggesting duplicate pageview or event signals."
+                    ),
+                    evidence_refs=[{"domain": domain, "count": count, "sample_urls": domain_urls[domain][:3]}],
+                    likely_cause="Duplicate tag firing due to multiple tag manager rules, incorrect event listeners, or tag not deduplicating.",
+                    recommendation="Review the tag manager rules for this domain and add deduplication logic to prevent double-counting.",
+                ))
+
+    return issues[:10]
+
+
+def _rule_consent_issue_no_interaction(audit_run, config, pages, page_vendors) -> list:
+    """Flag when tracking vendors load with no consent interaction on pages."""
+    if not config or config.consent_behavior != "no_interaction":
+        return []
+
+    issues = []
+
+    # Find pages where a consent vendor AND a tracking vendor are both present
+    page_vendor_map: Dict[str, set] = defaultdict(set)
+    page_vendor_categories: Dict[str, set] = defaultdict(set)
+
+    for pv in page_vendors:
+        page_vendor_map[str(pv.page_visit_id)].add(pv.vendor_key)
+        page_vendor_categories[str(pv.page_visit_id)].add(pv.category)
+
+    consent_vendor_keys = {"onetrust", "cookiebot", "trustarc"}
+
+    for page_id, vendor_keys in page_vendor_map.items():
+        has_consent_manager = bool(vendor_keys & consent_vendor_keys)
+        has_tracking_vendor = bool(page_vendor_categories.get(page_id, set()) & TRACKING_CATEGORIES - {"consent"})
+
+        if has_consent_manager and has_tracking_vendor:
+            tracking_vendors = [
+                k for k in vendor_keys
+                if k not in consent_vendor_keys
+            ]
+            issues.append(_make_issue(
+                audit_run,
+                page_visit_id=next(
+                    (pv.page_visit_id for pv in page_vendors if str(pv.page_visit_id) == page_id),
+                    None
+                ),
+                severity="high",
+                category="consent",
+                title="Tracking vendors fire without consent interaction",
+                description=(
+                    f"A consent management platform is present, but tracking vendors "
+                    f"({', '.join(tracking_vendors[:5])}) appear to fire before any consent "
+                    f"interaction (no_interaction mode)."
+                ),
+                evidence_refs=[{
+                    "consent_vendors": list(vendor_keys & consent_vendor_keys),
+                    "tracking_vendors_firing": tracking_vendors[:10],
+                }],
+                likely_cause="The CMP may not be blocking tracking until consent is given, or the implementation does not respect consent signals.",
+                recommendation="Verify CMP configuration ensures tracking tags are blocked until explicit consent is granted. Test with consent in all deny states.",
+            ))
+
+        if len(issues) >= 10:
+            break
+
+    return issues
+
+
+def _rule_ab_vendor_broken(audit_run, pages, requests, vendors) -> list:
+    """Flag A/B testing vendors where associated requests are failing."""
+    issues = []
+
+    ab_vendors = [v for v in vendors if v.category in AB_TESTING_CATEGORIES]
+    if not ab_vendors:
+        return []
+
+    # Group failed requests by vendor domain
+    from worker.detectors.vendor_detector import get_signatures
+    sigs = {s.key: s for s in get_signatures()}
+
+    for vendor in ab_vendors:
+        sig = sigs.get(vendor.vendor_key)
+        if not sig:
+            continue
+
+        vendor_failed = [
+            r for r in requests
+            if r.failed and any(d in r.url for d in sig.domains)
+        ]
+        vendor_total = [
+            r for r in requests
+            if any(d in r.url for d in sig.domains)
+        ]
+
+        if vendor_total and len(vendor_failed) / len(vendor_total) > 0.5:
+            issues.append(_make_issue(
+                audit_run,
+                severity="high",
+                category="broken_tracking",
+                title=f"A/B testing vendor has high failure rate: {vendor.vendor_name}",
+                description=(
+                    f"{vendor.vendor_name} requests are failing at a high rate "
+                    f"({len(vendor_failed)}/{len(vendor_total)}). A/B test assignments may be broken."
+                ),
+                affected_vendor_key=vendor.vendor_key,
+                evidence_refs=[{"failed_requests": len(vendor_failed), "total_requests": len(vendor_total)}],
+                likely_cause="The A/B testing service may be unreachable or the configuration token may be invalid.",
+                recommendation=f"Check {vendor.vendor_name} account configuration and network connectivity to their endpoints.",
+            ))
+
+    return issues
+
+
+def _rule_redirect_tracking_loss(audit_run, pages, page_vendors) -> list:
+    """Flag pages with redirects where tracking may be lost."""
+    issues = []
+
+    pages_with_redirects = [p for p in pages if p.redirect_chain and len(p.redirect_chain) > 0]
+
+    # Pages that had redirects: check if their final URL differs significantly
+    page_vendor_map: Dict[str, set] = defaultdict(set)
+    for pv in page_vendors:
+        page_vendor_map[str(pv.page_visit_id)].add(pv.vendor_key)
+
+    for page in pages_with_redirects:
+        vendors_on_page = page_vendor_map.get(str(page.id), set())
+        if vendors_on_page and page.url != page.final_url:
+            issues.append(_make_issue(
+                audit_run,
+                page_visit_id=page.id,
+                severity="low",
+                category="coverage_gap",
+                title=f"Redirect may cause tracking data loss",
+                description=(
+                    f"Page '{page.url}' redirected to '{page.final_url}'. "
+                    f"Tracking vendors ({', '.join(list(vendors_on_page)[:3])}) are present on the final page "
+                    f"but may miss the original URL in their data."
+                ),
+                affected_url=page.url,
+                evidence_refs=[{
+                    "original_url": page.url,
+                    "final_url": page.final_url,
+                    "vendors_present": list(vendors_on_page),
+                }],
+                likely_cause="Redirects can strip referrer and campaign parameters, causing analytics to miss attribution.",
+                recommendation="Ensure UTM parameters are preserved through redirects, and verify analytics captures the correct page URL.",
+            ))
+
+        if len(issues) >= 5:
+            break
+
+    return issues
+
+
+def _rule_template_inconsistency(audit_run, pages, page_vendors) -> list:
+    """Flag page groups where vendor coverage differs from the group average."""
+    issues = []
+
+    group_pages: Dict[str, list] = defaultdict(list)
+    for p in pages:
+        if p.page_group:
+            group_pages[p.page_group].append(p)
+
+    page_vendor_map: Dict[str, set] = defaultdict(set)
+    for pv in page_vendors:
+        page_vendor_map[str(pv.page_visit_id)].add(pv.vendor_key)
+
+    for group, group_page_list in group_pages.items():
+        if len(group_page_list) < 3:
+            continue
+
+        # Count unique vendor sets
+        vendor_sets = [frozenset(page_vendor_map.get(str(p.id), set())) for p in group_page_list]
+        unique_sets = set(vendor_sets)
+
+        if len(unique_sets) > 1:
+            most_common = max(unique_sets, key=lambda s: vendor_sets.count(s))
+            outliers = [
+                group_page_list[i] for i, vs in enumerate(vendor_sets)
+                if vs != most_common
+            ]
+
+            if outliers and len(outliers) < len(group_page_list):
+                issues.append(_make_issue(
+                    audit_run,
+                    severity="medium",
+                    category="coverage_gap",
+                    title=f"Template inconsistency in '{group}': {len(outliers)} page(s) differ",
+                    description=(
+                        f"{len(outliers)} page(s) in the '{group}' group have a different vendor set "
+                        f"than the majority ({len(group_page_list) - len(outliers)} pages)."
+                    ),
+                    evidence_refs=[{
+                        "group": group,
+                        "outlier_urls": [p.url for p in outliers[:3]],
+                        "expected_vendor_set": list(most_common),
+                    }],
+                    likely_cause="Template variations or conditional logic may cause some pages to have different tracking configurations.",
+                    recommendation=f"Review the outlier pages in the '{group}' group and standardize their tracking implementation.",
+                ))
+
+        if len(issues) >= 5:
+            break
+
+    return issues
