@@ -178,7 +178,8 @@ def _run_ai_enrichment(db, run) -> None:
     """Run all AI enrichment steps. Each step is independently fault-tolerant."""
     from app.models import Issue, NetworkRequest, DetectedVendor
     from worker.ai.claude_client import (
-        enrich_issue, infer_unknown_domains, generate_narrative_summary
+        enrich_issue, infer_unknown_domains, generate_narrative_summary,
+        reset_session_tokens, get_session_tokens,
     )
     import os
 
@@ -188,6 +189,7 @@ def _run_ai_enrichment(db, run) -> None:
         return
 
     audit_id = run.id
+    reset_session_tokens()
     logger.info(f"Running AI enrichment for audit {audit_id}")
 
     # Step 1: Enrich issues with better descriptions and recommendations
@@ -306,6 +308,14 @@ def _run_ai_enrichment(db, run) -> None:
             f.write(f"# AI Audit Summary\n\n{narrative}\n")
         register_artifact(db, audit_id, "report_md", summary_path)
         logger.info(f"AI narrative summary written for audit {audit_id}")
+
+    # Log session token usage summary
+    usage = get_session_tokens()
+    logger.info(
+        f"[AI tokens] Session total: {usage['input_tokens']} in + {usage['output_tokens']} out "
+        f"= {usage['total_tokens']} tokens across {usage['calls']} calls "
+        f"(~${usage['estimated_cost_usd']:.5f})"
+    )
 
 
 def poll_loop() -> None:

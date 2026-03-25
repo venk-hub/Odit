@@ -15,6 +15,34 @@ logger = logging.getLogger("odit.worker.ai")
 MODEL = "claude-haiku-4-5"
 MAX_TOKENS = 1024
 
+# Haiku pricing (per 1M tokens)
+_PRICE_INPUT_PER_M = 1.00
+_PRICE_OUTPUT_PER_M = 5.00
+
+# Session-level token accumulator — reset before each audit enrichment run
+_session_tokens: dict = {"input": 0, "output": 0, "calls": 0}
+
+
+def reset_session_tokens() -> None:
+    """Reset the session token counter. Call before each enrichment run."""
+    _session_tokens["input"] = 0
+    _session_tokens["output"] = 0
+    _session_tokens["calls"] = 0
+
+
+def get_session_tokens() -> dict:
+    """Return current session token totals and estimated cost."""
+    inp = _session_tokens["input"]
+    out = _session_tokens["output"]
+    cost = (inp * _PRICE_INPUT_PER_M + out * _PRICE_OUTPUT_PER_M) / 1_000_000
+    return {
+        "input_tokens": inp,
+        "output_tokens": out,
+        "total_tokens": inp + out,
+        "calls": _session_tokens["calls"],
+        "estimated_cost_usd": round(cost, 6),
+    }
+
 
 def _get_client():
     """Return an Anthropic client, or None if no API key is configured."""
@@ -29,7 +57,7 @@ def _get_client():
         return None
 
 
-def _call(client, prompt: str, system: str = "") -> Optional[str]:
+def _call(client, prompt: str, system: str = "", label: str = "call") -> Optional[str]:
     """Make a single Haiku call. Returns text or None on failure."""
     try:
         kwargs = {
@@ -40,6 +68,16 @@ def _call(client, prompt: str, system: str = "") -> Optional[str]:
         if system:
             kwargs["system"] = system
         response = client.messages.create(**kwargs)
+
+        # Log and accumulate token usage
+        usage = response.usage
+        inp, out = usage.input_tokens, usage.output_tokens
+        _session_tokens["input"] += inp
+        _session_tokens["output"] += out
+        _session_tokens["calls"] += 1
+        call_cost = (inp * _PRICE_INPUT_PER_M + out * _PRICE_OUTPUT_PER_M) / 1_000_000
+        logger.info(f"[AI tokens] {label}: {inp} in + {out} out = {inp + out} tokens (~${call_cost:.5f})")
+
         for block in response.content:
             if block.type == "text":
                 return block.text.strip()
@@ -91,7 +129,7 @@ Respond with ONLY a JSON object with these three keys:
 
 Respond only with the JSON object, no markdown, no extra text."""
 
-    result = _call(client, prompt, system=ISSUE_SYSTEM)
+    result = _call(client, prompt, system=ISSUE_SYSTEM, label="enrich_issue")
     if not result:
         return None
 
@@ -147,7 +185,7 @@ Example:
 Only include domains you are confident about. Omit unknown or infrastructure domains.
 Respond only with the JSON object, no extra text."""
 
-    result = _call(client, prompt, system=VENDOR_SYSTEM)
+    result = _call(client, prompt, system=VENDOR_SYSTEM, label="infer_unknown_domains")
     if not result:
         return {}
 
@@ -207,7 +245,7 @@ Write 3-5 paragraphs covering:
 
 Keep it professional and actionable. No bullet points — prose only."""
 
-    return _call(client, prompt, system=SUMMARY_SYSTEM)
+    return _call(client, prompt, system=SUMMARY_SYSTEM, label="generate_narrative_summary")
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -268,7 +306,7 @@ Example:
 
 Respond only with the JSON array, no extra text."""
 
-    result = _call(client, prompt, system=SELECTOR_SYSTEM)
+    result = _call(client, prompt, system=SELECTOR_SYSTEM, label="nl_to_playwright_actions")
     if not result:
         return None
 
