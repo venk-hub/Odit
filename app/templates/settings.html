@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Settings — Odit{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-2xl font-semibold text-gray-900 mb-6">Settings</h1>
+
+  <!-- AI Enrichment -->
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-6">
+    <div class="flex items-start gap-3 mb-4">
+      <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+        <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-base font-semibold text-gray-900">AI Enrichment</h2>
+        <p class="text-sm text-gray-500 mt-0.5">
+          Powers issue descriptions, unknown vendor inference, and narrative summaries using Claude Haiku.
+          Optional — audits run fully without it.
+        </p>
+      </div>
+    </div>
+
+    <!-- Current status -->
+    <div class="mb-4 p-3 rounded-md {% if key_set %}bg-green-50 border border-green-200{% else %}bg-gray-50 border border-gray-200{% endif %}">
+      <div class="flex items-center gap-2">
+        {% if key_set %}
+          <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-sm font-medium text-green-800">API key configured</span>
+          <code class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-mono ml-1">{{ key_masked }}</code>
+          {% if key_source == "env" %}
+            <span class="text-xs text-green-600 ml-1">(from environment variable — edit .env to change)</span>
+          {% endif %}
+        {% else %}
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-sm text-gray-600">No API key set — AI enrichment disabled</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if key_source != "env" %}
+    <!-- Key input form -->
+    <form id="settings-form" class="space-y-3">
+      <div>
+        <label for="api-key-input" class="block text-sm font-medium text-gray-700 mb-1">
+          Anthropic API Key
+        </label>
+        <input
+          id="api-key-input"
+          type="password"
+          placeholder="sk-ant-api03-..."
+          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <p class="text-xs text-gray-400 mt-1">
+          Stored in the local database. Never sent anywhere except the Anthropic API.
+          Get a key at <a href="https://console.anthropic.com" target="_blank" class="text-purple-600 hover:underline">console.anthropic.com</a>.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          onclick="saveKey()"
+          class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors"
+        >
+          Save Key
+        </button>
+        {% if key_set %}
+        <button
+          type="button"
+          onclick="clearKey()"
+          class="text-sm text-red-600 hover:text-red-700 px-4 py-2 rounded-md border border-red-200 hover:bg-red-50 transition-colors"
+        >
+          Remove Key
+        </button>
+        {% endif %}
+        <span id="save-status" class="text-sm hidden"></span>
+      </div>
+    </form>
+    {% else %}
+    <p class="text-sm text-gray-500">
+      The API key is set via the <code class="bg-gray-100 px-1 rounded text-xs">ANTHROPIC_API_KEY</code>
+      environment variable. To change it, edit your <code class="bg-gray-100 px-1 rounded text-xs">.env</code> file
+      and restart the worker.
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+async function saveKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) { showStatus('Enter a key first', 'error'); return; }
+
+  const res = await fetch('/api/settings', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({anthropic_api_key: key}),
+  });
+  const data = await res.json();
+  if (res.ok) {
+    showStatus('Saved — restart the worker for it to take effect', 'success');
+    setTimeout(() => location.reload(), 1500);
+  } else {
+    showStatus('Failed to save', 'error');
+  }
+}
+
+async function clearKey() {
+  if (!confirm('Remove the API key? AI enrichment will be disabled.')) return;
+  const res = await fetch('/api/settings', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({anthropic_api_key: ''}),
+  });
+  if (res.ok) { location.reload(); }
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('save-status');
+  el.textContent = msg;
+  el.className = `text-sm ${type === 'success' ? 'text-green-600' : 'text-red-600'}`;
+  el.classList.remove('hidden');
+}
+</script>
+{% endblock %}

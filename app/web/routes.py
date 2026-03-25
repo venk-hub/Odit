@@ -8,6 +8,7 @@ import os
 
 from app.database import get_db
 from app.models import AuditRun, Issue, DetectedVendor, PageVisit, Artifact, AuditComparison, AuditStatus
+from app.models.setting import AppSetting
 
 router = APIRouter(tags=["web"])
 templates = Jinja2Templates(directory="app/templates")
@@ -278,6 +279,40 @@ async def issue_detail(
             "page_visit": page_visit,
             "audit_id": audit_id,
         }
+    )
+
+
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request, db: AsyncSession = Depends(get_db)):
+    import os
+    env_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+
+    if env_key:
+        key_set = True
+        key_masked = f"sk-ant-...{env_key[-4:]}"
+        key_source = "env"
+    else:
+        result = await db.execute(
+            select(AppSetting).where(AppSetting.key == "anthropic_api_key")
+        )
+        setting = result.scalar_one_or_none()
+        if setting and setting.value:
+            key_set = True
+            key_masked = f"sk-ant-...{setting.value[-4:]}"
+            key_source = "database"
+        else:
+            key_set = False
+            key_masked = None
+            key_source = "none"
+
+    return templates.TemplateResponse(
+        "settings.html",
+        {
+            "request": request,
+            "key_set": key_set,
+            "key_masked": key_masked,
+            "key_source": key_source,
+        },
     )
 
 

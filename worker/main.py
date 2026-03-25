@@ -185,8 +185,22 @@ def _run_ai_enrichment(db, run) -> None:
 
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
-        logger.info("ANTHROPIC_API_KEY not set — skipping AI enrichment")
+        # Fall back to key stored in DB via the settings UI
+        try:
+            from app.models.setting import AppSetting
+            setting = db.query(AppSetting).filter(AppSetting.key == "anthropic_api_key").first()
+            if setting and setting.value:
+                api_key = setting.value.strip()
+                logger.info("Using Anthropic API key from database settings")
+        except Exception as e:
+            logger.warning(f"Could not read API key from database: {e}")
+
+    if not api_key:
+        logger.info("No Anthropic API key found (env or database) — skipping AI enrichment")
         return
+
+    # Pass the resolved key into the environment so _get_client() picks it up
+    os.environ["ANTHROPIC_API_KEY"] = api_key
 
     audit_id = run.id
     reset_session_tokens()

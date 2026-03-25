@@ -10,4 +10,4 @@ exec uvicorn app.main:app \
     --host 0.0.0.0 \
     --port "${APP_PORT:-8000}" \
     --workers 2 \
-    --log-level "${LOG_LEVEL:-info}"
+    --log-level "$(echo ${LOG_LEVEL:-info} | tr '[:upper:]' '[:lower:]')"

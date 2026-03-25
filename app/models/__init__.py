@@ -4,6 +4,7 @@ from app.models.vendor import DetectedVendor
 from app.models.issue import Issue
 from app.models.artifact import Artifact
 from app.models.comparison import AuditComparison
+from app.models.setting import AppSetting
 
 __all__ = [
     "AuditRun",
@@ -19,4 +20,5 @@ __all__ = [
     "Issue",
     "Artifact",
     "AuditComparison",
+    "AppSetting",
 ]
