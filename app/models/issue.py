@@ -22,6 +22,7 @@ class Issue(Base):
     evidence_refs = Column(JSONB, nullable=False, default=list)
     likely_cause = Column(Text, nullable=True)
     recommendation = Column(Text, nullable=True)
+    remediation_steps = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     audit_run = relationship("AuditRun", back_populates="issues")

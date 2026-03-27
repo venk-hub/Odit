@@ -366,3 +366,385 @@ vendors:
         - notice_behavior
         - notice_gdpr_prefs
         - cmapi_cookie_privacy
+
+  - key: hotjar
+    name: "Hotjar"
+    category: session_replay
+    signatures:
+      domains:
+        - static.hotjar.com
+        - script.hotjar.com
+        - vc.hotjar.io
+        - in.hotjar.com
+      script_patterns:
+        - static.hotjar.com/c/hotjar-
+        - script.hotjar.com
+      window_globals:
+        - hj
+        - hjSiteSettings
+        - _hjSettings
+      cookie_patterns:
+        - _hjSessionUser_
+        - _hjSession_
+        - _hjid
+        - _hjAbsoluteSessionInProgress
+
+  - key: fullstory
+    name: "FullStory"
+    category: session_replay
+    signatures:
+      domains:
+        - rs.fullstory.com
+        - edge.fullstory.com
+        - fullstory.com
+      script_patterns:
+        - fullstory.com/s/fs.js
+        - rs.fullstory.com
+      window_globals:
+        - FS
+        - _fs_dev_mode
+        - _fs_namespace
+      cookie_patterns:
+        - fs_uid
+        - _fs_
+
+  - key: contentsquare
+    name: "Contentsquare"
+    category: session_replay
+    signatures:
+      domains:
+        - t.contentsquare.net
+        - sstats.contentsquare.net
+      script_patterns:
+        - t.contentsquare.net/uxa/
+      window_globals:
+        - _uxa
+        - CS_CONF
+      cookie_patterns:
+        - _cs_id
+        - _cs_s
+        - _cs_vars
+        - _cs_ex
+
+  - key: mouseflow
+    name: "Mouseflow"
+    category: session_replay
+    signatures:
+      domains:
+        - cdn.mouseflow.com
+        - mouseflow.com
+      script_patterns:
+        - cdn.mouseflow.com/projects
+        - mouseflow.com/projects
+      window_globals:
+        - mouseflow
+        - _mfq
+      cookie_patterns:
+        - mf_user
+        - mf_
+
+  - key: clarity
+    name: "Microsoft Clarity"
+    category: session_replay
+    signatures:
+      domains:
+        - clarity.ms
+        - c.clarity.ms
+        - www.clarity.ms
+      script_patterns:
+        - clarity.ms/tag/
+        - clarity.js
+      window_globals:
+        - clarity
+        - WA
+      cookie_patterns:
+        - _clck
+        - _clsk
+        - MUID
+
+  - key: snowplow
+    name: "Snowplow Analytics"
+    category: analytics
+    signatures:
+      domains:
+        - sp.
+        - collector.
+        - snowplow.
+      script_patterns:
+        - sp.js
+        - snowplow.js
+        - snowplow-javascript-tracker
+      window_globals:
+        - snowplow
+        - GlobalSnowplowNamespace
+      cookie_patterns:
+        - _sp_id.
+        - _sp_ses.
+        - _sp_
+
+  - key: piano
+    name: "Piano Analytics (AT Internet)"
+    category: analytics
+    signatures:
+      domains:
+        - logc301.xiti.com
+        - logs1306.xiti.com
+        - piano.io
+        - tag.aticdn.net
+      script_patterns:
+        - tag.aticdn.net/piano-analytics.js
+        - ati-host.net
+        - smarttag.js
+      window_globals:
+        - pa
+        - ATInternet
+        - _piq
+      cookie_patterns:
+        - atreman
+        - atuserid
+        - atidvisitor
+
+  - key: braze
+    name: "Braze"
+    category: analytics
+    signatures:
+      domains:
+        - sdk.fra-02.braze.eu
+        - sdk.iad-01.braze.com
+        - sdk.iad-03.braze.com
+        - sdk.iad-05.braze.com
+        - braze.com
+      script_patterns:
+        - js.appboycdn.com/web-sdk
+        - cdn.braze.eu/web-sdk
+      window_globals:
+        - braze
+        - appboy
+      cookie_patterns:
+        - ab.storage.userId
+        - ab.storage.sessionId
+
+  - key: intercom
+    name: "Intercom"
+    category: analytics
+    signatures:
+      domains:
+        - js.intercomcdn.com
+        - api-iam.intercom.io
+        - widget.intercom.io
+      script_patterns:
+        - js.intercomcdn.com/shim.js
+        - intercomcdn.com
+      window_globals:
+        - Intercom
+        - intercomSettings
+      cookie_patterns:
+        - intercom-id-
+        - intercom-session-
+        - intercom-device-id-
+
+  - key: zendesk
+    name: "Zendesk / Zopim"
+    category: analytics
+    signatures:
+      domains:
+        - static.zdassets.com
+        - ekr.zdassets.com
+        - zendesk.com
+      script_patterns:
+        - static.zdassets.com/ekr/snippet.js
+        - ekr.zdassets.com
+      window_globals:
+        - zE
+        - zESettings
+        - $zopim
+      cookie_patterns:
+        - __zlcmid
+        - _zendesk_
+
+  - key: hubspot
+    name: "HubSpot"
+    category: analytics
+    signatures:
+      domains:
+        - js.hs-scripts.com
+        - js.hsforms.net
+        - track.hubspot.com
+        - api.hubapi.com
+      script_patterns:
+        - js.hs-scripts.com/
+        - js.hsforms.net/forms/
+        - hs-analytics.net
+      window_globals:
+        - _hsq
+        - HubSpotConversations
+        - hsConversationsSettings
+      cookie_patterns:
+        - hubspotutk
+        - __hstc
+        - __hssrc
+        - __hssc
+
+  - key: marketo
+    name: "Marketo Munchkin"
+    category: analytics
+    signatures:
+      domains:
+        - munchkin.marketo.net
+        - marketo.net
+      script_patterns:
+        - munchkin.marketo.net/munchkin.js
+        - marketo.net/munchkin
+      window_globals:
+        - Munchkin
+        - MunchkinTracker
+      cookie_patterns:
+        - _mkto_trk
+
+  - key: twitter_pixel
+    name: "X (Twitter) Pixel"
+    category: pixel
+    signatures:
+      domains:
+        - analytics.twitter.com
+        - static.ads-twitter.com
+        - t.co
+      script_patterns:
+        - static.ads-twitter.com/uwt.js
+        - analytics.twitter.com
+      window_globals:
+        - twq
+        - twttr
+      cookie_patterns:
+        - _twitter_sess
+        - personalization_id
+        - muc_ads
+
+  - key: pinterest_tag
+    name: "Pinterest Tag"
+    category: pixel
+    signatures:
+      domains:
+        - s.pinimg.com
+        - ct.pinterest.com
+      script_patterns:
+        - s.pinimg.com/ct/core.js
+        - ct.pinterest.com
+      window_globals:
+        - pintrk
+        - _pinterest_sess
+      cookie_patterns:
+        - _pinterest_ct_ua
+        - _pinterest_sess
+        - _pin_unauth
+
+  - key: criteo
+    name: "Criteo"
+    category: pixel
+    signatures:
+      domains:
+        - static.criteo.net
+        - sslwidget.criteo.com
+        - dis.us.criteo.com
+      script_patterns:
+        - static.criteo.net/js/ld/ld.js
+        - criteo.com
+      window_globals:
+        - Criteo
+        - criteo_q
+      cookie_patterns:
+        - criteo_write_test
+        - uid
+
+  - key: quantcast
+    name: "Quantcast"
+    category: analytics
+    signatures:
+      domains:
+        - quantserve.com
+        - quantcount.com
+      script_patterns:
+        - quantserve.com/quant.js
+      window_globals:
+        - _qevents
+        - QuantcastChoiceManager
+      cookie_patterns:
+        - __qca
+        - mc
+
+  - key: treasure_data
+    name: "Treasure Data CDP"
+    category: analytics
+    signatures:
+      domains:
+        - arm.treasure-data.com
+        - in.treasuredata.com
+        - cdn.treasuredata.com
+        - s3.amazonaws.com/td-cdn
+        - treasuredata.com
+      script_patterns:
+        - td-js-sdk
+        - td.min.js
+        - treasuredata.com/sdk
+        - cdn.treasuredata.com
+      window_globals:
+        - td
+        - TreasureData
+        - Treasure
+      cookie_patterns:
+        - _td
+        - td_ssc_id
+
+  - key: mparticle
+    name: "mParticle CDP"
+    category: analytics
+    signatures:
+      domains:
+        - jssdks.mparticle.com
+        - jssdkcdns.mparticle.com
+        - identity.mparticle.com
+      script_patterns:
+        - jssdks.mparticle.com/v2/JS/
+        - mparticle.com/js/v
+      window_globals:
+        - mParticle
+      cookie_patterns:
+        - mpid
+        - mparticle_sdk
+
+  - key: adobe_ecid
+    name: "Adobe Experience Cloud ID (ECID)"
+    category: analytics
+    signatures:
+      domains:
+        - dpm.demdex.net
+        - cm.everesttech.net
+      script_patterns:
+        - VisitorAPI.js
+        - AppMeasurement_Module_AudienceManagement
+      window_globals:
+        - Visitor
+        - s_c_il
+      cookie_patterns:
+        - AMCV_
+        - AMCVS_
+        - s_ecid
+        - demdex
+
+  - key: usercentrics
+    name: "Usercentrics CMP"
+    category: consent
+    signatures:
+      domains:
+        - app.usercentrics.eu
+        - aggregator.service.usercentrics.eu
+      script_patterns:
+        - app.usercentrics.eu/browser-ui/latest/loader.js
+        - privacy-proxy.usercentrics.eu
+      window_globals:
+        - UC_UI
+        - Usercentrics
+        - __ucCmp
+      cookie_patterns:
+        - uc_settings
+        - uc_user_interaction

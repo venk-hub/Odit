@@ -2,12 +2,13 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
+import json
 import logging
 import os
 import posixpath
 
 from app.config import get_settings
-from app.api import audits, pages, issues, vendors, exports, comparisons
+from app.api import audits, pages, issues, vendors, exports, comparisons, suggestions, events
 from app.api import settings as settings_api
 from app.web import routes as web_routes
 
@@ -33,6 +34,7 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 # Configure shared templates with custom filters
 templates = Jinja2Templates(directory="app/templates")
 templates.env.filters["basename"] = os.path.basename
+templates.env.filters["fromjson"] = json.loads
 
 # Inject templates into web routes module so it uses the same instance
 web_routes.templates = templates
@@ -45,6 +47,8 @@ app.include_router(vendors.router)
 app.include_router(exports.router)
 app.include_router(comparisons.router)
 app.include_router(settings_api.router)
+app.include_router(suggestions.router)
+app.include_router(events.router)
 
 # Include Web (template) router
 app.include_router(web_routes.router)

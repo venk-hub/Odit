@@ -49,6 +49,8 @@ class AuditConfig(Base):
     exclude_patterns = Column(JSONB, nullable=False, default=list)
     seed_urls = Column(JSONB, nullable=False, default=list)
     journey_instructions = Column(JSONB, nullable=False, default=list)  # NL steps for journey mode
+    auth_cookies = Column(JSONB, nullable=True)        # list of cookie dicts to inject pre-crawl
+    auth_storage_state = Column(JSONB, nullable=True)  # Playwright storage_state() dict
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     audit_runs = relationship("AuditRun", back_populates="config")

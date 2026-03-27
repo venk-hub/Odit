@@ -21,7 +21,7 @@
             <tbody class="divide-y divide-gray-100">
                 {% for item in pages %}
                 {% set pv = item.visit %}
-                <tr class="hover:bg-gray-50 transition-colors">
+                <tr class="hover:bg-blue-50 transition-colors cursor-pointer" onclick="location.href='/audits/{{ audit_id }}/pages/{{ pv.id }}'">
                     <td class="px-4 py-3 max-w-xs">
                         <div class="truncate text-blue-700 text-xs font-mono" title="{{ pv.url }}">
                             {{ pv.url | replace("https://", "") | replace("http://", "") | truncate(60) }}
@@ -69,12 +69,11 @@
                         {% endif %}
                     </td>
                     <td class="px-4 py-3 text-right">
-                        {% if pv.screenshot_path %}
-                        <a href="/api/audits/{{ audit_id }}/exports"
-                            class="text-xs text-gray-400 hover:text-blue-600" title="Has screenshot">
-                            📸
+                        <a href="/audits/{{ audit_id }}/pages/{{ pv.id }}"
+                            class="text-xs text-gray-400 hover:text-blue-600 font-medium"
+                            onclick="event.stopPropagation()">
+                            View →
                         </a>
-                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

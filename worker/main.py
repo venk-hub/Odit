@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from worker.config import get_settings
 from app.database import SyncSessionLocal
 from app.models import AuditRun, AuditStatus
+from worker.emit import emit
 
 settings = get_settings()
 
@@ -87,8 +88,28 @@ def process_audit(audit_run_id: str) -> None:
             return
 
         logger.info(f"Running rules for audit {audit_run_id}")
+        emit(db, run.id, "rule_engine", "Running issue detection rules across all crawled pages...")
+        db.commit()
         try:
             run_all_rules(db, run)
+            from app.models import Issue
+            issue_list = db.query(Issue).filter(Issue.audit_run_id == run.id).all()
+            counts = {}
+            for iss in issue_list:
+                counts[iss.severity] = counts.get(iss.severity, 0) + 1
+            summary = ", ".join(f"{v} {k}" for k, v in sorted(counts.items(), key=lambda x: ["critical","high","medium","low"].index(x[0]) if x[0] in ["critical","high","medium","low"] else 9))
+            emit(db, run.id, "rule_engine",
+                 f"Rules complete — {len(issue_list)} issue{'s' if len(issue_list) != 1 else ''} found"
+                 + (f" ({summary})" if summary else ""),
+                 {"total": len(issue_list), "by_severity": counts})
+            db.commit()
+            # Emit each issue as its own event
+            for iss in issue_list:
+                emit(db, run.id, "issue_flagged",
+                     f"[{iss.severity.upper()}] {iss.title}",
+                     {"severity": iss.severity, "category": iss.category,
+                      "title": iss.title, "affected_url": iss.affected_url})
+            db.commit()
         except Exception as e:
             logger.exception(f"Rule engine failed for audit {audit_run_id}: {e}")
 
@@ -101,11 +122,15 @@ def process_audit(audit_run_id: str) -> None:
         # Generate exports
         logger.info(f"Generating exports for audit {audit_run_id}")
         artifact_dir = get_artifact_dir(settings.DATA_DIR, str(audit_run_id))
+        emit(db, run.id, "export_start", "Generating reports and exports...")
+        db.commit()
 
         try:
             excel_path = os.path.join(artifact_dir, "audit_report.xlsx")
             generate_excel(db, run, excel_path)
             register_artifact(db, run.id, "excel", excel_path)
+            emit(db, run.id, "export_generated", "Excel workbook ready (9 sheets)", {"file": "audit_report.xlsx"})
+            db.commit()
         except Exception as e:
             logger.exception(f"Excel export failed: {e}")
 
@@ -113,6 +138,8 @@ def process_audit(audit_run_id: str) -> None:
             json_path = os.path.join(artifact_dir, "audit_summary.json")
             generate_json_summary(db, run, json_path)
             register_artifact(db, run.id, "report_json", json_path)
+            emit(db, run.id, "export_generated", "JSON summary ready", {"file": "audit_summary.json"})
+            db.commit()
         except Exception as e:
             logger.exception(f"JSON export failed: {e}")
 
@@ -120,6 +147,8 @@ def process_audit(audit_run_id: str) -> None:
             md_path = os.path.join(artifact_dir, "audit_summary.md")
             generate_markdown_report(db, run, md_path)
             register_artifact(db, run.id, "report_md", md_path)
+            emit(db, run.id, "export_generated", "Markdown report ready", {"file": "audit_summary.md"})
+            db.commit()
         except Exception as e:
             logger.exception(f"Markdown export failed: {e}")
 
@@ -127,6 +156,8 @@ def process_audit(audit_run_id: str) -> None:
             html_path = os.path.join(artifact_dir, "audit_summary.html")
             generate_html_report(db, run, html_path)
             register_artifact(db, run.id, "report_html", html_path)
+            emit(db, run.id, "export_generated", "HTML report ready", {"file": "audit_summary.html"})
+            db.commit()
         except Exception as e:
             logger.exception(f"HTML export failed: {e}")
 
@@ -157,6 +188,9 @@ def process_audit(audit_run_id: str) -> None:
         if run.status != AuditStatus.cancelled:
             run.status = AuditStatus.completed
             run.completed_at = datetime.utcnow()
+            emit(db, run.id, "crawl_complete",
+                 f"Audit complete — {run.pages_crawled} pages crawled",
+                 {"pages_crawled": run.pages_crawled, "pages_failed": run.pages_failed})
             db.commit()
             logger.info(f"Audit {audit_run_id} completed successfully")
 
@@ -179,6 +213,7 @@ def _run_ai_enrichment(db, run) -> None:
     from app.models import Issue, NetworkRequest, DetectedVendor
     from worker.ai.claude_client import (
         enrich_issue, infer_unknown_domains, generate_narrative_summary,
+        generate_remediation_steps,
         reset_session_tokens, get_session_tokens,
     )
     import os
@@ -197,6 +232,8 @@ def _run_ai_enrichment(db, run) -> None:
 
     if not api_key:
         logger.info("No Anthropic API key found (env or database) — skipping AI enrichment")
+        emit(db, run.id, "ai_call", "Skipping AI enrichment — no API key configured")
+        db.commit()
         return
 
     # Pass the resolved key into the environment so _get_client() picks it up
@@ -205,9 +242,15 @@ def _run_ai_enrichment(db, run) -> None:
     audit_id = run.id
     reset_session_tokens()
     logger.info(f"Running AI enrichment for audit {audit_id}")
+    emit(db, run.id, "ai_call", "Starting AI enrichment (Claude Haiku)...")
+    db.commit()
 
     # Step 1: Enrich issues with better descriptions and recommendations
     issues = db.query(Issue).filter(Issue.audit_run_id == audit_id).all()
+    if issues:
+        emit(db, run.id, "ai_call", f"Enriching {len(issues)} issue{'s' if len(issues) != 1 else ''} with AI analysis...",
+             {"count": len(issues)})
+        db.commit()
     enriched_count = 0
     for issue in issues:
         enrichment = enrich_issue({
@@ -233,6 +276,24 @@ def _run_ai_enrichment(db, run) -> None:
         db.commit()
         logger.info(f"AI enriched {enriched_count} issues for audit {audit_id}")
 
+    # Step 1b: Generate remediation steps for each issue
+    remediation_count = 0
+    for issue in issues:
+        steps_json = generate_remediation_steps({
+            "title": issue.title,
+            "category": issue.category,
+            "severity": issue.severity,
+            "affected_vendor_key": issue.affected_vendor_key,
+            "description": issue.description,
+            "recommendation": issue.recommendation,
+        })
+        if steps_json:
+            issue.remediation_steps = steps_json
+            remediation_count += 1
+    if remediation_count:
+        db.commit()
+        logger.info(f"AI generated remediation steps for {remediation_count} issues")
+
     # Step 2: Infer unknown third-party domains
     known_vendor_domains: set = set()
     for v in db.query(DetectedVendor).filter(DetectedVendor.audit_run_id == audit_id).all():
@@ -256,7 +317,16 @@ def _run_ai_enrichment(db, run) -> None:
 
     unknown_domains = [d for d in all_domains if d][:40]
     if unknown_domains:
+        emit(db, run.id, "ai_call",
+             f"Inferring purpose of {len(unknown_domains)} unrecognised third-party domain{'s' if len(unknown_domains) != 1 else ''}...",
+             {"count": len(unknown_domains)})
+        db.commit()
         inferred = infer_unknown_domains(unknown_domains)
+        if inferred:
+            emit(db, run.id, "ai_call",
+                 f"Identified {len(inferred)} unknown domain{'s' if len(inferred) != 1 else ''} via AI",
+                 {"domains": list(inferred.keys())[:10]})
+            db.commit()
         for domain, info in inferred.items():
             # Store as a DetectedVendor record marked as AI-inferred
             existing = (
@@ -283,6 +353,7 @@ def _run_ai_enrichment(db, run) -> None:
 
     # Step 3: Generate narrative summary and store as an artifact
     from worker.exports.artifact_manager import get_artifact_dir, register_artifact
+    from app.models import PageVisit
 
     vendors = db.query(DetectedVendor).filter(
         DetectedVendor.audit_run_id == audit_id,
@@ -305,14 +376,85 @@ def _run_ai_enrichment(db, run) -> None:
         if i.affected_url and i.severity in ("critical", "high")
     })[:8]
 
+    # ── Collect richer evidence for the summary prompt ──────────────
+    # 1. Top third-party request domains by hit count
+    req_domain_counts: dict = {}
+    sample_beacons: list = []
+    all_reqs = db.query(NetworkRequest).filter(NetworkRequest.audit_run_id == audit_id).all()
+    for req in all_reqs:
+        try:
+            netloc = urlparse(req.url).netloc
+            if netloc and netloc != urlparse(run.base_url).netloc:
+                req_domain_counts[netloc] = req_domain_counts.get(netloc, 0) + 1
+            # Capture POST payloads to known tracking endpoints
+            if (req.post_data and len(sample_beacons) < 6
+                    and req.resource_type in ("fetch", "xhr", "other")):
+                sample_beacons.append({
+                    "url": req.url[:120],
+                    "body": req.post_data[:300],
+                })
+        except Exception:
+            pass
+    top_domains = sorted(req_domain_counts.items(), key=lambda x: -x[1])[:15]
+
+    # 2. Data layer keys found across all pages
+    data_layer_summary: dict = {}  # layer_name -> list of sample keys
+    cookie_names: set = set()
+    pages_visited = db.query(PageVisit).filter(PageVisit.audit_run_id == audit_id).all()
+    for page in pages_visited:
+        if page.data_layer:
+            for layer_name, layer_data in page.data_layer.items():
+                if layer_name not in data_layer_summary:
+                    data_layer_summary[layer_name] = set()
+                if isinstance(layer_data, list):
+                    for item in layer_data[:3]:
+                        if isinstance(item, dict):
+                            data_layer_summary[layer_name].update(item.keys())
+                elif isinstance(layer_data, dict):
+                    data_layer_summary[layer_name].update(layer_data.keys())
+        if page.cookies_detail:
+            for cookie in page.cookies_detail:
+                if isinstance(cookie, dict) and cookie.get("name"):
+                    cookie_names.add(cookie["name"])
+
+    # Trim data layer keys
+    data_layer_out = {
+        name: sorted(list(keys))[:25]
+        for name, keys in data_layer_summary.items()
+        if keys
+    }
+
+    # 3. Vendor detection evidence (method + domains/scripts)
+    vendor_evidence = []
+    for v in vendors:
+        ev = v.evidence or {}
+        vendor_evidence.append({
+            "name": v.vendor_name,
+            "category": v.category,
+            "method": v.detection_method,
+            "domains": ev.get("domains", [])[:3],
+            "scripts": ev.get("scripts", [])[:3],
+            "globals": ev.get("globals", [])[:3],
+            "cookies": ev.get("cookies", [])[:3],
+            "pages": v.page_count,
+        })
+
+    emit(db, run.id, "ai_call", "Generating AI narrative summary...")
+    db.commit()
     narrative = generate_narrative_summary({
         "base_url": run.base_url,
         "mode": run.mode.value if hasattr(run.mode, "value") else str(run.mode),
         "pages_crawled": run.pages_crawled or 0,
         "vendors": vendor_names,
+        "vendor_evidence": vendor_evidence,
         "issue_counts": issue_counts,
         "top_issues": top_issues,
         "broken_domains": broken_domains,
+        "top_request_domains": top_domains,
+        "total_requests": len(all_reqs),
+        "sample_beacons": sample_beacons,
+        "data_layers": data_layer_out,
+        "cookie_names": sorted(list(cookie_names))[:30],
     })
 
     if narrative:
@@ -321,10 +463,19 @@ def _run_ai_enrichment(db, run) -> None:
         with open(summary_path, "w") as f:
             f.write(f"# AI Audit Summary\n\n{narrative}\n")
         register_artifact(db, audit_id, "report_md", summary_path)
+        emit(db, run.id, "ai_call", "AI narrative summary written")
+        db.commit()
         logger.info(f"AI narrative summary written for audit {audit_id}")
 
     # Log session token usage summary
     usage = get_session_tokens()
+    emit(db, run.id, "ai_call",
+         f"AI enrichment complete — {usage['calls']} call{'s' if usage['calls'] != 1 else ''}, "
+         f"{usage['total_tokens']} tokens (~${usage['estimated_cost_usd']:.4f})",
+         {"input_tokens": usage["input_tokens"], "output_tokens": usage["output_tokens"],
+          "total_tokens": usage["total_tokens"], "calls": usage["calls"],
+          "estimated_cost_usd": usage["estimated_cost_usd"]})
+    db.commit()
     logger.info(
         f"[AI tokens] Session total: {usage['input_tokens']} in + {usage['output_tokens']} out "
         f"= {usage['total_tokens']} tokens across {usage['calls']} calls "

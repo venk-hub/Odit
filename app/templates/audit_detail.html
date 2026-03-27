@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Audit: {{ run.base_url }} - Odit{% endblock %}
 {% block content %}
+
 <div class="mb-6">
     <a href="/" class="text-sm text-gray-500 hover:text-blue-600">&larr; Back to Dashboard</a>
     <div class="flex items-start justify-between mt-2">
@@ -13,6 +14,26 @@
                 <span class="text-xs text-gray-500">Created {{ run.created_at.strftime("%b %d, %Y %H:%M") }}</span>
             </div>
         </div>
+        <div class="flex items-center gap-2">
+        {% if key_artifacts %}
+        {% for art in key_artifacts %}
+        {% if art.artifact_type == "excel" %}
+        <a href="/api/audits/{{ audit_id }}/exports/{{ art.id }}/download"
+            class="inline-flex items-center gap-1 text-xs bg-green-600 hover:bg-green-700 text-white px-2.5 py-1.5 rounded-lg transition-colors font-medium"
+            title="Download Excel report">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Excel
+        </a>
+        {% elif art.artifact_type == "report_html" %}
+        <a href="/api/audits/{{ audit_id }}/exports/{{ art.id }}/download"
+            class="inline-flex items-center gap-1 text-xs bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-2.5 py-1.5 rounded-lg transition-colors font-medium"
+            title="Download HTML report">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            HTML
+        </a>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
         <div id="status-badge">
             {% if run.status.value == "pending" %}
             <span class="inline-flex items-center gap-1.5 text-sm font-medium bg-gray-100 text-gray-600 px-3 py-1 rounded-full">
@@ -36,86 +57,112 @@
             </span>
             {% endif %}
         </div>
+        </div><!-- end flex items-center gap-2 -->
     </div>
 </div>
 
-<!-- Tabs -->
-<div class="border-b border-gray-200 mb-6">
-    <nav class="-mb-px flex gap-0" id="tab-nav">
-        {% for tab_id, tab_label in [("progress","Progress"),("summary","Summary"),("pages","Pages"),("issues","Issues"),("vendors","Vendors"),("exports","Exports")] %}
-        <button
-            onclick="showTab('{{ tab_id }}')"
-            id="tab-btn-{{ tab_id }}"
-            class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition-colors
-            {% if tab_id == 'progress' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
-            {{ tab_label }}
-        </button>
-        {% endfor %}
-    </nav>
-</div>
+<!-- Two-column layout: main content + activity feed -->
+<div class="flex gap-5 items-start">
 
-<div id="tab-content">
-    <!-- Progress tab (default) -->
-    <div id="tab-progress"
-        hx-get="/partials/audit-progress/{{ audit_id }}"
-        hx-trigger="load, every 3s [document.getElementById('tab-progress').classList.contains('active-tab')]"
-        hx-swap="innerHTML">
-        <div class="text-center py-8 text-gray-400 text-sm">Loading progress...</div>
-    </div>
+    <!-- Main content (left) -->
+    <div class="flex-1 min-w-0">
+        <!-- Tabs -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="-mb-px flex gap-0" id="tab-nav">
+                {% for tab_id, tab_label in [("overview","Overview"),("pages","Pages"),("issues","Issues")] %}
+                <button
+                    onclick="showTab('{{ tab_id }}')"
+                    id="tab-btn-{{ tab_id }}"
+                    class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition-colors
+                    {% if tab_id == 'overview' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
+                    {{ tab_label }}
+                </button>
+                {% endfor %}
+            </nav>
+        </div>
 
-    <div id="tab-summary" class="hidden">
-        <div
-            hx-get="/partials/audit-summary/{{ audit_id }}"
-            hx-trigger="intersect once"
-            hx-swap="innerHTML">
-            <div class="text-center py-8 text-gray-400 text-sm">Loading summary...</div>
+        <div id="tab-content">
+            <!-- Overview = progress (live-polling) + summary (load once) stacked -->
+            <div id="tab-overview" class="space-y-6">
+                <div id="overview-progress"
+                    hx-get="/partials/audit-progress/{{ audit_id }}"
+                    hx-trigger="load, every 3s [document.getElementById('tab-overview').classList.contains('active-tab')]"
+                    hx-swap="innerHTML">
+                    <div class="text-center py-8 text-gray-400 text-sm">Loading progress...</div>
+                </div>
+                <div
+                    hx-get="/partials/audit-summary/{{ audit_id }}"
+                    hx-trigger="intersect once"
+                    hx-swap="innerHTML">
+                    <div class="text-center py-8 text-gray-400 text-sm">Loading summary...</div>
+                </div>
+            </div>
+
+            <div id="tab-pages" class="hidden">
+                <div
+                    hx-get="/audits/{{ audit_id }}/pages"
+                    hx-trigger="intersect once"
+                    hx-swap="innerHTML">
+                    <div class="text-center py-8 text-gray-400 text-sm">Loading pages...</div>
+                </div>
+            </div>
+
+            <div id="tab-issues" class="hidden">
+                <div
+                    hx-get="/audits/{{ audit_id }}/issues"
+                    hx-trigger="intersect once"
+                    hx-swap="innerHTML">
+                    <div class="text-center py-8 text-gray-400 text-sm">Loading issues...</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div id="tab-pages" class="hidden">
-        <div
-            hx-get="/audits/{{ audit_id }}/pages"
-            hx-trigger="intersect once"
-            hx-swap="innerHTML">
-            <div class="text-center py-8 text-gray-400 text-sm">Loading pages...</div>
+    <!-- Activity feed (right) -->
+    <div class="w-80 flex-shrink-0 sticky top-4">
+        <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-3 py-2.5 bg-gray-50 border-b border-gray-200">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-semibold text-gray-700">Activity Feed</span>
+                    <span id="feed-status-dot" class="w-2 h-2 rounded-full bg-gray-300"></span>
+                </div>
+                <button onclick="toggleFeedPause()" id="feed-pause-btn"
+                    class="text-xs text-gray-400 hover:text-gray-600 transition-colors px-1.5 py-0.5 rounded hover:bg-gray-100"
+                    title="Pause/resume auto-scroll">
+                    ⏸
+                </button>
+            </div>
+            <!-- Event list -->
+            <div id="activity-feed"
+                class="overflow-y-auto text-xs font-mono"
+                style="height: 520px;">
+                <div id="feed-empty" class="flex flex-col items-center justify-center h-full text-gray-400 text-xs">
+                    <svg class="w-8 h-8 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                    </svg>
+                    <p>Waiting for activity...</p>
+                </div>
+            </div>
+            <!-- Footer -->
+            <div class="px-3 py-1.5 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                <span id="feed-count" class="text-xs text-gray-400">0 events</span>
+                <button onclick="clearFeedView()" class="text-xs text-gray-400 hover:text-gray-600">Clear view</button>
+            </div>
         </div>
     </div>
 
-    <div id="tab-issues" class="hidden">
-        <div
-            hx-get="/audits/{{ audit_id }}/issues"
-            hx-trigger="intersect once"
-            hx-swap="innerHTML">
-            <div class="text-center py-8 text-gray-400 text-sm">Loading issues...</div>
-        </div>
-    </div>
-
-    <div id="tab-vendors" class="hidden">
-        <div
-            hx-get="/audits/{{ audit_id }}/vendors"
-            hx-trigger="intersect once"
-            hx-swap="innerHTML">
-            <div class="text-center py-8 text-gray-400 text-sm">Loading vendors...</div>
-        </div>
-    </div>
-
-    <div id="tab-exports" class="hidden">
-        <div
-            hx-get="/audits/{{ audit_id }}/exports"
-            hx-trigger="intersect once"
-            hx-swap="innerHTML">
-            <div class="text-center py-8 text-gray-400 text-sm">Loading exports...</div>
-        </div>
-    </div>
-</div>
+</div><!-- end two-column -->
 
 <script>
-    const tabs = ['progress', 'summary', 'pages', 'issues', 'vendors', 'exports'];
+    // ── Tab switching ──────────────────────────────────────────────
+    const tabs = ['overview', 'pages', 'issues'];
 
     function showTab(tabId) {
         tabs.forEach(t => {
             const pane = document.getElementById('tab-' + t);
-            const btn = document.getElementById('tab-btn-' + t);
+            const btn  = document.getElementById('tab-btn-' + t);
             if (t === tabId) {
                 pane.classList.remove('hidden');
                 pane.classList.add('active-tab');
@@ -129,8 +176,170 @@
             }
         });
     }
+    document.getElementById('tab-overview').classList.add('active-tab');
 
-    // Mark progress as active initially
-    document.getElementById('tab-progress').classList.add('active-tab');
+    // Keep the top-right status badge in sync with the live progress partial
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (!evt.target.closest('#tab-overview')) return;
+        const statusEl = evt.target.querySelector('[data-status]');
+        const badge = document.getElementById('status-badge');
+        if (!statusEl || !badge) return;
+        const s = statusEl.dataset.status;
+        const badges = {
+            pending:   '<span class="inline-flex items-center gap-1.5 text-sm font-medium bg-gray-100 text-gray-600 px-3 py-1 rounded-full"><span class="w-2 h-2 bg-gray-400 rounded-full"></span> Pending</span>',
+            running:   '<span class="inline-flex items-center gap-1.5 text-sm font-medium bg-blue-50 text-blue-700 px-3 py-1 rounded-full"><span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> Running</span>',
+            completed: '<span class="inline-flex items-center gap-1.5 text-sm font-medium bg-green-50 text-green-700 px-3 py-1 rounded-full"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Completed</span>',
+            failed:    '<span class="inline-flex items-center gap-1.5 text-sm font-medium bg-red-50 text-red-700 px-3 py-1 rounded-full"><span class="w-2 h-2 bg-red-500 rounded-full"></span> Failed</span>',
+            cancelled: '<span class="inline-flex items-center gap-1.5 text-sm font-medium bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full"><span class="w-2 h-2 bg-yellow-500 rounded-full"></span> Cancelled</span>',
+        };
+        if (badges[s]) badge.innerHTML = badges[s];
+    });
+
+    // ── Activity feed ──────────────────────────────────────────────
+    const AUDIT_ID = "{{ audit_id }}";
+    const INITIAL_STATUS = "{{ run.status.value }}";
+
+    let lastTimestamp = null;      // ISO string of most recent event fetched
+    let totalEventCount = 0;
+    let feedPaused = false;        // auto-scroll pause
+    let pollTimer = null;
+    let isTerminal = ['completed', 'failed', 'cancelled'].includes(INITIAL_STATUS);
+
+    // Colour / icon config per event_type
+    const EVENT_STYLES = {
+        crawl_start:       { dot: 'bg-blue-400',   label: 'bg-blue-50 text-blue-600',    icon: '🌐' },
+        page_start:        { dot: 'bg-blue-300',   label: 'bg-blue-50 text-blue-500',    icon: '📄' },
+        page_complete:     { dot: 'bg-green-400',  label: 'bg-green-50 text-green-700',  icon: '✓'  },
+        page_error:        { dot: 'bg-red-400',    label: 'bg-red-50 text-red-600',      icon: '✗'  },
+        vendor_detected:   { dot: 'bg-purple-400', label: 'bg-purple-50 text-purple-700',icon: '🏷' },
+        request_captured:  { dot: 'bg-indigo-300', label: 'bg-indigo-50 text-indigo-600',icon: '→'  },
+        rule_engine:       { dot: 'bg-orange-400', label: 'bg-orange-50 text-orange-700',icon: '⚙'  },
+        issue_flagged:     { dot: 'bg-red-500',    label: 'bg-red-50 text-red-700',      icon: '⚠'  },
+        ai_call:           { dot: 'bg-emerald-400',label: 'bg-emerald-50 text-emerald-700',icon: '✦' },
+        export_start:      { dot: 'bg-teal-400',   label: 'bg-teal-50 text-teal-700',    icon: '📦' },
+        export_generated:  { dot: 'bg-teal-500',   label: 'bg-teal-50 text-teal-800',    icon: '✓'  },
+        crawl_complete:    { dot: 'bg-green-500',  label: 'bg-green-50 text-green-800',  icon: '🏁' },
+    };
+    const DEFAULT_STYLE = { dot: 'bg-gray-300', label: 'bg-gray-50 text-gray-600', icon: '·' };
+
+    function getStyle(eventType) {
+        return EVENT_STYLES[eventType] || DEFAULT_STYLE;
+    }
+
+    function fmtTime(isoStr) {
+        const d = new Date(isoStr);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    }
+
+    function appendEvents(events) {
+        if (!events.length) return;
+
+        const feed = document.getElementById('activity-feed');
+        const empty = document.getElementById('feed-empty');
+        if (empty) empty.remove();
+
+        const wasAtBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 60;
+
+        events.forEach(ev => {
+            const style = getStyle(ev.event_type);
+            const row = document.createElement('div');
+            row.className = 'flex gap-2 px-2.5 py-1.5 border-b border-gray-100 hover:bg-gray-50 transition-colors';
+            row.innerHTML = `
+                <div class="flex-shrink-0 flex items-start pt-0.5">
+                    <span class="w-1.5 h-1.5 rounded-full mt-1 ${style.dot}"></span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-1.5 mb-0.5">
+                        <span class="inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded ${style.label}">
+                            <span>${style.icon}</span>
+                            <span>${ev.event_type.replace(/_/g,' ')}</span>
+                        </span>
+                        <span class="text-[10px] text-gray-400 flex-shrink-0">${fmtTime(ev.created_at)}</span>
+                    </div>
+                    <p class="text-gray-700 leading-tight break-words">${escHtml(ev.message)}</p>
+                </div>
+            `;
+            feed.appendChild(row);
+        });
+
+        totalEventCount += events.length;
+        document.getElementById('feed-count').textContent = totalEventCount + ' event' + (totalEventCount !== 1 ? 's' : '');
+
+        if (!feedPaused && wasAtBottom) {
+            feed.scrollTop = feed.scrollHeight;
+        }
+    }
+
+    function escHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function fetchEvents() {
+        try {
+            let url = `/api/audits/${AUDIT_ID}/events?limit=200`;
+            if (lastTimestamp) url += `&since=${encodeURIComponent(lastTimestamp)}`;
+
+            const resp = await fetch(url);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const events = data.events || [];
+
+            if (events.length) {
+                appendEvents(events);
+                lastTimestamp = events[events.length - 1].created_at;
+            }
+
+            // Update the live dot based on terminal types in latest events
+            const hasCrawlComplete = events.some(e => e.event_type === 'crawl_complete');
+            if (hasCrawlComplete || isTerminal) {
+                setFeedDot('done');
+            }
+        } catch (e) {
+            // network error — will retry
+        }
+    }
+
+    function setFeedDot(state) {
+        const dot = document.getElementById('feed-status-dot');
+        if (state === 'live') {
+            dot.className = 'w-2 h-2 rounded-full bg-blue-500 animate-pulse';
+        } else if (state === 'done') {
+            dot.className = 'w-2 h-2 rounded-full bg-green-500';
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+        } else {
+            dot.className = 'w-2 h-2 rounded-full bg-gray-300';
+        }
+    }
+
+    function toggleFeedPause() {
+        feedPaused = !feedPaused;
+        const btn = document.getElementById('feed-pause-btn');
+        btn.textContent = feedPaused ? '▶' : '⏸';
+        btn.title = feedPaused ? 'Resume auto-scroll' : 'Pause auto-scroll';
+        if (!feedPaused) {
+            const feed = document.getElementById('activity-feed');
+            feed.scrollTop = feed.scrollHeight;
+        }
+    }
+
+    function clearFeedView() {
+        const feed = document.getElementById('activity-feed');
+        feed.innerHTML = '';
+        // Don't reset lastTimestamp — we just hide old events visually
+    }
+
+    // Kick off polling
+    if (!isTerminal) {
+        setFeedDot('live');
+        fetchEvents();  // immediate first load
+        pollTimer = setInterval(fetchEvents, 2000);
+    } else {
+        // Completed/failed audit — load all events once
+        setFeedDot('done');
+        fetchEvents();
+    }
 </script>
 {% endblock %}

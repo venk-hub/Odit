@@ -22,10 +22,12 @@ from worker.crawler.page_analyzer import (
     extract_cookies,
     extract_script_srcs,
     extract_window_globals,
+    extract_data_layer,
     take_screenshot,
     extract_links,
 )
 from worker.detectors.vendor_detector import detect_vendors_from_page_data, is_tracking_url, get_vendor_key_for_url
+from worker.emit import emit
 
 logger = logging.getLogger("odit.worker.engine")
 settings = get_settings()
@@ -116,6 +118,12 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
     audit_run.pages_discovered = pages_discovered
     db.commit()
 
+    emit(db, audit_run.id, "crawl_start",
+         f"Starting crawl of {base_url}",
+         {"base_url": base_url, "mode": str(mode), "max_pages": max_pages, "max_depth": max_depth,
+          "device": device_type, "consent": consent_behavior})
+    db.commit()
+
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
@@ -141,6 +149,10 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
 
                 url, depth = queue.popleft()
                 logger.info(f"Crawling [{pages_crawled+1}/{max_pages}] depth={depth}: {url}")
+                emit(db, audit_run.id, "page_start",
+                     f"Crawling page {pages_crawled+1}: {url}",
+                     {"url": url, "depth": depth, "page_num": pages_crawled + 1})
+                db.commit()
 
                 # Set up context with HAR recording
                 har_path = os.path.join(har_dir, f"page_{pages_crawled:04d}.har")
@@ -161,7 +173,19 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                 else:
                     context_kwargs["viewport"] = {"width": 1440, "height": 900}
 
+                # Storage state covers cookies + localStorage — takes precedence
+                if audit_config.auth_storage_state:
+                    context_kwargs["storage_state"] = audit_config.auth_storage_state
+
                 context = browser.new_context(**context_kwargs)
+
+                # Cookie-only injection (used when storage state not provided)
+                if audit_config.auth_cookies and not audit_config.auth_storage_state:
+                    try:
+                        context.add_cookies(audit_config.auth_cookies)
+                    except Exception as e:
+                        logger.warning(f"Failed to inject auth cookies: {e}")
+
                 page = context.new_page()
 
                 # Collect network events
@@ -172,6 +196,12 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                 def on_response(response):
                     try:
                         req = response.request
+                        post_data = None
+                        if req.method in ("POST", "PUT", "PATCH"):
+                            try:
+                                post_data = req.post_data
+                            except Exception:
+                                pass
                         page_requests.append({
                             "url": response.url,
                             "method": req.method,
@@ -179,6 +209,7 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                             "resource_type": req.resource_type,
                             "request_headers": dict(req.headers),
                             "response_headers": dict(response.headers),
+                            "post_data": post_data,
                             "failed": response.status >= 400,
                             "failure_reason": None,
                         })
@@ -262,6 +293,7 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                 cookies_data = []
                 script_srcs = []
                 window_globals_found = []
+                data_layer_data = {}
                 discovered_links = []
 
                 if not error_message:
@@ -289,6 +321,11 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                         window_globals_found = extract_window_globals(page)
                     except Exception as e:
                         logger.warning(f"Window globals extraction failed: {e}")
+
+                    try:
+                        data_layer_data = extract_data_layer(page)
+                    except Exception as e:
+                        logger.warning(f"Data layer extraction failed: {e}")
 
                     # Screenshot
                     ss_filename = f"screenshot_{pages_crawled:04d}.png"
@@ -334,6 +371,8 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                     console_error_count=console_error_count,
                     failed_request_count=failed_request_count,
                     cookies=[c["name"] for c in cookies_data],
+                    cookies_detail=cookies_data,
+                    data_layer=data_layer_data if data_layer_data else None,
                     local_storage_keys=storage["local_storage_keys"],
                     session_storage_keys=storage["session_storage_keys"],
                     script_srcs=script_srcs,
@@ -359,6 +398,7 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                         resource_type=req_data.get("resource_type"),
                         request_headers=req_data.get("request_headers", {}),
                         response_headers=req_data.get("response_headers", {}),
+                        post_data=req_data.get("post_data"),
                         failed=req_data["failed"],
                         failure_reason=req_data.get("failure_reason"),
                         is_tracking_related=is_tracking,
@@ -403,11 +443,45 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                         detected_at=datetime.utcnow(),
                     )
                     db.add(dv)
+                    emit(db, audit_run.id, "vendor_detected",
+                         f"Detected: {vm.vendor_name} ({vm.category}) via {vm.detection_method}",
+                         {"vendor_key": vm.vendor_key, "vendor_name": vm.vendor_name,
+                          "category": vm.category, "method": vm.detection_method,
+                          "page_url": url})
+
+                # Emit tracking requests (up to 5 per page to avoid noise)
+                tracking_reqs = [r for r in page_requests if is_tracking_url(r["url"])]
+                for req in tracking_reqs[:5]:
+                    vendor_key = get_vendor_key_for_url(req["url"])
+                    emit(db, audit_run.id, "request_captured",
+                         f"Tracking request: {req['url'][:80]}",
+                         {"url": req["url"], "method": req["method"],
+                          "status": req.get("status_code"), "vendor": vendor_key,
+                          "has_payload": bool(req.get("post_data"))})
+                if len(tracking_reqs) > 5:
+                    emit(db, audit_run.id, "request_captured",
+                         f"...and {len(tracking_reqs) - 5} more tracking requests on this page",
+                         {"count": len(tracking_reqs)})
 
                 if error_message:
                     pages_failed += 1
+                    emit(db, audit_run.id, "page_error",
+                         f"Failed: {url} — {error_message[:120]}",
+                         {"url": url, "error": error_message})
                 else:
                     pages_crawled += 1
+                    tracking_count = len(tracking_reqs)
+                    vendor_count = len(page_vendor_matches)
+                    load_ms = round(load_time_ms) if load_time_ms else 0
+                    dl_keys = list(data_layer_data.keys()) if data_layer_data else []
+                    emit(db, audit_run.id, "page_complete",
+                         f"Done: {url} — {tracking_count} tracking req{'s' if tracking_count != 1 else ''}, "
+                         f"{vendor_count} vendor{'s' if vendor_count != 1 else ''} in {load_ms}ms"
+                         + (f", data layer: {', '.join(dl_keys)}" if dl_keys else ""),
+                         {"url": url, "tracking_requests": tracking_count,
+                          "vendors": vendor_count, "load_ms": load_ms,
+                          "console_errors": console_error_count,
+                          "data_layer_keys": dl_keys, "cookies": len(cookies_data)})
 
                 # Enqueue new links
                 for link in discovered_links:

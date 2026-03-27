@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
+import asyncio
 import uuid
 
 from app.database import get_db
@@ -85,13 +86,25 @@ async def create_comparison(
 
     page_count_change = compare_run.pages_crawled - base_run.pages_crawled
 
-    summary_parts = [
-        f"Comparing audit {str(base_uid)[:8]} (base) vs {str(compare_uid)[:8]} (compare).",
-        f"New issues: {len(new_issues)}, Resolved issues: {len(resolved_issues)}.",
-        f"Vendors added: {len(vendor_changes['added'])}, removed: {len(vendor_changes['removed'])}.",
-        f"Page count change: {page_count_change:+d}.",
-    ]
-    summary = " ".join(summary_parts)
+    # Try AI-generated summary, fall back to plain text
+    fallback_summary = (
+        f"Comparing audit {str(base_uid)[:8]} (base) vs {str(compare_uid)[:8]} (compare). "
+        f"New issues: {len(new_issues)}, Resolved issues: {len(resolved_issues)}. "
+        f"Vendors added: {len(vendor_changes['added'])}, removed: {len(vendor_changes['removed'])}. "
+        f"Page count change: {page_count_change:+d}."
+    )
+    try:
+        from app.ai.claude_client import explain_audit_comparison
+        ai_summary = await asyncio.to_thread(explain_audit_comparison, {
+            "base_url": base_run.base_url,
+            "new_issues": new_issues,
+            "resolved_issues": resolved_issues,
+            "vendor_changes": vendor_changes,
+            "page_count_change": page_count_change,
+        })
+        summary = ai_summary or fallback_summary
+    except Exception:
+        summary = fallback_summary
 
     # Remove existing comparison if any
     existing = await db.execute(

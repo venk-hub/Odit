@@ -27,6 +27,8 @@ class AuditCreateRequest(BaseModel):
     journey_instructions: List[str] = []
     allowed_domains: List[str] = []
     comparison_audit_id: Optional[str] = None
+    auth_cookies: Optional[list] = None
+    auth_storage_state: Optional[dict] = None
 
 
 @router.post("")
@@ -51,6 +53,8 @@ async def create_audit(payload: AuditCreateRequest, db: AsyncSession = Depends(g
         exclude_patterns=payload.exclude_patterns,
         seed_urls=payload.seed_urls,
         journey_instructions=payload.journey_instructions,
+        auth_cookies=payload.auth_cookies or None,
+        auth_storage_state=payload.auth_storage_state or None,
     )
     db.add(config)
     await db.flush()

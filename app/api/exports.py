@@ -1,12 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
+import asyncio
 import uuid
 import os
+import logging
+
+logger = logging.getLogger("odit.api.exports")
 
 from app.database import get_db
-from app.models import AuditRun, Artifact, AuditStatus
+from app.models import AuditRun, Artifact, AuditStatus, Issue, DetectedVendor, PageVisit
+from app.models.page import NetworkRequest
 
 router = APIRouter(prefix="/api/audits", tags=["exports"])
 
@@ -92,4 +99,249 @@ async def download_artifact(
         path=artifact.file_path,
         filename=os.path.basename(artifact.file_path),
         media_type="application/octet-stream",
+    )
+
+
+@router.get("/{audit_id}/screenshot/{page_id}")
+async def serve_screenshot(audit_id: str, page_id: str, db: AsyncSession = Depends(get_db)):
+    """Serve a page screenshot by page_visit ID."""
+    try:
+        audit_uid = uuid.UUID(audit_id)
+        page_uid = uuid.UUID(page_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid ID")
+
+    result = await db.execute(
+        select(PageVisit)
+        .where(PageVisit.id == page_uid)
+        .where(PageVisit.audit_run_id == audit_uid)
+    )
+    page = result.scalar_one_or_none()
+    if not page or not page.screenshot_path:
+        raise HTTPException(status_code=404, detail="Screenshot not found")
+
+    if not os.path.exists(page.screenshot_path):
+        raise HTTPException(status_code=404, detail="Screenshot file not found on disk")
+
+    return FileResponse(path=page.screenshot_path, media_type="image/png")
+
+
+@router.post("/{audit_id}/rerun-ai", response_class=HTMLResponse)
+async def rerun_ai_summary(request: Request, audit_id: str, db: AsyncSession = Depends(get_db)):
+    """Regenerate the AI narrative summary for a completed audit without re-crawling."""
+    from app.config import get_settings
+    from app.models.setting import AppSetting
+
+    try:
+        uid = uuid.UUID(audit_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid audit ID")
+
+    result = await db.execute(select(AuditRun).where(AuditRun.id == uid))
+    run = result.scalar_one_or_none()
+    if not run:
+        raise HTTPException(status_code=404, detail="Audit not found")
+
+    if run.status != AuditStatus.completed:
+        raise HTTPException(status_code=400, detail="Audit must be completed to regenerate summary")
+
+    # Resolve API key: env first, then DB settings
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not api_key:
+        try:
+            setting_result = await db.execute(
+                select(AppSetting).where(AppSetting.key == "anthropic_api_key")
+            )
+            setting = setting_result.scalar_one_or_none()
+            if setting and setting.value:
+                api_key = setting.value.strip()
+        except Exception as e:
+            logger.warning(f"Could not read API key from DB: {e}")
+
+    if not api_key:
+        raise HTTPException(status_code=400, detail="No Anthropic API key configured")
+
+    os.environ["ANTHROPIC_API_KEY"] = api_key
+
+    # Gather evidence from DB (mirrors worker/_run_ai_enrichment Step 3)
+    from urllib.parse import urlparse
+
+    vendors_result = await db.execute(
+        select(DetectedVendor)
+        .where(DetectedVendor.audit_run_id == uid)
+        .where(DetectedVendor.page_visit_id == None)
+    )
+    vendors = vendors_result.scalars().all()
+    vendor_names = [v.vendor_name for v in vendors]
+
+    vendor_evidence = []
+    for v in vendors:
+        ev = v.evidence or {}
+        vendor_evidence.append({
+            "name": v.vendor_name,
+            "category": v.category,
+            "method": v.detection_method,
+            "domains": ev.get("domains", [])[:3],
+            "scripts": ev.get("scripts", [])[:3],
+            "globals": ev.get("globals", [])[:3],
+            "cookies": ev.get("cookies", [])[:3],
+            "pages": v.page_count,
+        })
+
+    issues_result = await db.execute(
+        select(Issue).where(Issue.audit_run_id == uid)
+    )
+    issues = issues_result.scalars().all()
+
+    issue_counts: dict = {}
+    for issue in issues:
+        issue_counts[issue.severity] = issue_counts.get(issue.severity, 0) + 1
+
+    top_issues = [i.title for i in sorted(issues, key=lambda x: (
+        {"critical": 0, "high": 1, "medium": 2, "low": 3}.get(x.severity, 4)
+    ))[:8]]
+
+    broken_domains = list({
+        urlparse(i.affected_url).netloc
+        for i in issues
+        if i.affected_url and i.severity in ("critical", "high")
+    })[:8]
+
+    reqs_result = await db.execute(
+        select(NetworkRequest).where(NetworkRequest.audit_run_id == uid)
+    )
+    all_reqs = reqs_result.scalars().all()
+
+    base_netloc = urlparse(run.base_url).netloc
+    req_domain_counts: dict = {}
+    sample_beacons: list = []
+    for req in all_reqs:
+        try:
+            netloc = urlparse(req.url).netloc
+            if netloc and netloc != base_netloc:
+                req_domain_counts[netloc] = req_domain_counts.get(netloc, 0) + 1
+            if (req.post_data and len(sample_beacons) < 6
+                    and req.resource_type in ("fetch", "xhr", "other")):
+                sample_beacons.append({"url": req.url[:120], "body": req.post_data[:300]})
+        except Exception:
+            pass
+    top_domains = sorted(req_domain_counts.items(), key=lambda x: -x[1])[:15]
+
+    pages_result = await db.execute(
+        select(PageVisit).where(PageVisit.audit_run_id == uid)
+    )
+    pages_visited = pages_result.scalars().all()
+
+    data_layer_summary: dict = {}
+    cookie_names: set = set()
+    for page in pages_visited:
+        if page.data_layer:
+            for layer_name, layer_data in page.data_layer.items():
+                if layer_name not in data_layer_summary:
+                    data_layer_summary[layer_name] = set()
+                if isinstance(layer_data, list):
+                    for item in layer_data[:3]:
+                        if isinstance(item, dict):
+                            data_layer_summary[layer_name].update(item.keys())
+                elif isinstance(layer_data, dict):
+                    data_layer_summary[layer_name].update(layer_data.keys())
+        if page.cookies_detail:
+            for cookie in page.cookies_detail:
+                if isinstance(cookie, dict) and cookie.get("name"):
+                    cookie_names.add(cookie["name"])
+
+    data_layer_out = {
+        name: sorted(list(keys))[:25]
+        for name, keys in data_layer_summary.items()
+        if keys
+    }
+
+    audit_data = {
+        "base_url": run.base_url,
+        "mode": run.mode.value if hasattr(run.mode, "value") else str(run.mode),
+        "pages_crawled": run.pages_crawled or 0,
+        "vendors": vendor_names,
+        "vendor_evidence": vendor_evidence,
+        "issue_counts": issue_counts,
+        "top_issues": top_issues,
+        "broken_domains": broken_domains,
+        "top_request_domains": top_domains,
+        "total_requests": len(all_reqs),
+        "sample_beacons": sample_beacons,
+        "data_layers": data_layer_out,
+        "cookie_names": sorted(list(cookie_names))[:30],
+    }
+
+    # Run the synchronous AI call in a thread pool to avoid blocking the event loop
+    from app.ai.claude_client import generate_narrative_summary
+    loop = asyncio.get_event_loop()
+    narrative = await loop.run_in_executor(None, generate_narrative_summary, audit_data)
+
+    if not narrative:
+        raise HTTPException(status_code=502, detail="AI summary generation failed — check API key and logs")
+
+    # Write result to file (overwrite if exists, create if not)
+    settings = get_settings()
+    artifact_dir = os.path.join(settings.DATA_DIR, "audits", str(uid), "reports")
+    os.makedirs(artifact_dir, exist_ok=True)
+    summary_path = os.path.join(artifact_dir, "ai_summary.md")
+    with open(summary_path, "w") as f:
+        f.write(f"# AI Audit Summary\n\n{narrative}\n")
+
+    # Upsert the artifact record: update existing or insert new
+    existing_result = await db.execute(
+        select(Artifact)
+        .where(Artifact.audit_run_id == uid)
+        .where(Artifact.artifact_type == "report_md")
+        .where(Artifact.file_path == summary_path)
+    )
+    existing = existing_result.scalar_one_or_none()
+    if existing:
+        existing.file_size_bytes = os.path.getsize(summary_path)
+        from datetime import datetime
+        existing.created_at = datetime.utcnow()
+    else:
+        from datetime import datetime
+        artifact = Artifact(
+            audit_run_id=uid,
+            artifact_type="report_md",
+            file_path=summary_path,
+            file_size_bytes=os.path.getsize(summary_path),
+        )
+        db.add(artifact)
+    await db.commit()
+
+    # Return the re-rendered summary partial so HTMX can swap it in
+    issue_counts_result = await db.execute(
+        select(Issue.severity, func.count(Issue.id))
+        .where(Issue.audit_run_id == uid)
+        .group_by(Issue.severity)
+    )
+    rendered_issue_counts = {row[0]: row[1] for row in issue_counts_result}
+
+    top_issues_result = await db.execute(
+        select(Issue)
+        .where(Issue.audit_run_id == uid)
+        .order_by(Issue.severity)
+        .limit(5)
+    )
+    top_issues_objs = top_issues_result.scalars().all()
+
+    from fastapi.templating import Jinja2Templates as _T
+    import json
+    _templates = _T(directory="app/templates")
+    _templates.env.filters["basename"] = os.path.basename
+    _templates.env.filters["fromjson"] = json.loads
+
+    return _templates.TemplateResponse(
+        "partials/audit_summary.html",
+        {
+            "request": request,
+            "run": run,
+            "audit_id": audit_id,
+            "issue_counts": rendered_issue_counts,
+            "top_issues": top_issues_objs,
+            "vendors": vendors,
+            "ai_summary": narrative,
+        },
     )

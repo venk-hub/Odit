@@ -5,9 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 import uuid
 import os
+import logging
+
+logger = logging.getLogger("odit.web")
 
 from app.database import get_db
-from app.models import AuditRun, Issue, DetectedVendor, PageVisit, Artifact, AuditComparison, AuditStatus
+from app.models import AuditRun, AuditConfig, Issue, DetectedVendor, PageVisit, Artifact, AuditComparison, AuditStatus
+from app.models.page import NetworkRequest, ConsoleEvent
 from app.models.setting import AppSetting
 
 router = APIRouter(tags=["web"])
@@ -62,9 +66,20 @@ async def audit_detail(request: Request, audit_id: str, db: AsyncSession = Depen
     if not run:
         raise HTTPException(status_code=404, detail="Audit not found")
 
+    # Load key report artifacts for quick-download buttons in header
+    key_artifacts = []
+    if run.status.value == "completed":
+        art_result = await db.execute(
+            select(Artifact)
+            .where(Artifact.audit_run_id == uid)
+            .where(Artifact.artifact_type.in_(["excel", "report_html", "report_md"]))
+            .order_by(Artifact.created_at)
+        )
+        key_artifacts = art_result.scalars().all()
+
     return templates.TemplateResponse(
         "audit_detail.html",
-        {"request": request, "run": run, "audit_id": audit_id}
+        {"request": request, "run": run, "audit_id": audit_id, "key_artifacts": key_artifacts}
     )
 
 
@@ -98,6 +113,67 @@ async def audit_pages(request: Request, audit_id: str, db: AsyncSession = Depend
     return templates.TemplateResponse(
         "partials/pages_table.html",
         {"request": request, "pages": page_data, "run": run, "audit_id": audit_id}
+    )
+
+
+@router.get("/audits/{audit_id}/pages/{page_id}", response_class=HTMLResponse)
+async def page_detail(request: Request, audit_id: str, page_id: str, db: AsyncSession = Depends(get_db)):
+    try:
+        audit_uid = uuid.UUID(audit_id)
+        page_uid = uuid.UUID(page_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid ID")
+
+    result = await db.execute(select(AuditRun).where(AuditRun.id == audit_uid))
+    run = result.scalar_one_or_none()
+    if not run:
+        raise HTTPException(status_code=404, detail="Audit not found")
+
+    pv_result = await db.execute(
+        select(PageVisit).where(PageVisit.id == page_uid).where(PageVisit.audit_run_id == audit_uid)
+    )
+    page = pv_result.scalar_one_or_none()
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    reqs_result = await db.execute(
+        select(NetworkRequest)
+        .where(NetworkRequest.page_visit_id == page_uid)
+        .order_by(NetworkRequest.captured_at)
+    )
+    network_requests = reqs_result.scalars().all()
+
+    console_result = await db.execute(
+        select(ConsoleEvent)
+        .where(ConsoleEvent.page_visit_id == page_uid)
+        .order_by(ConsoleEvent.captured_at)
+    )
+    console_events = console_result.scalars().all()
+
+    vendors_result = await db.execute(
+        select(DetectedVendor)
+        .where(DetectedVendor.page_visit_id == page_uid)
+        .order_by(DetectedVendor.category)
+    )
+    vendors = vendors_result.scalars().all()
+
+    issues_result = await db.execute(
+        select(Issue).where(Issue.page_visit_id == page_uid)
+    )
+    issues = issues_result.scalars().all()
+
+    return templates.TemplateResponse(
+        "page_detail.html",
+        {
+            "request": request,
+            "run": run,
+            "page": page,
+            "audit_id": audit_id,
+            "network_requests": network_requests,
+            "console_events": console_events,
+            "vendors": vendors,
+            "issues": issues,
+        }
     )
 
 
@@ -337,12 +413,25 @@ async def partial_audit_progress(
     )
     issue_counts = {row[0]: row[1] for row in issue_counts_result}
 
-    vendor_count_result = await db.execute(
+    # Use audit-level (deduplicated) count if available, otherwise count distinct
+    # page-level detections so the number is live during crawling.
+    audit_level_result = await db.execute(
         select(func.count(DetectedVendor.id))
         .where(DetectedVendor.audit_run_id == uid)
         .where(DetectedVendor.page_visit_id == None)
     )
-    vendor_count = vendor_count_result.scalar()
+    audit_level_count = audit_level_result.scalar()
+
+    if audit_level_count:
+        vendor_count = audit_level_count
+    else:
+        # Fall back to distinct vendor keys seen at page level
+        page_level_result = await db.execute(
+            select(func.count(DetectedVendor.vendor_key.distinct()))
+            .where(DetectedVendor.audit_run_id == uid)
+            .where(DetectedVendor.page_visit_id != None)
+        )
+        vendor_count = page_level_result.scalar() or 0
 
     return templates.TemplateResponse(
         "partials/audit_progress.html",
@@ -370,6 +459,7 @@ async def partial_audit_summary(
     if not run:
         raise HTTPException(status_code=404, detail="Audit not found")
 
+    # Issue counts (for severity cards)
     issue_counts_result = await db.execute(
         select(Issue.severity, func.count(Issue.id))
         .where(Issue.audit_run_id == uid)
@@ -377,6 +467,7 @@ async def partial_audit_summary(
     )
     issue_counts = {row[0]: row[1] for row in issue_counts_result}
 
+    # Top 5 issues (for the issues list)
     top_issues_result = await db.execute(
         select(Issue)
         .where(Issue.audit_run_id == uid)
@@ -385,12 +476,85 @@ async def partial_audit_summary(
     )
     top_issues = top_issues_result.scalars().all()
 
+    # All issues (needed for executive metrics)
+    all_issues_result = await db.execute(
+        select(Issue).where(Issue.audit_run_id == uid)
+    )
+    all_issues = all_issues_result.scalars().all()
+
+    # Audit-level vendors (page_visit_id IS NULL)
     vendors_result = await db.execute(
         select(DetectedVendor)
         .where(DetectedVendor.audit_run_id == uid)
         .where(DetectedVendor.page_visit_id == None)
     )
     vendors = vendors_result.scalars().all()
+
+    # Page-level vendors (for performance stats vendor_id → key mapping)
+    page_vendors_result = await db.execute(
+        select(DetectedVendor)
+        .where(DetectedVendor.audit_run_id == uid)
+        .where(DetectedVendor.page_visit_id != None)
+    )
+    page_level_vendors = page_vendors_result.scalars().all()
+
+    # Pages (for cookie register + tag attribution)
+    pages_result = await db.execute(
+        select(PageVisit).where(PageVisit.audit_run_id == uid)
+    )
+    pages = pages_result.scalars().all()
+
+    # Network requests (for performance stats + tag attribution)
+    requests_result = await db.execute(
+        select(NetworkRequest).where(NetworkRequest.audit_run_id == uid)
+    )
+    all_requests = requests_result.scalars().all()
+
+    # Audit config (for executive metrics consent_behavior)
+    config = None
+    if run.config_id:
+        config_result = await db.execute(
+            select(AuditConfig).where(AuditConfig.id == run.config_id)
+        )
+        config = config_result.scalar_one_or_none()
+
+    # AI narrative summary
+    ai_summary = None
+    try:
+        ai_artifact_result = await db.execute(
+            select(Artifact)
+            .where(Artifact.audit_run_id == uid)
+            .where(Artifact.artifact_type == "report_md")
+        )
+        ai_artifacts = ai_artifact_result.scalars().all()
+        for artifact in ai_artifacts:
+            if artifact.file_path and "ai_summary" in artifact.file_path:
+                if os.path.exists(artifact.file_path):
+                    with open(artifact.file_path, "r") as f:
+                        content = f.read()
+                    lines = content.splitlines()
+                    body_lines = [l for l in lines if not l.startswith("# ")]
+                    ai_summary = "\n".join(body_lines).strip()
+                break
+    except Exception as e:
+        logger.warning(f"Could not load AI summary for {audit_id}: {e}")
+
+    # Compute derived metrics (pure Python — no DB calls)
+    cookie_register = []
+    attributions = {}
+    perf_stats = []
+    executive = None
+    try:
+        from app.lib.report_metrics import (
+            build_cookie_register, build_tag_attribution,
+            build_performance_stats, compute_executive_metrics,
+        )
+        cookie_register = build_cookie_register(pages)
+        attributions = build_tag_attribution(vendors, pages, all_requests)
+        perf_stats = build_performance_stats(vendors, all_requests, page_level_vendors)
+        executive = compute_executive_metrics(vendors, all_issues, config, pages)
+    except Exception as e:
+        logger.warning(f"Could not compute summary metrics for {audit_id}: {e}")
 
     return templates.TemplateResponse(
         "partials/audit_summary.html",
@@ -401,5 +565,10 @@ async def partial_audit_summary(
             "issue_counts": issue_counts,
             "top_issues": top_issues,
             "vendors": vendors,
+            "ai_summary": ai_summary,
+            "cookie_register": cookie_register,
+            "attributions": attributions,
+            "perf_stats": perf_stats,
+            "executive": executive,
         }
     )

@@ -5,6 +5,7 @@ from app.models.issue import Issue
 from app.models.artifact import Artifact
 from app.models.comparison import AuditComparison
 from app.models.setting import AppSetting
+from app.models.event import AuditEvent
 
 __all__ = [
     "AuditRun",
@@ -21,4 +22,5 @@ __all__ = [
     "Artifact",
     "AuditComparison",
     "AppSetting",
+    "AuditEvent",
 ]

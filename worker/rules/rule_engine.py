@@ -42,6 +42,7 @@ def run_all_rules(db: Session, audit_run) -> None:
 
     issues: List[Issue] = []
 
+    issues.extend(_rule_no_tracking_detected(audit_run, pages, vendors))
     issues.extend(_rule_broken_tracking_request(audit_run, pages, requests, vendors))
     issues.extend(_rule_failed_script_load(audit_run, pages, requests, vendors))
     issues.extend(_rule_console_js_errors(audit_run, pages, console_events))
@@ -52,6 +53,8 @@ def run_all_rules(db: Session, audit_run) -> None:
     issues.extend(_rule_ab_vendor_broken(audit_run, pages, requests, vendors))
     issues.extend(_rule_redirect_tracking_loss(audit_run, pages, page_vendors))
     issues.extend(_rule_template_inconsistency(audit_run, pages, page_vendors))
+    issues.extend(_rule_network_request_destinations(audit_run, pages, requests, vendors))
+    issues.extend(_rule_data_layer_audit(audit_run, pages))
 
     for issue in issues:
         db.add(issue)
@@ -67,6 +70,50 @@ def _make_issue(audit_run, **kwargs) -> "Issue":
         created_at=datetime.utcnow(),
         **kwargs,
     )
+
+
+def _rule_no_tracking_detected(audit_run, pages, vendors) -> list:
+    """Flag when no tracking technology is detected after crawling real pages."""
+    if not pages:
+        return []
+    # Only flag if we actually crawled some pages successfully
+    successful_pages = [p for p in pages if not p.error_message]
+    if not successful_pages:
+        return []
+    if vendors:
+        return []
+
+    return [_make_issue(
+        audit_run,
+        severity="critical",
+        category="no_tracking",
+        title="No tracking technology detected on any crawled page",
+        description=(
+            f"After successfully crawling {len(successful_pages)} page(s), no tracking vendors, "
+            f"analytics tools, tag managers, or pixels were detected. For a site that should have "
+            f"tracking in place, this is a critical gap — data collection may be completely absent."
+        ),
+        evidence_refs=[{
+            "pages_crawled": len(successful_pages),
+            "vendors_detected": 0,
+            "note": (
+                "No domain, script src, window global, or cookie matched any known vendor signature. "
+                "Checked for: GA4, GTM, Adobe Analytics/Launch, Tealium, Segment, Meta Pixel, "
+                "and 15+ other common tracking platforms."
+            ),
+        }],
+        likely_cause=(
+            "The site may have no tracking implementation at all, tracking may require user "
+            "consent before firing (check with 'accept_consent' mode), all tags may be "
+            "server-side only, or an ad-blocker/CSP in the crawl environment is suppressing requests."
+        ),
+        recommendation=(
+            "Run the audit again with 'Accept Consent' mode to rule out consent-gated tracking. "
+            "Manually browse the site in Chrome DevTools Network tab and filter by tracking domains. "
+            "If no tracking is expected, document this as intentional. "
+            "If tracking is expected, verify tag manager installation and container publishing."
+        ),
+    )]
 
 
 def _rule_broken_tracking_request(audit_run, pages, requests, vendors) -> list:
@@ -433,6 +480,242 @@ def _rule_redirect_tracking_loss(audit_run, pages, page_vendors) -> list:
 
         if len(issues) >= 5:
             break
+
+    return issues
+
+
+def _rule_network_request_destinations(audit_run, pages, requests, vendors) -> list:
+    """Audit every third-party domain receiving data — what is being sent where."""
+    from urllib.parse import urlparse
+    import json
+
+    if not requests:
+        return []
+
+    try:
+        base_domain = urlparse(audit_run.base_url).netloc
+    except Exception:
+        base_domain = ""
+
+    # Build vendor domain lookup
+    vendor_domain_map: Dict[str, str] = {}
+    try:
+        from worker.detectors.vendor_detector import get_signatures
+        for sig in get_signatures():
+            for d in sig.domains:
+                vendor_domain_map[d] = sig.name
+    except Exception:
+        pass
+
+    # Aggregate per third-party domain
+    domain_data: Dict[str, Dict] = {}
+    for req in requests:
+        try:
+            netloc = urlparse(req.url).netloc
+        except Exception:
+            continue
+        if not netloc or netloc == base_domain or netloc.endswith("." + base_domain):
+            continue
+
+        if netloc not in domain_data:
+            domain_data[netloc] = {
+                "count": 0,
+                "post_count": 0,
+                "pages": set(),
+                "sample_urls": [],
+                "sample_payloads": [],
+                "vendor_name": None,
+            }
+
+        entry = domain_data[netloc]
+        entry["count"] += 1
+        if req.page_visit_id:
+            entry["pages"].add(str(req.page_visit_id))
+        if len(entry["sample_urls"]) < 3:
+            entry["sample_urls"].append(req.url[:200])
+
+        if req.method == "POST" and req.post_data:
+            entry["post_count"] += 1
+            if len(entry["sample_payloads"]) < 2:
+                entry["sample_payloads"].append(req.post_data[:400])
+
+        # Match vendor name
+        if entry["vendor_name"] is None:
+            for domain_key, vname in vendor_domain_map.items():
+                if domain_key in netloc:
+                    entry["vendor_name"] = vname
+                    break
+
+    issues = []
+    # Only flag UNKNOWN domains receiving POST data — known vendors are already in the Vendors tab.
+    # Flagging analytics.google.com as a "medium issue" when GA4 is intentionally installed is noise.
+    for netloc, data in sorted(domain_data.items(), key=lambda x: -x[1]["post_count"]):
+        is_unknown = data["vendor_name"] is None
+        if not is_unknown:
+            continue  # Known vendor — covered by vendor detection, not an issue
+        if data["post_count"] == 0:
+            continue  # Only flag unknowns that are actively receiving data
+
+        severity = "high" if data["post_count"] >= 3 else "medium"
+
+        issues.append(_make_issue(
+            audit_run,
+            severity=severity,
+            category="data_destination",
+            title=f"Unrecognised domain receiving POST data: {netloc}",
+            description=(
+                f"WHERE: {netloc}\n"
+                f"WHAT: {data['post_count']} POST request(s), {data['count']} total requests\n"
+                f"WHO: Not in vendor registry — identity unknown\n"
+                f"PAGES: Seen on {len(data['pages'])} page(s)\n"
+                f"SAMPLE URL: {data['sample_urls'][0] if data['sample_urls'] else 'N/A'}"
+                + (f"\nPAYLOAD SAMPLE: {data['sample_payloads'][0][:300]}" if data["sample_payloads"] else "")
+            ),
+            evidence_refs=[{
+                "domain": netloc,
+                "total_requests": data["count"],
+                "post_requests": data["post_count"],
+                "pages_seen": len(data["pages"]),
+                "sample_urls": data["sample_urls"],
+                "sample_payloads": data["sample_payloads"],
+            }],
+            likely_cause=(
+                "An unrecognised script or tag is sending data to this domain. "
+                "May be a custom endpoint, a vendor not yet in the registry, or an unauthorised tracker."
+            ),
+            recommendation=(
+                "Identify what script is making requests to this domain (check the Network tab in DevTools). "
+                "Review the POST payload for personal data. If it's a legitimate vendor, add it to the registry. "
+                "If unknown, escalate to the client for confirmation before the next audit."
+            ),
+        ))
+
+        if len(issues) >= 15:
+            break
+
+    return issues
+
+
+def _rule_data_layer_audit(audit_run, pages) -> list:
+    """Document data layer contents — dataLayer, utag_data, digitalData, _satellite."""
+    import json
+
+    if not pages:
+        return []
+
+    issues = []
+    PII_HINT_KEYS = {
+        "email", "mail", "user_id", "userId", "user_email", "userEmail",
+        "customer_id", "customerId", "phone", "firstname", "lastname",
+        "first_name", "last_name", "name", "username", "user_name",
+        "address", "zip", "postcode", "dob", "date_of_birth",
+    }
+
+    # Aggregate data layer variables across all pages
+    dl_keys_seen: Dict[str, set] = {}  # key -> set of page urls
+    utag_keys_seen: Dict[str, set] = {}
+    digital_data_keys_seen: Dict[str, set] = {}
+    satellite_props: Dict[str, set] = {}
+
+    for page in pages:
+        if not page.data_layer:  # type: ignore
+            continue
+        dl = page.data_layer
+        page_url = page.url or ""
+
+        # dataLayer events
+        if "dataLayer" in dl and isinstance(dl["dataLayer"], list):
+            for event in dl["dataLayer"]:
+                if isinstance(event, dict):
+                    for k in event.keys():
+                        dl_keys_seen.setdefault(k, set()).add(page_url)
+
+        # utag_data
+        if "utag_data" in dl and isinstance(dl["utag_data"], dict):
+            for k in dl["utag_data"].keys():
+                utag_keys_seen.setdefault(k, set()).add(page_url)
+
+        # digitalData
+        if "digitalData" in dl and isinstance(dl["digitalData"], dict):
+            for k in dl["digitalData"].keys():
+                digital_data_keys_seen.setdefault(k, set()).add(page_url)
+
+        # _satellite (Adobe Launch)
+        if "_satellite" in dl and isinstance(dl["_satellite"], dict):
+            for k, v in dl["_satellite"].items():
+                satellite_props.setdefault(k, set()).add(str(v)[:100] if v else "")
+
+    # Only create findings when there's actual PII risk in data layers.
+    # "dataLayer has 12 variables" with no PII is not an issue — it's expected.
+    # The AI summary already reports data layer inventory for discovery/inheritance audits.
+
+    for layer_name, keys_seen, layer_label, cause, rec_base in [
+        ("dataLayer", dl_keys_seen, "Google Tag Manager dataLayer",
+         "GTM dataLayer is populated by the site's tag implementation.",
+         "Ensure no raw personal data is pushed to the dataLayer without consent."),
+        ("utag_data", utag_keys_seen, "Tealium utag_data",
+         "Tealium Universal Data Object (UDO) is populated on page load.",
+         "Audit PII keys in utag_data per your data governance policy."),
+        ("digitalData", digital_data_keys_seen, "W3C digitalData layer",
+         "A W3C-standard digitalData layer is present.",
+         "Ensure PII values are not exposed in the digitalData object without consent."),
+    ]:
+        if not keys_seen:
+            continue
+        pii_keys = [k for k in keys_seen if k.lower() in PII_HINT_KEYS]
+        if not pii_keys:
+            continue  # No PII risk — not worth an issue, inventory is in the summary
+
+        issues.append(_make_issue(
+            audit_run,
+            severity="high",
+            category="data_layer",
+            title=f"Possible PII in {layer_label}: {', '.join(pii_keys[:5])}",
+            description=(
+                f"WHERE: window.{layer_name}\n"
+                f"WHAT: {layer_label} contains keys that suggest personal data\n"
+                f"⚠ SUSPECT KEYS: {', '.join(pii_keys)}\n"
+                f"ALL VARIABLES ({len(keys_seen)}): {', '.join(sorted(keys_seen.keys())[:30])}"
+            ),
+            evidence_refs=[{
+                "layer": layer_name,
+                "pii_hint_keys": pii_keys,
+                "all_variables": sorted(keys_seen.keys())[:50],
+                "pages_seen": list({url for urls in keys_seen.values() for url in urls})[:5],
+            }],
+            likely_cause=cause,
+            recommendation=f"{rec_base} Confirm each PII key is hashed or pseudonymised before being pushed.",
+        ))
+
+    # _satellite: only flag if property ID is unexpected (always include as evidence though)
+    if satellite_props:
+        prop_id = next(iter(satellite_props.get("property", set())), None)
+        build_info = next(iter(satellite_props.get("buildInfo", set())), None)
+        # Always create — Adobe Launch property ID is critical audit info for inherited clients
+        issues.append(_make_issue(
+            audit_run,
+            severity="low",
+            category="data_layer",
+            title=f"Adobe Launch property detected" + (f": {prop_id}" if prop_id else ""),
+            description=(
+                f"WHERE: window._satellite (Adobe Experience Platform Tags)\n"
+                f"WHAT: Adobe Launch runtime is active on this site\n"
+                + (f"PROPERTY ID: {prop_id}\n" if prop_id else "Property ID not exposed\n")
+                + (f"BUILD INFO: {build_info}\n" if build_info else "")
+                + f"WHY THIS MATTERS: Confirms which Adobe Launch property/environment is publishing rules to this site."
+            ),
+            evidence_refs=[{
+                "layer": "_satellite",
+                "property_id": prop_id,
+                "build_info": build_info,
+                "runtime_keys": sorted(satellite_props.keys())[:20],
+            }],
+            likely_cause="Adobe Experience Platform Tags is the tag management system in use.",
+            recommendation=(
+                "Verify the property ID matches the expected Adobe Launch property for this environment "
+                "(prod vs staging). Mismatched property IDs indicate the wrong container is published."
+            ),
+        ))
 
     return issues
 

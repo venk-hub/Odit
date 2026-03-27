@@ -34,7 +34,17 @@
                         </span>
                     </td>
                     <td class="px-4 py-3">
-                        <span class="text-xs text-gray-500">{{ vendor.detection_method.replace("_", " ").title() }}</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-gray-500">{{ vendor.detection_method.replace("_", " ").title() }}</span>
+                            {% if vendor.detection_method == "ai_inferred" %}
+                            <span class="inline-flex items-center gap-0.5 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium" title="Identified by AI — not directly observed in network traffic">
+                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347a3.75 3.75 0 01-5.303 0l-.346-.346a5 5 0 010-7.072z" />
+                                </svg>
+                                AI
+                            </span>
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="px-4 py-3">
                         <span class="text-sm font-medium text-gray-800">{{ vendor.page_count }}</span>

@@ -79,11 +79,23 @@ def extract_storage(page) -> Dict[str, List[str]]:
     return {"local_storage_keys": local_keys or [], "session_storage_keys": session_keys or []}
 
 
-def extract_cookies(context) -> List[Dict[str, str]]:
-    """Extract cookies from browser context."""
+def extract_cookies(context) -> List[Dict]:
+    """Extract cookies from browser context with full detail."""
     try:
         cookies = context.cookies()
-        return [{"name": c["name"], "domain": c.get("domain", ""), "path": c.get("path", "/")} for c in cookies]
+        result = []
+        for c in cookies:
+            result.append({
+                "name": c["name"],
+                "value": c.get("value", ""),
+                "domain": c.get("domain", ""),
+                "path": c.get("path", "/"),
+                "expires": c.get("expires"),
+                "httpOnly": c.get("httpOnly", False),
+                "secure": c.get("secure", False),
+                "sameSite": c.get("sameSite", ""),
+            })
+        return result
     except Exception as e:
         logger.warning(f"Failed to extract cookies: {e}")
         return []
@@ -108,7 +120,7 @@ def extract_window_globals(page) -> List[str]:
     """Detect known analytics/tracking window globals."""
     known_globals = [
         "gtag", "dataLayer", "ga", "google_tag_manager",
-        "_satellite", "s_gi", "AppMeasurement",
+        "_satellite", "s_gi", "AppMeasurement", "s",
         "utag", "utag_data",
         "analytics", "rudderanalytics",
         "mixpanel", "amplitude", "heap",
@@ -122,6 +134,11 @@ def extract_window_globals(page) -> List[str]:
         "Cookiebot", "CookieConsent",
         "truste",
         "LDClient",
+        "td", "TreasureData",
+        "mParticle",
+        "Visitor",
+        "digitalData",
+        "adobeDataLayer",
     ]
     try:
         detected = page.evaluate("""
@@ -141,6 +158,134 @@ def extract_window_globals(page) -> List[str]:
     except Exception as e:
         logger.warning(f"Failed to extract window globals: {e}")
         return []
+
+
+def extract_data_layer(page) -> Dict[str, Any]:
+    """Extract common data layer objects: dataLayer, utag_data, digitalData, etc."""
+    result = {}
+    try:
+        data_layer = page.evaluate("""
+            () => {
+                try {
+                    const dl = window.dataLayer;
+                    if (Array.isArray(dl) && dl.length > 0) {
+                        // Return last 10 events, serialisable only
+                        return dl.slice(-10).map(item => {
+                            try { return JSON.parse(JSON.stringify(item)); } catch(e) { return String(item); }
+                        });
+                    }
+                } catch(e) {}
+                return null;
+            }
+        """)
+        if data_layer:
+            result["dataLayer"] = data_layer
+    except Exception:
+        pass
+
+    try:
+        utag_data = page.evaluate("""
+            () => {
+                try {
+                    if (window.utag_data && typeof window.utag_data === 'object') {
+                        return JSON.parse(JSON.stringify(window.utag_data));
+                    }
+                } catch(e) {}
+                return null;
+            }
+        """)
+        if utag_data:
+            result["utag_data"] = utag_data
+    except Exception:
+        pass
+
+    try:
+        digital_data = page.evaluate("""
+            () => {
+                try {
+                    if (window.digitalData && typeof window.digitalData === 'object') {
+                        return JSON.parse(JSON.stringify(window.digitalData));
+                    }
+                } catch(e) {}
+                return null;
+            }
+        """)
+        if digital_data:
+            result["digitalData"] = digital_data
+    except Exception:
+        pass
+
+    try:
+        adobeDataLayer = page.evaluate("""
+            () => {
+                try {
+                    const dl = window.adobeDataLayer;
+                    if (Array.isArray(dl) && dl.length > 0) {
+                        return dl.slice(-10).map(item => {
+                            try { return JSON.parse(JSON.stringify(item)); } catch(e) { return String(item); }
+                        });
+                    }
+                } catch(e) {}
+                return null;
+            }
+        """)
+        if adobeDataLayer:
+            result["adobeDataLayer"] = adobeDataLayer
+    except Exception:
+        pass
+
+    # Adobe Launch (_satellite) runtime details
+    try:
+        satellite = page.evaluate("""
+            () => {
+                try {
+                    const s = window._satellite;
+                    if (!s || typeof s !== 'object') return null;
+                    const out = {};
+                    try { if (s.property && s.property.id) out.property = s.property.id; } catch(e) {}
+                    try { if (s.buildInfo) out.buildInfo = JSON.parse(JSON.stringify(s.buildInfo)); } catch(e) {}
+                    try {
+                        const rules = s.container && s.container.data && s.container.data.rules;
+                        if (Array.isArray(rules)) out.rule_count = rules.length;
+                    } catch(e) {}
+                    try { if (s.company) out.company = s.company; } catch(e) {}
+                    return Object.keys(out).length > 0 ? out : { present: true };
+                } catch(e) { return null; }
+            }
+        """)
+        if satellite:
+            result["_satellite"] = satellite
+    except Exception:
+        pass
+
+    # Adobe Analytics s object variables
+    try:
+        adobe_s = page.evaluate("""
+            () => {
+                try {
+                    const s = window.s;
+                    if (!s || typeof s !== 'object' || !s.account) return null;
+                    const out = { account: s.account };
+                    if (s.pageName) out.pageName = s.pageName;
+                    if (s.pageType) out.pageType = s.pageType;
+                    if (s.channel) out.channel = s.channel;
+                    const evars = {}, props = {};
+                    for (let i = 1; i <= 75; i++) {
+                        if (s['eVar' + i]) evars['eVar' + i] = String(s['eVar' + i]).substring(0, 100);
+                        if (s['prop' + i]) props['prop' + i] = String(s['prop' + i]).substring(0, 100);
+                    }
+                    if (Object.keys(evars).length) out.evars = evars;
+                    if (Object.keys(props).length) out.props = props;
+                    return out;
+                } catch(e) { return null; }
+            }
+        """)
+        if adobe_s:
+            result["adobe_s"] = adobe_s
+    except Exception:
+        pass
+
+    return result
 
 
 def take_screenshot(page, output_path: str) -> Optional[str]:
