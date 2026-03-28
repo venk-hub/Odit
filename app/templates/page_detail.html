@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="mb-4">
-    <a href="/audits/{{ audit_id }}#pages" class="text-sm text-gray-500 hover:text-brand-600">&larr; Back to {{ run.base_url }}</a>
+    <a href="/audits/{{ audit_id }}#pages" class="text-sm text-gray-500 hover:text-[#1800ad]">&larr; Back to {{ run.base_url }}</a>
 </div>
 
 <div class="mb-5">
@@ -46,7 +46,7 @@
                     <span>·</span>
                     <span class="text-red-500">{{ network_requests | selectattr('failed') | list | length }} failed</span>
                     <span>·</span>
-                    <span class="text-brand-500">{{ network_requests | selectattr('post_data') | list | length }} POST</span>
+                    <span class="text-[#f0eeff]0">{{ network_requests | selectattr('post_data') | list | length }} POST</span>
                 </div>
             </div>
             {% if network_requests %}
@@ -71,7 +71,7 @@
                                 {% elif req.is_tracking_related %}
                                 <span class="text-purple-500" title="Tracking">🏷</span>
                                 {% elif req.post_data %}
-                                <span class="text-brand-400" title="POST data">→</span>
+                                <span class="text-[#6355e0]" title="POST data">→</span>
                                 {% else %}
                                 <span class="text-gray-300">·</span>
                                 {% endif %}
@@ -189,10 +189,10 @@
                             {% if issue.severity == 'critical' %}bg-red-500
                             {% elif issue.severity == 'high' %}bg-orange-500
                             {% elif issue.severity == 'medium' %}bg-yellow-500
-                            {% else %}bg-brand-400{% endif %}">
+                            {% else %}bg-[#6355e0]{% endif %}">
                         </span>
                         <div>
-                            <div class="text-xs font-medium text-gray-800 group-hover:text-brand-600">{{ issue.title }}</div>
+                            <div class="text-xs font-medium text-gray-800 group-hover:text-[#1800ad]">{{ issue.title }}</div>
                             <div class="text-[10px] text-gray-400 mt-0.5">{{ issue.severity }} · {{ issue.category }}</div>
                         </div>
                     </a>
@@ -215,7 +215,7 @@
                     {% if layer_data is mapping %}
                     <div class="text-xs font-mono text-gray-600 bg-gray-50 rounded p-2 max-h-32 overflow-y-auto">
                         {% for k, v in layer_data.items() %}
-                        <div><span class="text-brand-600">{{ k }}</span>: <span class="text-green-700">{{ v | string | truncate(80) }}</span></div>
+                        <div><span class="text-[#1800ad]">{{ k }}</span>: <span class="text-green-700">{{ v | string | truncate(80) }}</span></div>
                         {% endfor %}
                     </div>
                     {% elif layer_data is iterable and layer_data is not string %}
@@ -223,7 +223,7 @@
                         {% for item in layer_data %}
                         {% if item is mapping %}
                         {% for k, v in item.items() %}
-                        <div><span class="text-brand-600">{{ k }}</span>: <span class="text-green-700">{{ v | string | truncate(60) }}</span></div>
+                        <div><span class="text-[#1800ad]">{{ k }}</span>: <span class="text-green-700">{{ v | string | truncate(60) }}</span></div>
                         {% endfor %}
                         <div class="border-t border-gray-200 my-1"></div>
                         {% else %}

@@ -3,7 +3,7 @@
     <form hx-get="/audits/{{ audit_id }}/issues" hx-target="closest div" hx-swap="outerHTML"
         class="flex items-center gap-3 mb-4 flex-wrap">
         <select name="severity" onchange="this.form.requestSubmit()"
-            class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+            class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0">
             <option value="">All Severities</option>
             <option value="critical" {% if filter_severity == "critical" %}selected{% endif %}>Critical</option>
             <option value="high" {% if filter_severity == "high" %}selected{% endif %}>High</option>
@@ -11,7 +11,7 @@
             <option value="low" {% if filter_severity == "low" %}selected{% endif %}>Low</option>
         </select>
         <select name="category" onchange="this.form.requestSubmit()"
-            class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+            class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0">
             <option value="">All Categories</option>
             <option value="broken_tracking" {% if filter_category == "broken_tracking" %}selected{% endif %}>Broken Tracking</option>
             <option value="missing_vendor" {% if filter_category == "missing_vendor" %}selected{% endif %}>Missing Vendor</option>
@@ -53,8 +53,8 @@
                             <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span> Medium
                         </span>
                         {% else %}
-                        <span class="inline-flex items-center gap-1 text-xs font-medium bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full">
-                            <span class="w-1.5 h-1.5 bg-brand-400 rounded-full"></span> Low
+                        <span class="inline-flex items-center gap-1 text-xs font-medium bg-[#dddaff] text-[#13008a] px-2 py-0.5 rounded-full">
+                            <span class="w-1.5 h-1.5 bg-[#6355e0] rounded-full"></span> Low
                         </span>
                         {% endif %}
                     </td>
@@ -63,7 +63,7 @@
                     </td>
                     <td class="px-4 py-3">
                         <a href="/audits/{{ audit_id }}/issue/{{ issue.id }}"
-                            class="text-sm font-medium text-gray-800 hover:text-brand-600">{{ issue.title }}</a>
+                            class="text-sm font-medium text-gray-800 hover:text-[#1800ad]">{{ issue.title }}</a>
                         <p class="text-xs text-gray-400 mt-0.5 truncate max-w-sm">{{ issue.description[:100] }}{% if issue.description|length > 100 %}...{% endif %}</p>
                     </td>
                     <td class="px-4 py-3">
@@ -86,7 +86,7 @@
                     </td>
                     <td class="px-4 py-3 text-right">
                         <a href="/audits/{{ audit_id }}/issue/{{ issue.id }}"
-                            class="text-xs text-brand-600 hover:text-brand-800">Details →</a>
+                            class="text-xs text-[#1800ad] hover:text-[#0e0068]">Details →</a>
                     </td>
                 </tr>
                 {% endfor %}

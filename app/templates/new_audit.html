@@ -3,7 +3,7 @@
 {% block content %}
 <div class="max-w-2xl mx-auto">
     <div class="mb-6">
-        <a href="/" class="text-sm text-gray-500 hover:text-brand-600">&larr; Back to Dashboard</a>
+        <a href="/" class="text-sm text-gray-500 hover:text-[#1800ad]">&larr; Back to Dashboard</a>
         <h1 class="text-2xl font-bold text-gray-900 mt-2">New Audit</h1>
         <p class="text-gray-500 text-sm mt-1">Configure and run a tracking audit on a website.</p>
     </div>
@@ -16,7 +16,7 @@
         <div>
             <label for="base_url" class="block text-sm font-medium text-gray-700 mb-1">Base URL <span class="text-red-500">*</span></label>
             <input type="url" id="base_url" name="base_url" required placeholder="https://example.com"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0 focus:border-transparent"
                 onblur="suggestVendors(this.value)" />
             <div id="vendor-suggestion-status" class="mt-1.5 hidden">
                 <span class="text-xs text-purple-600 flex items-center gap-1">
@@ -34,7 +34,7 @@
             <label class="block text-sm font-medium text-gray-700 mb-2">Audit Mode</label>
             <div class="grid grid-cols-2 gap-2">
                 {% for mode_val, mode_label in [("quick_scan","Quick Scan"),("full_crawl","Full Crawl"),("journey_audit","Journey Audit"),("regression_compare","Regression Compare")] %}
-                <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-[#6355e0] transition-colors has-[:checked]:border-[#f0eeff]0 has-[:checked]:bg-[#f0eeff]">
                     <input type="radio" name="mode" value="{{ mode_val }}" {% if mode_val == "quick_scan" %}checked{% endif %}
                         class="mt-0.5" onchange="toggleJourneyMode(this.value)" />
                     <span class="text-sm font-medium text-gray-700">{{ mode_label }}</span>
@@ -48,12 +48,12 @@
             <div>
                 <label for="max_pages" class="block text-sm font-medium text-gray-700 mb-1">Max Pages</label>
                 <input type="number" id="max_pages" name="max_pages" value="50" min="1" max="500"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0" />
             </div>
             <div>
                 <label for="max_depth" class="block text-sm font-medium text-gray-700 mb-1">Max Depth</label>
                 <input type="number" id="max_depth" name="max_depth" value="3" min="1" max="10"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0" />
             </div>
         </div>
 
@@ -62,7 +62,7 @@
             <div>
                 <label for="device_type" class="block text-sm font-medium text-gray-700 mb-1">Device Type</label>
                 <select id="device_type" name="device_type"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0">
                     <option value="desktop">Desktop</option>
                     <option value="mobile">Mobile</option>
                     <option value="both">Both</option>
@@ -71,7 +71,7 @@
             <div>
                 <label for="consent_behavior" class="block text-sm font-medium text-gray-700 mb-1">Consent Behavior</label>
                 <select id="consent_behavior" name="consent_behavior"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0">
                     <option value="no_interaction">No Interaction</option>
                     <option value="accept_consent">Accept Consent</option>
                 </select>
@@ -109,7 +109,7 @@
                 {% for v_key, v_name in vendor_list %}
                 <label class="flex items-center gap-2 text-sm cursor-pointer">
                     <input type="checkbox" name="expected_vendors" value="{{ v_key }}"
-                        class="rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
+                        class="rounded border-gray-300 text-[#1800ad] focus:ring-[#f0eeff]0" />
                     <span class="text-gray-700">{{ v_name }}</span>
                 </label>
                 {% endfor %}
@@ -122,14 +122,14 @@
                 <label for="include_patterns" class="block text-sm font-medium text-gray-700 mb-1">Include Patterns</label>
                 <input type="text" id="include_patterns" name="include_patterns_raw"
                     placeholder="/blog/*, /products/*"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0" />
                 <p class="text-xs text-gray-400 mt-1">Comma-separated glob patterns</p>
             </div>
             <div>
                 <label for="exclude_patterns" class="block text-sm font-medium text-gray-700 mb-1">Exclude Patterns</label>
                 <input type="text" id="exclude_patterns" name="exclude_patterns_raw"
                     placeholder="/admin/*, /login"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0" />
                 <p class="text-xs text-gray-400 mt-1">Comma-separated glob patterns</p>
             </div>
         </div>
@@ -139,7 +139,7 @@
             <label for="seed_urls" class="block text-sm font-medium text-gray-700 mb-1">Seed URLs</label>
             <textarea id="seed_urls" name="seed_urls_raw" rows="4"
                 placeholder="https://example.com/start&#10;https://example.com/checkout"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0"></textarea>
             <p class="text-xs text-gray-400 mt-1">One URL per line for journey audit mode</p>
         </div>
 
@@ -147,7 +147,7 @@
         <div id="regression-section" class="hidden">
             <label for="comparison_audit_id" class="block text-sm font-medium text-gray-700 mb-1">Compare Against</label>
             <select id="comparison_audit_id" name="comparison_audit_id"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0">
                 <option value="">— Select a previous audit —</option>
                 {% for prev_run in completed_runs %}
                 <option value="{{ prev_run.id }}">{{ prev_run.base_url }} ({{ prev_run.created_at.strftime("%b %d %H:%M") }})</option>
@@ -193,7 +193,7 @@
                     </p>
                     <textarea id="auth_cookies_raw" name="auth_cookies_raw" rows="5"
                         placeholder='[{"name":"session","value":"abc123","domain":".example.com","path":"/","httpOnly":true,"secure":true}]'
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500 resize-y"></textarea>
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0 resize-y"></textarea>
                 </div>
 
                 <!-- Storage State JSON -->
@@ -203,14 +203,14 @@
                     </p>
                     <textarea id="auth_storage_state_raw" name="auth_storage_state_raw" rows="5"
                         placeholder='{"cookies":[...],"origins":[{"origin":"https://example.com","localStorage":[...]}]}'
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500 resize-y"></textarea>
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#f0eeff]0 resize-y"></textarea>
                 </div>
             </div>
         </div>
 
         <div class="pt-2">
             <button type="submit"
-                class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                class="w-full bg-[#1800ad] hover:bg-[#13008a] text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
                 <svg class="w-4 h-4 htmx-indicator animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>

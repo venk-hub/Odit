@@ -79,9 +79,9 @@
         <div class="text-3xl font-bold text-yellow-600">{{ issue_counts.get("medium", 0) }}</div>
         <div class="text-xs text-yellow-500 mt-1 font-medium uppercase tracking-wide">Medium</div>
     </div>
-    <div class="bg-brand-50 border border-brand-100 rounded-xl p-4">
-        <div class="text-3xl font-bold text-brand-600">{{ issue_counts.get("low", 0) }}</div>
-        <div class="text-xs text-brand-500 mt-1 font-medium uppercase tracking-wide">Low</div>
+    <div class="bg-[#f0eeff] border border-[#dddaff] rounded-xl p-4">
+        <div class="text-3xl font-bold text-[#1800ad]">{{ issue_counts.get("low", 0) }}</div>
+        <div class="text-xs text-[#f0eeff]0 mt-1 font-medium uppercase tracking-wide">Low</div>
     </div>
 </div>
 {% endif %}
@@ -155,10 +155,10 @@
                     {% elif issue.severity == "medium" %}
                     <span class="mt-1 inline-block w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0"></span>
                     {% else %}
-                    <span class="mt-1 inline-block w-2 h-2 rounded-full bg-brand-400 flex-shrink-0"></span>
+                    <span class="mt-1 inline-block w-2 h-2 rounded-full bg-[#6355e0] flex-shrink-0"></span>
                     {% endif %}
                     <div class="min-w-0">
-                        <p class="text-sm text-gray-800 group-hover:text-brand-600 font-medium leading-tight truncate">{{ issue.title }}</p>
+                        <p class="text-sm text-gray-800 group-hover:text-[#1800ad] font-medium leading-tight truncate">{{ issue.title }}</p>
                         <p class="text-xs text-gray-400 mt-0.5">{{ issue.category }}</p>
                     </div>
                 </a>
@@ -186,7 +186,7 @@
                         {% if attributions and vendor.vendor_key in attributions %}
                         {% set src = attributions[vendor.vendor_key] %}
                         {% if src == "Direct (HTML tag)" %}
-                        <span class="text-xs bg-brand-50 text-brand-600 px-1.5 py-0.5 rounded font-medium">Direct</span>
+                        <span class="text-xs bg-[#f0eeff] text-[#1800ad] px-1.5 py-0.5 rounded font-medium">Direct</span>
                         {% elif src == "Via GTM (inferred)" %}
                         <span class="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded font-medium">GTM</span>
                         {% elif src == "Pixel / API only" %}
@@ -257,7 +257,7 @@
                         {% if c.purpose_category == "marketing" %}
                         <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-xs font-medium capitalize">{{ c.purpose_category }}</span>
                         {% elif c.purpose_category == "analytics" %}
-                        <span class="bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded text-xs font-medium capitalize">{{ c.purpose_category }}</span>
+                        <span class="bg-[#dddaff] text-[#13008a] px-1.5 py-0.5 rounded text-xs font-medium capitalize">{{ c.purpose_category }}</span>
                         {% elif c.purpose_category == "consent" %}
                         <span class="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs font-medium capitalize">{{ c.purpose_category }}</span>
                         {% elif c.purpose_category == "security" %}
@@ -346,6 +346,6 @@
 {% endif %}
 
 <div class="mt-2 flex gap-3">
-    <a href="/audits/{{ audit_id }}/issues" class="text-sm text-brand-600 hover:text-brand-800 font-medium">View all issues &rarr;</a>
-    <a href="/audits/{{ audit_id }}/exports" class="text-sm text-brand-600 hover:text-brand-800 font-medium">Download exports &rarr;</a>
+    <a href="/audits/{{ audit_id }}/issues" class="text-sm text-[#1800ad] hover:text-[#0e0068] font-medium">View all issues &rarr;</a>
+    <a href="/audits/{{ audit_id }}/exports" class="text-sm text-[#1800ad] hover:text-[#0e0068] font-medium">Download exports &rarr;</a>
 </div>

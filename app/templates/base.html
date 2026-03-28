@@ -4,28 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Odit - Tracking Auditor{% endblock %}</title>
-    <script>
-        tailwind = { config: {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50:  '#f0eeff',
-                            100: '#dddaff',
-                            200: '#bbb5ff',
-                            300: '#9088ff',
-                            400: '#6355e0',
-                            500: '#3820c4',
-                            600: '#1800ad',
-                            700: '#13008a',
-                            800: '#0e0068',
-                            900: '#080047',
-                        }
-                    }
-                }
-            }
-        }}
-    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
@@ -44,10 +22,10 @@
                     <span class="text-sm text-gray-400 hidden sm:inline">Tracking Auditor</span>
                 </a>
                 <div class="flex items-center gap-3">
-                    <a href="/" class="text-sm text-gray-600 hover:text-brand-600 transition-colors">Audits</a>
-                    <a href="/settings" class="text-sm text-gray-600 hover:text-brand-600 transition-colors">Settings</a>
+                    <a href="/" class="text-sm text-gray-600 hover:text-[#1800ad] transition-colors">Audits</a>
+                    <a href="/settings" class="text-sm text-gray-600 hover:text-[#1800ad] transition-colors">Settings</a>
                     <a href="/audits/new"
-                        class="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-3 py-1.5 rounded-md transition-colors">
+                        class="inline-flex items-center gap-1.5 bg-[#1800ad] hover:bg-[#13008a] text-white text-sm font-medium px-3 py-1.5 rounded-md transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
