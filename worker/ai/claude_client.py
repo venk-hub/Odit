@@ -5,6 +5,7 @@ from app.ai.claude_client import (  # noqa: F401
     reset_session_tokens,
     get_session_tokens,
     enrich_issue,
+    batch_enrich_issues,
     infer_unknown_domains,
     generate_narrative_summary,
     explain_audit_comparison,

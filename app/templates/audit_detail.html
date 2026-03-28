@@ -90,9 +90,9 @@
                     hx-swap="innerHTML">
                     <div class="text-center py-8 text-gray-400 text-sm">Loading progress...</div>
                 </div>
-                <div
+                <div id="summary-container"
                     hx-get="/partials/audit-summary/{{ audit_id }}"
-                    hx-trigger="intersect once"
+                    hx-trigger="load, every 5s [window.isAuditRunning], refreshSummary"
                     hx-swap="innerHTML">
                     <div class="text-center py-8 text-gray-400 text-sm">Loading summary...</div>
                 </div>
@@ -193,11 +193,17 @@
             cancelled: '<span class="inline-flex items-center gap-1.5 text-sm font-medium bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full"><span class="w-2 h-2 bg-yellow-500 rounded-full"></span> Cancelled</span>',
         };
         if (badges[s]) badge.innerHTML = badges[s];
+        // Stop summary polling and do one final refresh when audit becomes terminal
+        if (window.isAuditRunning && !['running', 'pending'].includes(s)) {
+            window.isAuditRunning = false;
+            htmx.trigger(document.getElementById('summary-container'), 'refreshSummary');
+        }
     });
 
     // ── Activity feed ──────────────────────────────────────────────
     const AUDIT_ID = "{{ audit_id }}";
     const INITIAL_STATUS = "{{ run.status.value }}";
+    window.isAuditRunning = ['running', 'pending'].includes(INITIAL_STATUS);
 
     let lastTimestamp = null;      // ISO string of most recent event fetched
     let totalEventCount = 0;

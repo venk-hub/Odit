@@ -144,6 +144,67 @@ Respond only with the JSON object, no markdown, no extra text."""
         return None
 
 
+def batch_enrich_issues(issues_data: list, chunk_size: int = 20) -> list:
+    """
+    Batch-enrich a list of issue dicts in chunks.
+    Returns a list of enriched dicts (same order as input), each with keys:
+      description, likely_cause, recommendation, remediation_steps (list of str)
+    Falls back to empty dicts on failure.
+    """
+    client = _get_client()
+    if not client or not issues_data:
+        return [{} for _ in issues_data]
+
+    results = [{} for _ in issues_data]
+
+    for chunk_start in range(0, len(issues_data), chunk_size):
+        chunk = issues_data[chunk_start:chunk_start + chunk_size]
+        issues_json = json.dumps([
+            {
+                "index": i,
+                "title": iss.get("title", ""),
+                "category": iss.get("category", ""),
+                "severity": iss.get("severity", ""),
+                "affected_vendor_key": iss.get("affected_vendor_key") or "",
+                "description": iss.get("description") or "",
+            }
+            for i, iss in enumerate(chunk)
+        ], indent=2)
+
+        prompt = f"""You are a web analytics and privacy compliance expert. Enrich these {len(chunk)} tracking audit issues.
+
+Issues:
+{issues_json}
+
+For EACH issue return exactly:
+- description: 2-3 sentences explaining what is wrong and why it matters (mention GDPR/CCPA where relevant)
+- likely_cause: 1-2 sentence specific root cause diagnosis
+- recommendation: 1-3 sentence concrete fix a developer can act on
+- remediation_steps: array of 2-4 short imperative step strings
+
+Respond ONLY with a JSON array in input order. Each element: {{index, description, likely_cause, recommendation, remediation_steps}}.
+No markdown, no extra text."""
+
+        raw = _call(
+            client, prompt, system=ISSUE_SYSTEM,
+            label=f"batch_enrich[{chunk_start}:{chunk_start + len(chunk)}]",
+            max_tokens=min(4000, len(chunk) * 250),
+        )
+        if not raw:
+            continue
+        try:
+            cleaned = raw.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+            enriched = json.loads(cleaned)
+            for item in enriched:
+                idx = item.get("index")
+                if idx is not None and 0 <= idx < len(chunk):
+                    results[chunk_start + idx] = item
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning(f"Failed to parse batch enrichment response (chunk {chunk_start}): {e}")
+
+    return results
+
+
 # ─────────────────────────────────────────────────────────────────
 # Feature 2: Unknown vendor / domain inference
 # ─────────────────────────────────────────────────────────────────

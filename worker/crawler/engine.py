@@ -32,9 +32,10 @@ from worker.emit import emit
 logger = logging.getLogger("odit.worker.engine")
 settings = get_settings()
 
-MAX_RETRIES = 2
-PAGE_TIMEOUT = 30000  # ms
-NAV_TIMEOUT = 30000  # ms
+MAX_RETRIES = 1
+PAGE_TIMEOUT = 15000  # ms
+NAV_TIMEOUT = 15000  # ms
+JS_SETTLE_MS = 1000  # ms to wait after load for JS to fire (was 2000)
 
 
 def matches_any_pattern(url: str, patterns: List[str]) -> bool:
@@ -98,9 +99,7 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
     # Set up artifact directory
     artifact_dir = os.path.join(settings.DATA_DIR, "audits", audit_id)
     screenshots_dir = os.path.join(artifact_dir, "screenshots")
-    har_dir = os.path.join(artifact_dir, "har")
     os.makedirs(screenshots_dir, exist_ok=True)
-    os.makedirs(har_dir, exist_ok=True)
 
     # Seed URLs
     if seed_urls:
@@ -139,6 +138,29 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
 
         browser = p.chromium.launch(**launch_kwargs)
 
+        # Create ONE context for the entire crawl (reused across all pages)
+        # This avoids the overhead of spinning up a new context per page.
+        context_kwargs: Dict = {"ignore_https_errors": True}
+        if device_type == "mobile":
+            context_kwargs.update({
+                "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+                "viewport": {"width": 390, "height": 844},
+                "device_scale_factor": 3,
+                "is_mobile": True,
+            })
+        else:
+            context_kwargs["viewport"] = {"width": 1440, "height": 900}
+        if audit_config.auth_storage_state:
+            context_kwargs["storage_state"] = audit_config.auth_storage_state
+
+        context = browser.new_context(**context_kwargs)
+
+        if audit_config.auth_cookies and not audit_config.auth_storage_state:
+            try:
+                context.add_cookies(audit_config.auth_cookies)
+            except Exception as e:
+                logger.warning(f"Failed to inject auth cookies: {e}")
+
         try:
             while queue and pages_crawled < max_pages:
                 # Check for cancellation
@@ -153,38 +175,6 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                      f"Crawling page {pages_crawled+1}: {url}",
                      {"url": url, "depth": depth, "page_num": pages_crawled + 1})
                 db.commit()
-
-                # Set up context with HAR recording
-                har_path = os.path.join(har_dir, f"page_{pages_crawled:04d}.har")
-
-                context_kwargs = {
-                    "ignore_https_errors": True,
-                    "record_har_path": har_path,
-                    "record_har_content": "omit",
-                }
-
-                if device_type == "mobile":
-                    context_kwargs.update({
-                        "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
-                        "viewport": {"width": 390, "height": 844},
-                        "device_scale_factor": 3,
-                        "is_mobile": True,
-                    })
-                else:
-                    context_kwargs["viewport"] = {"width": 1440, "height": 900}
-
-                # Storage state covers cookies + localStorage — takes precedence
-                if audit_config.auth_storage_state:
-                    context_kwargs["storage_state"] = audit_config.auth_storage_state
-
-                context = browser.new_context(**context_kwargs)
-
-                # Cookie-only injection (used when storage state not provided)
-                if audit_config.auth_cookies and not audit_config.auth_storage_state:
-                    try:
-                        context.add_cookies(audit_config.auth_cookies)
-                    except Exception as e:
-                        logger.warning(f"Failed to inject auth cookies: {e}")
 
                 page = context.new_page()
 
@@ -271,7 +261,7 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                             _try_accept_consent(page)
 
                         # Wait a bit for JS to fire
-                        page.wait_for_timeout(2000)
+                        page.wait_for_timeout(JS_SETTLE_MS)
 
                         # Journey audit: execute AI-resolved NL steps on seed pages
                         journey_instructions = list(getattr(audit_config, "journey_instructions", None) or [])
@@ -339,14 +329,13 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                         except Exception as e:
                             logger.warning(f"Link extraction failed: {e}")
 
-                # Close context to flush HAR
+                # Close the page (context is reused across pages)
                 try:
-                    context.close()
+                    page.close()
                 except Exception:
                     pass
 
-                # Check if HAR was written
-                har_file_path = har_path if os.path.exists(har_path) else None
+                har_file_path = None
 
                 # Compute page group
                 page_group = compute_page_group(final_url or url)
@@ -500,6 +489,10 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                 db.commit()
 
         finally:
+            try:
+                context.close()
+            except Exception:
+                pass
             browser.close()
 
     # Aggregate vendors at audit level

@@ -245,54 +245,42 @@ def _run_ai_enrichment(db, run) -> None:
     emit(db, run.id, "ai_call", "Starting AI enrichment (Claude Haiku)...")
     db.commit()
 
-    # Step 1: Enrich issues with better descriptions and recommendations
+    # Step 1: Batch-enrich all issues in one set of API calls (chunks of 20)
     issues = db.query(Issue).filter(Issue.audit_run_id == audit_id).all()
     if issues:
-        emit(db, run.id, "ai_call", f"Enriching {len(issues)} issue{'s' if len(issues) != 1 else ''} with AI analysis...",
+        emit(db, run.id, "ai_call",
+             f"Enriching {len(issues)} issue{'s' if len(issues) != 1 else ''} with AI analysis...",
              {"count": len(issues)})
         db.commit()
-    enriched_count = 0
-    for issue in issues:
-        enrichment = enrich_issue({
-            "category": issue.category,
-            "title": issue.title,
-            "severity": issue.severity,
-            "affected_url": issue.affected_url,
-            "affected_vendor_key": issue.affected_vendor_key,
-            "evidence_refs": issue.evidence_refs or [],
-            "description": issue.description,
-            "likely_cause": issue.likely_cause,
-            "recommendation": issue.recommendation,
-        })
-        if enrichment:
+
+        from worker.ai.claude_client import batch_enrich_issues
+        issues_data = [
+            {
+                "title": iss.title,
+                "category": iss.category,
+                "severity": iss.severity,
+                "affected_vendor_key": iss.affected_vendor_key,
+                "description": iss.description,
+            }
+            for iss in issues
+        ]
+        enrichments = batch_enrich_issues(issues_data)
+        enriched_count = 0
+        for issue, enrichment in zip(issues, enrichments):
+            if not enrichment:
+                continue
             if enrichment.get("description"):
                 issue.description = enrichment["description"]
             if enrichment.get("likely_cause"):
                 issue.likely_cause = enrichment["likely_cause"]
             if enrichment.get("recommendation"):
                 issue.recommendation = enrichment["recommendation"]
+            if enrichment.get("remediation_steps"):
+                issue.remediation_steps = enrichment["remediation_steps"]
             enriched_count += 1
-    if enriched_count:
-        db.commit()
-        logger.info(f"AI enriched {enriched_count} issues for audit {audit_id}")
-
-    # Step 1b: Generate remediation steps for each issue
-    remediation_count = 0
-    for issue in issues:
-        steps_json = generate_remediation_steps({
-            "title": issue.title,
-            "category": issue.category,
-            "severity": issue.severity,
-            "affected_vendor_key": issue.affected_vendor_key,
-            "description": issue.description,
-            "recommendation": issue.recommendation,
-        })
-        if steps_json:
-            issue.remediation_steps = steps_json
-            remediation_count += 1
-    if remediation_count:
-        db.commit()
-        logger.info(f"AI generated remediation steps for {remediation_count} issues")
+        if enriched_count:
+            db.commit()
+            logger.info(f"AI batch-enriched {enriched_count} issues for audit {audit_id}")
 
     # Step 2: Infer unknown third-party domains
     known_vendor_domains: set = set()
