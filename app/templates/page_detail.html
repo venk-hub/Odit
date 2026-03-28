@@ -46,7 +46,7 @@
                     <span>·</span>
                     <span class="text-red-500">{{ network_requests | selectattr('failed') | list | length }} failed</span>
                     <span>·</span>
-                    <span class="text-[#f0eeff]0">{{ network_requests | selectattr('post_data') | list | length }} POST</span>
+                    <span class="text-[#3820c4]">{{ network_requests | selectattr('post_data') | list | length }} POST</span>
                 </div>
             </div>
             {% if network_requests %}

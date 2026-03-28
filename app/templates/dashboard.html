@@ -1,94 +1,104 @@
 {% extends "base.html" %}
 {% block title %}Odit - Dashboard{% endblock %}
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Audit Dashboard</h1>
+
+<div class="flex items-center justify-between mb-8">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Audits</h1>
+        <p class="text-sm text-gray-400 mt-0.5">Track and compare website tracking implementations</p>
+    </div>
     <a href="/audits/new"
-        class="inline-flex items-center gap-2 bg-[#1800ad] hover:bg-[#13008a] text-white font-medium px-4 py-2 rounded-md transition-colors">
+        class="inline-flex items-center gap-2 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors"
+        style="background:#1800ad"
+        onmouseover="this.style.background='#13008a'" onmouseout="this.style.background='#1800ad'">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
         </svg>
         New Audit
     </a>
 </div>
 
 {% if audits %}
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-    <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-            <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mode</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pages</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issues</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th class="px-4 py-3"></th>
+<div class="bg-white rounded-2xl border border-gray-100 overflow-hidden" style="box-shadow:0 1px 4px rgba(0,0,0,0.05)">
+    <table class="min-w-full">
+        <thead>
+            <tr class="border-b border-gray-100">
+                <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">URL</th>
+                <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Mode</th>
+                <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+                <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Pages</th>
+                <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Issues</th>
+                <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Created</th>
+                <th class="px-4 py-3.5"></th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody class="divide-y divide-gray-50">
             {% for item in audits %}
             {% set run = item.run %}
             {% set counts = item.issue_counts %}
-            <tr class="hover:bg-gray-50 transition-colors" id="audit-row-{{ run.id }}">
-                <td class="px-4 py-3">
-                    <a href="/audits/{{ run.id }}" class="text-[#1800ad] hover:text-[#0e0068] font-medium text-sm truncate max-w-xs block">
-                        {{ run.base_url }}
+            <tr class="hover:bg-slate-50 transition-colors group" id="audit-row-{{ run.id }}">
+                <td class="px-5 py-4">
+                    <a href="/audits/{{ run.id }}" class="font-medium text-sm text-gray-900 hover:text-[#1800ad] transition-colors block truncate max-w-xs">
+                        {{ run.base_url | replace("https://", "") | replace("http://", "") }}
                     </a>
                 </td>
-                <td class="px-4 py-3">
-                    <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                <td class="px-4 py-4">
+                    <span class="text-xs font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
                         {{ run.mode.value.replace("_", " ").title() }}
                     </span>
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-4 py-4">
                     {% if run.status.value == "pending" %}
-                    <span class="inline-flex items-center gap-1 text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                        <span class="w-1.5 h-1.5 bg-gray-400 rounded-full"></span> Pending
+                    <span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                        <span class="w-1.5 h-1.5 bg-gray-300 rounded-full"></span> Pending
                     </span>
                     {% elif run.status.value == "running" %}
-                    <span class="inline-flex items-center gap-1 text-xs font-medium bg-[#f0eeff] text-[#13008a] px-2 py-0.5 rounded-full">
-                        <span class="w-1.5 h-1.5 bg-[#f0eeff]0 rounded-full animate-pulse"></span> Running
+                    <span class="inline-flex items-center gap-1.5 text-xs font-medium text-[#1800ad]">
+                        <span class="w-1.5 h-1.5 bg-[#6355e0] rounded-full animate-pulse"></span> Running
                     </span>
                     {% elif run.status.value == "completed" %}
-                    <span class="inline-flex items-center gap-1 text-xs font-medium bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                    <span class="inline-flex items-center gap-1.5 text-xs font-medium text-green-700">
                         <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Completed
                     </span>
                     {% elif run.status.value == "failed" %}
-                    <span class="inline-flex items-center gap-1 text-xs font-medium bg-red-50 text-red-700 px-2 py-0.5 rounded-full">
+                    <span class="inline-flex items-center gap-1.5 text-xs font-medium text-red-600">
                         <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Failed
                     </span>
                     {% elif run.status.value == "cancelled" %}
-                    <span class="inline-flex items-center gap-1 text-xs font-medium bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full">
-                        <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span> Cancelled
+                    <span class="inline-flex items-center gap-1.5 text-xs font-medium text-yellow-700">
+                        <span class="w-1.5 h-1.5 bg-yellow-400 rounded-full"></span> Cancelled
                     </span>
                     {% endif %}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">{{ run.pages_crawled }}</td>
-                <td class="px-4 py-3">
+                <td class="px-4 py-4 text-sm font-medium text-gray-700">{{ run.pages_crawled }}</td>
+                <td class="px-4 py-4">
                     <div class="flex items-center gap-1">
                         {% if counts.get("critical", 0) > 0 %}
-                        <span class="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">{{ counts.critical }} C</span>
+                        <span class="text-xs bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full font-semibold">{{ counts.critical }}C</span>
                         {% endif %}
                         {% if counts.get("high", 0) > 0 %}
-                        <span class="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">{{ counts.high }} H</span>
+                        <span class="text-xs bg-orange-50 text-orange-600 border border-orange-100 px-2 py-0.5 rounded-full font-semibold">{{ counts.high }}H</span>
                         {% endif %}
                         {% if counts.get("medium", 0) > 0 %}
-                        <span class="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-medium">{{ counts.medium }} M</span>
+                        <span class="text-xs bg-yellow-50 text-yellow-700 border border-yellow-100 px-2 py-0.5 rounded-full font-semibold">{{ counts.medium }}M</span>
                         {% endif %}
                         {% if counts.get("low", 0) > 0 %}
-                        <span class="text-xs bg-[#dddaff] text-[#13008a] px-1.5 py-0.5 rounded font-medium">{{ counts.low }} L</span>
+                        <span class="text-xs bg-gray-50 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full font-semibold">{{ counts.low }}L</span>
                         {% endif %}
                         {% if not counts %}
-                        <span class="text-xs text-gray-400">—</span>
+                        <span class="text-xs text-gray-300">—</span>
                         {% endif %}
                     </div>
                 </td>
-                <td class="px-4 py-3 text-xs text-gray-500">
+                <td class="px-4 py-4 text-xs text-gray-400">
                     {{ run.created_at.strftime("%b %d, %Y %H:%M") }}
                 </td>
-                <td class="px-4 py-3 text-right">
-                    <a href="/audits/{{ run.id }}" class="text-xs text-[#1800ad] hover:text-[#0e0068] font-medium">View →</a>
+                <td class="px-4 py-4 text-right">
+                    <a href="/audits/{{ run.id }}"
+                        class="text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+                        style="color:#1800ad">
+                        View →
+                    </a>
                 </td>
             </tr>
             {% endfor %}
@@ -96,17 +106,16 @@
     </table>
 </div>
 {% else %}
-<div class="text-center py-24">
-    <div class="w-14 h-14 bg-[#f0eeff] rounded-full flex items-center justify-center mx-auto mb-4">
-        <svg class="w-7 h-7 text-[#6355e0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
+<div class="text-center py-28">
+    <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5" style="background:#f0eeff">
+        <img src="/static/odit.svg" alt="" class="h-9 w-auto opacity-60" />
     </div>
-    <h2 class="text-lg font-semibold text-gray-700 mb-1">No audits yet</h2>
-    <p class="text-gray-500 text-sm mb-6">Start your first audit to inspect a website's tracking implementation.</p>
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">No audits yet</h2>
+    <p class="text-gray-400 text-sm mb-7 max-w-xs mx-auto">Run your first audit to inspect a website's tracking implementation.</p>
     <a href="/audits/new"
-        class="inline-flex items-center gap-2 bg-[#1800ad] hover:bg-[#13008a] text-white font-medium px-5 py-2.5 rounded-lg transition-colors">
+        class="inline-flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+        style="background:#1800ad"
+        onmouseover="this.style.background='#13008a'" onmouseout="this.style.background='#1800ad'">
         Run your first audit
     </a>
 </div>
