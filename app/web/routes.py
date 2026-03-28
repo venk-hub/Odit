@@ -534,7 +534,12 @@ async def partial_audit_summary(
                         content = f.read()
                     lines = content.splitlines()
                     body_lines = [l for l in lines if not l.startswith("# ")]
-                    ai_summary = "\n".join(body_lines).strip()
+                    md_text = "\n".join(body_lines).strip()
+                    try:
+                        from markdown_it import MarkdownIt
+                        ai_summary = MarkdownIt().render(md_text)
+                    except Exception:
+                        ai_summary = md_text
                 break
     except Exception as e:
         logger.warning(f"Could not load AI summary for {audit_id}: {e}")
