@@ -123,35 +123,37 @@
 
     <!-- Activity feed (right) -->
     <div class="w-80 flex-shrink-0 sticky top-4">
-        <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-white border border-gray-100 rounded-xl overflow-hidden" style="box-shadow:0 1px 4px rgba(0,0,0,0.06)">
             <!-- Header -->
-            <div class="flex items-center justify-between px-3 py-2.5 bg-gray-50 border-b border-gray-200">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-semibold text-gray-700">Activity Feed</span>
+                    <span class="text-sm font-semibold text-gray-800">Activity Feed</span>
                     <span id="feed-status-dot" class="w-2 h-2 rounded-full bg-gray-300"></span>
                 </div>
                 <button onclick="toggleFeedPause()" id="feed-pause-btn"
-                    class="text-xs text-gray-400 hover:text-gray-600 transition-colors px-1.5 py-0.5 rounded hover:bg-gray-100"
+                    class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100"
                     title="Pause/resume auto-scroll">
-                    ⏸
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                    </svg>
                 </button>
             </div>
             <!-- Event list -->
             <div id="activity-feed"
-                class="overflow-y-auto text-xs font-mono"
+                class="overflow-y-auto text-xs divide-y divide-gray-50"
                 style="height: 520px;">
-                <div id="feed-empty" class="flex flex-col items-center justify-center h-full text-gray-400 text-xs">
-                    <svg class="w-8 h-8 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div id="feed-empty" class="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                            d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                     </svg>
-                    <p>Waiting for activity...</p>
+                    <p class="text-gray-400">Waiting for activity…</p>
                 </div>
             </div>
             <!-- Footer -->
-            <div class="px-3 py-1.5 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <div class="px-4 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
                 <span id="feed-count" class="text-xs text-gray-400">0 events</span>
-                <button onclick="clearFeedView()" class="text-xs text-gray-400 hover:text-gray-600">Clear view</button>
+                <button onclick="clearFeedView()" class="text-xs text-gray-400 hover:text-[#1800ad] transition-colors">Clear</button>
             </div>
         </div>
     </div>
@@ -252,20 +254,18 @@
         events.forEach(ev => {
             const style = getStyle(ev.event_type);
             const row = document.createElement('div');
-            row.className = 'flex gap-2 px-2.5 py-1.5 border-b border-gray-100 hover:bg-gray-50 transition-colors';
+            row.className = 'flex gap-2.5 px-4 py-2.5 hover:bg-slate-50 transition-colors';
+            const labelText = ev.event_type.replace(/_/g, ' ');
             row.innerHTML = `
-                <div class="flex-shrink-0 flex items-start pt-0.5">
-                    <span class="w-1.5 h-1.5 rounded-full mt-1 ${style.dot}"></span>
+                <div class="flex-shrink-0 pt-1.5">
+                    <span class="w-2 h-2 rounded-full block ${style.dot}"></span>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-1.5 mb-0.5">
-                        <span class="inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded ${style.label}">
-                            <span>${style.icon}</span>
-                            <span>${ev.event_type.replace(/_/g,' ')}</span>
-                        </span>
-                        <span class="text-[10px] text-gray-400 flex-shrink-0">${fmtTime(ev.created_at)}</span>
+                    <div class="flex items-center gap-1.5 mb-1">
+                        <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md ${style.label}">${labelText}</span>
+                        <span class="text-[10px] text-gray-300 flex-shrink-0 tabular-nums">${fmtTime(ev.created_at)}</span>
                     </div>
-                    <p class="text-gray-700 leading-tight break-words">${escHtml(ev.message)}</p>
+                    <p class="text-[11px] text-gray-600 leading-relaxed break-all">${escHtml(ev.message)}</p>
                 </div>
             `;
             feed.appendChild(row);
