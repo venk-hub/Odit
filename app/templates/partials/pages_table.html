@@ -21,9 +21,9 @@
             <tbody class="divide-y divide-gray-100">
                 {% for item in pages %}
                 {% set pv = item.visit %}
-                <tr class="hover:bg-blue-50 transition-colors cursor-pointer" onclick="location.href='/audits/{{ audit_id }}/pages/{{ pv.id }}'">
+                <tr class="hover:bg-brand-50 transition-colors cursor-pointer" onclick="location.href='/audits/{{ audit_id }}/pages/{{ pv.id }}'">
                     <td class="px-4 py-3 max-w-xs">
-                        <div class="truncate text-blue-700 text-xs font-mono" title="{{ pv.url }}">
+                        <div class="truncate text-brand-700 text-xs font-mono" title="{{ pv.url }}">
                             {{ pv.url | replace("https://", "") | replace("http://", "") | truncate(60) }}
                         </div>
                         {% if pv.page_title %}
@@ -70,7 +70,7 @@
                     </td>
                     <td class="px-4 py-3 text-right">
                         <a href="/audits/{{ audit_id }}/pages/{{ pv.id }}"
-                            class="text-xs text-gray-400 hover:text-blue-600 font-medium"
+                            class="text-xs text-gray-400 hover:text-brand-600 font-medium"
                             onclick="event.stopPropagation()">
                             View →
                         </a>

@@ -4,7 +4,7 @@
         <div class="text-xs text-gray-500 mt-1">Pages Discovered</div>
     </div>
     <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-        <div class="text-2xl font-bold text-blue-600">{{ run.pages_crawled }}</div>
+        <div class="text-2xl font-bold text-brand-600">{{ run.pages_crawled }}</div>
         <div class="text-xs text-gray-500 mt-1">Pages Crawled</div>
     </div>
     <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
@@ -30,9 +30,9 @@
         <div class="text-2xl font-bold text-yellow-600">{{ issue_counts.get("medium", 0) }}</div>
         <div class="text-xs text-yellow-500 mt-1">Medium Issues</div>
     </div>
-    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
-        <div class="text-2xl font-bold text-blue-600">{{ issue_counts.get("low", 0) }}</div>
-        <div class="text-xs text-blue-500 mt-1">Low Issues</div>
+    <div class="bg-brand-50 border border-brand-100 rounded-xl p-4">
+        <div class="text-2xl font-bold text-brand-600">{{ issue_counts.get("low", 0) }}</div>
+        <div class="text-xs text-brand-500 mt-1">Low Issues</div>
     </div>
 </div>
 
@@ -41,8 +41,8 @@
         <div>
             <span class="text-sm font-medium text-gray-700">Status: </span>
             {% if run.status.value == "running" %}
-            <span class="inline-flex items-center gap-1 text-sm text-blue-600">
-                <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> Running
+            <span class="inline-flex items-center gap-1 text-sm text-brand-600">
+                <span class="w-2 h-2 bg-brand-500 rounded-full animate-pulse"></span> Running
             </span>
             {% elif run.status.value == "completed" %}
             <span class="inline-flex items-center gap-1 text-sm text-green-600">
