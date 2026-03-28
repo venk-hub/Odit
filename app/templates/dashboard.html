@@ -19,7 +19,7 @@
 </div>
 
 {% if audits %}
-<div class="bg-white rounded-2xl border border-gray-100 overflow-hidden" style="box-shadow:0 1px 4px rgba(0,0,0,0.05)">
+<div class="bg-white rounded-2xl overflow-hidden" style="border:1px solid rgba(24,0,173,0.08); box-shadow:0 1px 8px rgba(24,0,173,0.06)">
     <table class="min-w-full">
         <thead>
             <tr class="border-b border-gray-100">
@@ -36,7 +36,7 @@
             {% for item in audits %}
             {% set run = item.run %}
             {% set counts = item.issue_counts %}
-            <tr class="hover:bg-slate-50 transition-colors group" id="audit-row-{{ run.id }}">
+            <tr class="transition-colors group" style="--hover-bg:#f5f4ff" id="audit-row-{{ run.id }}" onmouseover="this.style.background='#f5f4ff'" onmouseout="this.style.background=''">
                 <td class="px-5 py-4">
                     <a href="/audits/{{ run.id }}" class="font-medium text-sm text-gray-900 hover:text-[#1800ad] transition-colors block truncate max-w-xs">
                         {{ run.base_url | replace("https://", "") | replace("http://", "") }}
