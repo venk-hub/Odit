@@ -1,16 +1,27 @@
 {% extends "base.html" %}
 {% block title %}Odit - Dashboard{% endblock %}
+
+{% block page_context_script %}
+<script>
+window.__oditPageContext = {
+    page: 'Dashboard',
+    greeting: {% if audits %}'I can see you have {{ audits|length }} audit{% if audits|length != 1 %}s{% endif %} on your dashboard. The most recent is **{{ audits[0].run.base_url | replace("'", "\\'") }}** ({{ audits[0].run.status.value }}). Want me to explain what was found, or help you start a new audit?'{% else %}'Welcome to the Odit dashboard! It looks like you haven\'t run any audits yet. Would you like me to walk you through creating your first audit?'{% endif %},
+    context: '{% if audits %}User is on the dashboard. They have {{ audits|length }} audit(s). Most recent: {{ audits[0].run.base_url }} ({{ audits[0].run.status.value }}).{% else %}User is on the dashboard with no audits yet.{% endif %}'
+};
+</script>
+{% endblock %}
+
 {% block content %}
 
 <div class="flex items-center justify-between mb-8">
     <div>
         <h1 class="text-2xl font-bold text-gray-900">Audits</h1>
-        <p class="text-sm text-gray-400 mt-0.5">Track and compare website tracking implementations</p>
+        <p class="text-sm text-gray-400 mt-0.5">Monitor tracking across your websites</p>
     </div>
     <a href="/audits/new"
         class="inline-flex items-center gap-2 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors"
-        style="background:#1800ad"
-        onmouseover="this.style.background='#13008a'" onmouseout="this.style.background='#1800ad'">
+        style="background:var(--odit-brand)"
+        onmouseover="this.style.background='var(--odit-brand-hover)'" onmouseout="this.style.background='var(--odit-brand)'"
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
         </svg>
@@ -19,15 +30,15 @@
 </div>
 
 {% if audits %}
-<div class="bg-white rounded-2xl overflow-hidden" style="border:1px solid rgba(24,0,173,0.08); box-shadow:0 1px 8px rgba(24,0,173,0.06)">
+<div class="bg-white rounded-2xl overflow-hidden" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow)">
     <table class="min-w-full">
         <thead>
             <tr class="border-b border-gray-100">
                 <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">URL</th>
-                <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Mode</th>
                 <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-                <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Pages</th>
                 <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Issues</th>
+                <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Mode</th>
+                <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Pages</th>
                 <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Created</th>
                 <th class="px-4 py-3.5"></th>
             </tr>
@@ -36,16 +47,11 @@
             {% for item in audits %}
             {% set run = item.run %}
             {% set counts = item.issue_counts %}
-            <tr class="transition-colors group" style="--hover-bg:#f5f4ff" id="audit-row-{{ run.id }}" onmouseover="this.style.background='#f5f4ff'" onmouseout="this.style.background=''">
+            <tr class="transition-colors group" id="audit-row-{{ run.id }}" onmouseover="this.style.background='var(--odit-surface-hover)'" onmouseout="this.style.background=''">
                 <td class="px-5 py-4">
                     <a href="/audits/{{ run.id }}" class="font-medium text-sm text-gray-900 hover:text-[#1800ad] transition-colors block truncate max-w-xs">
                         {{ run.base_url | replace("https://", "") | replace("http://", "") }}
                     </a>
-                </td>
-                <td class="px-4 py-4">
-                    <span class="text-xs font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
-                        {{ run.mode.value.replace("_", " ").title() }}
-                    </span>
                 </td>
                 <td class="px-4 py-4">
                     {% if run.status.value == "pending" %}
@@ -70,35 +76,54 @@
                     </span>
                     {% endif %}
                 </td>
-                <td class="px-4 py-4 text-sm font-medium text-gray-700">{{ run.pages_crawled }}</td>
                 <td class="px-4 py-4">
                     <div class="flex items-center gap-1">
                         {% if counts.get("critical", 0) > 0 %}
-                        <span class="text-xs bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full font-semibold">{{ counts.critical }}C</span>
+                        <span class="text-xs bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full font-semibold" title="{{ counts.get('critical',0) }} critical issues">{{ counts.critical }}C</span>
                         {% endif %}
                         {% if counts.get("high", 0) > 0 %}
-                        <span class="text-xs bg-orange-50 text-orange-600 border border-orange-100 px-2 py-0.5 rounded-full font-semibold">{{ counts.high }}H</span>
+                        <span class="text-xs bg-orange-50 text-orange-600 border border-orange-100 px-2 py-0.5 rounded-full font-semibold" title="{{ counts.get('high',0) }} high issues">{{ counts.high }}H</span>
                         {% endif %}
                         {% if counts.get("medium", 0) > 0 %}
-                        <span class="text-xs bg-yellow-50 text-yellow-700 border border-yellow-100 px-2 py-0.5 rounded-full font-semibold">{{ counts.medium }}M</span>
+                        <span class="text-xs bg-yellow-50 text-yellow-700 border border-yellow-100 px-2 py-0.5 rounded-full font-semibold" title="{{ counts.get('medium',0) }} medium issues">{{ counts.medium }}M</span>
                         {% endif %}
                         {% if counts.get("low", 0) > 0 %}
-                        <span class="text-xs bg-gray-50 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full font-semibold">{{ counts.low }}L</span>
+                        <span class="text-xs bg-gray-50 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full font-semibold" title="{{ counts.get('low',0) }} low issues">{{ counts.low }}L</span>
                         {% endif %}
                         {% if not counts %}
                         <span class="text-xs text-gray-300">—</span>
                         {% endif %}
                     </div>
                 </td>
+                <td class="px-4 py-4">
+                    <span class="text-xs font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
+                        {{ run.mode.value.replace("_", " ").title() }}
+                    </span>
+                </td>
+                <td class="px-4 py-4 text-sm font-medium text-gray-700">{{ run.pages_crawled }}</td>
                 <td class="px-4 py-4 text-xs text-gray-400">
-                    {{ run.created_at.strftime("%b %d, %Y %H:%M") }}
+                    <time class="odit-reltime" datetime="{{ run.created_at.isoformat() }}" title="{{ run.created_at.strftime('%d %b %Y %H:%M') }}">{{ run.created_at.strftime('%d %b %Y') }}</time>
                 </td>
                 <td class="px-4 py-4 text-right">
-                    <a href="/audits/{{ run.id }}"
-                        class="text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
-                        style="color:#1800ad">
-                        View →
-                    </a>
+                    <div class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <a href="/audits/{{ run.id }}"
+                            class="text-xs font-semibold"
+                            style="color:var(--odit-brand)">
+                            View →
+                        </a>
+                        <button
+                            hx-delete="/api/audits/{{ run.id }}"
+                            hx-confirm="Delete this audit and all its data? This cannot be undone."
+                            hx-target="#audit-row-{{ run.id }}"
+                            hx-swap="outerHTML swap:0.2s"
+                            class="text-xs text-red-400 hover:text-red-600 transition-colors"
+                            title="Delete audit"
+                            aria-label="Delete audit">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
@@ -107,17 +132,32 @@
 </div>
 {% else %}
 <div class="text-center py-28">
-    <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5" style="background:#f0eeff">
+    <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5" style="background:var(--odit-brand-light)">
         <img src="/static/odit.svg" alt="" class="h-9 w-auto opacity-60" />
     </div>
     <h2 class="text-lg font-semibold text-gray-800 mb-2">No audits yet</h2>
     <p class="text-gray-400 text-sm mb-7 max-w-xs mx-auto">Run your first audit to inspect a website's tracking implementation.</p>
     <a href="/audits/new"
         class="inline-flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
-        style="background:#1800ad"
-        onmouseover="this.style.background='#13008a'" onmouseout="this.style.background='#1800ad'">
+        style="background:var(--odit-brand)"
+        onmouseover="this.style.background='var(--odit-brand-hover)'" onmouseout="this.style.background='var(--odit-brand)'"
         Run your first audit
     </a>
 </div>
 {% endif %}
+<script>
+(function(){
+  function reltime(dt) {
+    const diff = (Date.now() - new Date(dt).getTime()) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    if (diff < 86400*30) return Math.floor(diff/86400) + 'd ago';
+    return Math.floor(diff/86400/30) + 'mo ago';
+  }
+  document.querySelectorAll('time.odit-reltime').forEach(el => {
+    el.textContent = reltime(el.getAttribute('datetime'));
+  });
+})();
+</script>
 {% endblock %}

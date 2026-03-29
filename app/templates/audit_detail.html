@@ -1,9 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Audit: {{ run.base_url }} - Odit{% endblock %}
+
+{% block page_context_script %}
+<script>
+window.__oditPageContext = {
+    page: 'Audit Detail',
+    greeting: 'I\'m looking at your audit of **{{ run.base_url | replace("'", "\\'") | replace('"', '\\"') }}**. Status: {{ run.status.value }}, {{ run.pages_crawled }} pages crawled. What would you like to know about the results?',
+    context: 'User is viewing audit detail. URL: {{ run.base_url }}. Status: {{ run.status.value }}. Mode: {{ run.mode.value }}. Pages crawled: {{ run.pages_crawled }}. Created: {{ run.created_at.strftime("%Y-%m-%d") }}.'
+};
+</script>
+{% endblock %}
+
 {% block content %}
 
 <div class="mb-6">
-    <a href="/" class="inline-flex items-center gap-1 text-xs font-medium transition-colors mb-4" style="color:rgba(24,0,173,0.45)" onmouseover="this.style.color='#1800ad'" onmouseout="this.style.color='rgba(24,0,173,0.45)'">
+    <a href="/" class="inline-flex items-center gap-1 text-xs font-medium transition-colors mb-4 text-gray-400 hover:text-[#1800ad]">
         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         Back to Dashboard
     </a>
@@ -14,7 +25,7 @@
                 <span class="text-xs font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
                     {{ run.mode.value.replace("_", " ").title() }}
                 </span>
-                <span class="text-xs text-gray-400">Created {{ run.created_at.strftime("%b %d, %Y %H:%M") }}</span>
+                <span class="text-xs text-gray-400">Created <time class="odit-reltime" datetime="{{ run.created_at.isoformat() }}" title="{{ run.created_at.strftime('%d %b %Y %H:%M') }}">{{ run.created_at.strftime('%d %b %Y') }}</time></span>
             </div>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
@@ -37,6 +48,17 @@
         {% endif %}
         {% endfor %}
         {% endif %}
+        <button
+            hx-delete="/api/audits/{{ audit_id }}"
+            hx-confirm="Delete this audit and all its data? This cannot be undone."
+            hx-on::after-request="window.location.href='/'"
+            class="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 bg-white px-3 py-1.5 rounded-lg transition-colors font-medium"
+            title="Delete audit">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            Delete
+        </button>
         <div id="status-badge">
             {% if run.status.value == "pending" %}
             <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-gray-100 text-gray-500 px-3 py-1.5 rounded-lg">
@@ -70,7 +92,7 @@
     <!-- Main content (left) -->
     <div class="flex-1 min-w-0">
         <!-- Tabs -->
-        <div class="mb-6" style="border-bottom:1px solid rgba(24,0,173,0.12)">
+        <div class="mb-6" style="border-bottom:1px solid var(--odit-border-md)">
             <nav class="-mb-px flex gap-0" id="tab-nav">
                 {% for tab_id, tab_label in [("overview","Overview"),("pages","Pages"),("issues","Issues")] %}
                 <button
@@ -90,9 +112,13 @@
                 <div id="overview-progress"
                     hx-get="/partials/audit-progress/{{ audit_id }}"
                     hx-trigger="load, every 3s [document.getElementById('tab-overview').classList.contains('active-tab')]"
-                    hx-swap="innerHTML">
+                    hx-swap="innerHTML"
+                    hx-indicator="#progress-refresh-indicator">
                     <div class="text-center py-8 text-gray-400 text-sm">Loading progress...</div>
                 </div>
+                <span id="progress-refresh-indicator" class="htmx-indicator inline-flex items-center gap-1 text-xs text-gray-400 ml-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse"></span> Refreshing...
+                </span>
                 <div id="summary-container"
                     hx-get="/partials/audit-summary/{{ audit_id }}"
                     hx-trigger="load, every 5s [window.isAuditRunning], refreshSummary"
@@ -123,7 +149,7 @@
 
     <!-- Activity feed (right) -->
     <div class="w-80 flex-shrink-0 sticky top-4">
-        <div class="bg-white rounded-xl overflow-hidden" style="border:1px solid rgba(24,0,173,0.1); box-shadow:0 1px 8px rgba(24,0,173,0.07)">
+        <div class="bg-white rounded-xl overflow-hidden" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow)">
             <!-- Header -->
             <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <div class="flex items-center gap-2">
@@ -191,8 +217,8 @@
         if (!statusEl || !badge) return;
         const s = statusEl.dataset.status;
         const badges = {
-            pending:   '<span class="inline-flex items-center gap-1.5 text-sm font-medium bg-gray-100 text-gray-600 px-3 py-1 rounded-full"><span class="w-2 h-2 bg-gray-400 rounded-full"></span> Pending</span>',
-            running:   '<span class="inline-flex items-center gap-1.5 text-sm font-medium bg-[#f0eeff] text-[#13008a] px-3 py-1 rounded-full"><span class="w-2 h-2 bg-[#3820c4] rounded-full animate-pulse"></span> Running</span>',
+            pending:   '<span class="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1 rounded-full" style="background:var(--odit-surface-2);color:var(--odit-text-2)"><span class="w-2 h-2 rounded-full" style="background:var(--odit-text-3)"></span> Pending</span>',
+            running:   '<span class="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1 rounded-full" style="background:var(--odit-brand-light);color:var(--odit-brand)"><span class="w-2 h-2 rounded-full animate-pulse" style="background:var(--odit-brand-2)"></span> Running</span>',
             completed: '<span class="inline-flex items-center gap-1.5 text-sm font-medium bg-green-50 text-green-700 px-3 py-1 rounded-full"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Completed</span>',
             failed:    '<span class="inline-flex items-center gap-1.5 text-sm font-medium bg-red-50 text-red-700 px-3 py-1 rounded-full"><span class="w-2 h-2 bg-red-500 rounded-full"></span> Failed</span>',
             cancelled: '<span class="inline-flex items-center gap-1.5 text-sm font-medium bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full"><span class="w-2 h-2 bg-yellow-500 rounded-full"></span> Cancelled</span>',
@@ -217,21 +243,22 @@
     let isTerminal = ['completed', 'failed', 'cancelled'].includes(INITIAL_STATUS);
 
     // Colour / icon config per event_type
+    // labelStyle uses CSS vars so colours respond to dark mode
     const EVENT_STYLES = {
-        crawl_start:       { dot: 'bg-[#6355e0]',   label: 'bg-[#f0eeff] text-[#1800ad]',    icon: '🌐' },
-        page_start:        { dot: 'bg-[#9088ff]',   label: 'bg-[#f0eeff] text-[#3820c4]',    icon: '📄' },
-        page_complete:     { dot: 'bg-green-400',  label: 'bg-green-50 text-green-700',  icon: '✓'  },
-        page_error:        { dot: 'bg-red-400',    label: 'bg-red-50 text-red-600',      icon: '✗'  },
-        vendor_detected:   { dot: 'bg-purple-400', label: 'bg-purple-50 text-purple-700',icon: '🏷' },
-        request_captured:  { dot: 'bg-indigo-300', label: 'bg-indigo-50 text-indigo-600',icon: '→'  },
-        rule_engine:       { dot: 'bg-orange-400', label: 'bg-orange-50 text-orange-700',icon: '⚙'  },
-        issue_flagged:     { dot: 'bg-red-500',    label: 'bg-red-50 text-red-700',      icon: '⚠'  },
-        ai_call:           { dot: 'bg-emerald-400',label: 'bg-emerald-50 text-emerald-700',icon: '✦' },
-        export_start:      { dot: 'bg-teal-400',   label: 'bg-teal-50 text-teal-700',    icon: '📦' },
-        export_generated:  { dot: 'bg-teal-500',   label: 'bg-teal-50 text-teal-800',    icon: '✓'  },
-        crawl_complete:    { dot: 'bg-green-500',  label: 'bg-green-50 text-green-800',  icon: '🏁' },
+        crawl_start:      { dot: 'bg-[#6355e0]', labelStyle: 'background:var(--odit-brand-light);color:var(--odit-brand)',   icon: '🌐' },
+        page_start:       { dot: 'bg-[#9088ff]', labelStyle: 'background:var(--odit-brand-light);color:var(--odit-brand-2)', icon: '📄' },
+        page_complete:    { dot: 'bg-green-400',  labelStyle: 'background:rgba(16,185,129,0.13);color:#15803d',              icon: '✓'  },
+        page_error:       { dot: 'bg-red-400',    labelStyle: 'background:rgba(239,68,68,0.13);color:#dc2626',              icon: '✗'  },
+        vendor_detected:  { dot: 'bg-purple-400', labelStyle: 'background:rgba(167,139,250,0.13);color:#7c3aed',            icon: '🏷' },
+        request_captured: { dot: 'bg-indigo-300', labelStyle: 'background:rgba(99,102,241,0.13);color:#4f46e5',             icon: '→'  },
+        rule_engine:      { dot: 'bg-orange-400', labelStyle: 'background:rgba(234,88,12,0.13);color:#c2410c',              icon: '⚙'  },
+        issue_flagged:    { dot: 'bg-red-500',    labelStyle: 'background:rgba(239,68,68,0.13);color:#b91c1c',              icon: '⚠'  },
+        ai_call:          { dot: 'bg-emerald-400',labelStyle: 'background:rgba(16,185,129,0.13);color:#065f46',             icon: '✦' },
+        export_start:     { dot: 'bg-teal-400',   labelStyle: 'background:rgba(20,184,166,0.13);color:#0f766e',            icon: '📦' },
+        export_generated: { dot: 'bg-teal-500',   labelStyle: 'background:rgba(20,184,166,0.15);color:#115e59',            icon: '✓'  },
+        crawl_complete:   { dot: 'bg-green-500',  labelStyle: 'background:rgba(16,185,129,0.15);color:#14532d',            icon: '🏁' },
     };
-    const DEFAULT_STYLE = { dot: 'bg-gray-300', label: 'bg-gray-50 text-gray-600', icon: '·' };
+    const DEFAULT_STYLE = { dot: 'bg-gray-300', labelStyle: 'background:rgba(107,114,128,0.12);color:#6b7280', icon: '·' };
 
     function getStyle(eventType) {
         return EVENT_STYLES[eventType] || DEFAULT_STYLE;
@@ -262,10 +289,10 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-1.5 mb-1">
-                        <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md ${style.label}">${labelText}</span>
-                        <span class="text-[10px] text-gray-300 flex-shrink-0 tabular-nums">${fmtTime(ev.created_at)}</span>
+                        <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md" style="${style.labelStyle}">${labelText}</span>
+                        <span class="text-[10px] flex-shrink-0 tabular-nums" style="color:var(--odit-text-3)">${fmtTime(ev.created_at)}</span>
                     </div>
-                    <p class="text-[11px] text-gray-600 leading-relaxed break-all">${escHtml(ev.message)}</p>
+                    <p class="text-[11px] leading-relaxed break-all" style="color:var(--odit-text-2)">${escHtml(ev.message)}</p>
                 </div>
             `;
             feed.appendChild(row);
@@ -350,5 +377,20 @@
         setFeedDot('done');
         fetchEvents();
     }
+</script>
+<script>
+(function(){
+  function reltime(dt) {
+    const diff = (Date.now() - new Date(dt).getTime()) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    if (diff < 86400*30) return Math.floor(diff/86400) + 'd ago';
+    return Math.floor(diff/86400/30) + 'mo ago';
+  }
+  document.querySelectorAll('time.odit-reltime').forEach(el => {
+    el.textContent = reltime(el.getAttribute('datetime'));
+  });
+})();
 </script>
 {% endblock %}

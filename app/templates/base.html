@@ -4,49 +4,632 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Odit - Tracking Auditor{% endblock %}</title>
+    <!-- Dark mode: apply class before paint to avoid flash -->
+    <script>
+    (function(){
+        var s = localStorage.getItem('oditDarkMode');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (s === 'dark' || (s === null && prefersDark)) {
+            document.documentElement.classList.add('dark');
+        }
+    })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' };</script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
     <style>
+        /* ── Design tokens (light mode) ──────────────────────────── */
+        :root {
+            --odit-bg:            #f5f4ff;
+            --odit-surface:       #ffffff;
+            --odit-surface-2:     #f8f8fc;
+            --odit-surface-hover: #f5f4ff;
+            --odit-border:        rgba(24,0,173,0.08);
+            --odit-border-md:     rgba(24,0,173,0.13);
+            --odit-border-strong: rgba(24,0,173,0.20);
+            --odit-shadow-sm:     0 1px 6px rgba(24,0,173,0.05);
+            --odit-shadow:        0 1px 8px rgba(24,0,173,0.07);
+            --odit-brand:         #1800ad;
+            --odit-brand-hover:   #13008a;
+            --odit-brand-2:       #3820c4;
+            --odit-brand-light:   #f0eeff;
+            --odit-text:          #111827;
+            --odit-text-2:        #6b7280;
+            --odit-text-3:        #9ca3af;
+        }
+
+        /* ── Design tokens (dark mode) ───────────────────────────── */
+        html.dark {
+            --odit-bg:            #0d0d1c;
+            --odit-surface:       #14142a;
+            --odit-surface-2:     #0f0f22;
+            --odit-surface-hover: #1c1c38;
+            --odit-border:        rgba(99,85,224,0.14);
+            --odit-border-md:     rgba(99,85,224,0.22);
+            --odit-border-strong: rgba(99,85,224,0.34);
+            --odit-shadow-sm:     0 1px 6px rgba(0,0,0,0.4);
+            --odit-shadow:        0 2px 10px rgba(0,0,0,0.5);
+            --odit-brand:         #6355e0;
+            --odit-brand-hover:   #7c6ef0;
+            --odit-brand-2:       #8878ff;
+            --odit-brand-light:   #1c1c3c;
+            --odit-text:          #e2e2f5;
+            --odit-text-2:        #9090bb;
+            --odit-text-3:        #5a5a7a;
+        }
+
+        /* ── Base ────────────────────────────────────────────────── */
         [x-cloak] { display: none !important; }
         .htmx-indicator { display: none; }
         .htmx-request .htmx-indicator { display: inline; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4ff; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--odit-bg);
+            color: var(--odit-text);
+        }
         .nav-link { color: rgba(255,255,255,0.72); transition: color 0.15s, background 0.15s; }
         .nav-link:hover { color: #fff; background: rgba(255,255,255,0.12); }
+        .nav-new-btn { background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.25); transition: background 0.15s; }
+        .nav-new-btn:hover { background: rgba(255,255,255,0.28); }
+
+        .main-area { flex: 1; min-width: 0; }
+
+        /* ── Sidebar ─────────────────────────────────────────────── */
+        #help-sidebar {
+            width: 288px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--odit-surface);
+            border-left: 1px solid var(--odit-border-strong);
+            transition: width 0.2s cubic-bezier(.4,0,.2,1);
+            overflow: hidden;
+        }
+        #help-sidebar.collapsed { width: 46px; }
+        #help-sidebar.collapsed .sidebar-body { opacity: 0; pointer-events: none; }
+        #help-sidebar.collapsed .sidebar-tab { opacity: 1; pointer-events: auto; }
+
+        .sidebar-body {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            opacity: 1;
+            transition: opacity 0.12s ease;
+        }
+        .sidebar-tab {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 13px;
+            gap: 10px;
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.12s ease;
+            background: var(--odit-surface);
+        }
+        .sidebar-tab:hover { background: var(--odit-surface-hover); }
+        .sidebar-collapsed-label {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--odit-text-3);
+            transform: rotate(180deg);
+        }
+
+        /* Messages scrollbar */
+        #help-messages::-webkit-scrollbar { width: 4px; }
+        #help-messages::-webkit-scrollbar-track { background: transparent; }
+        #help-messages::-webkit-scrollbar-thumb { background: var(--odit-border-md); border-radius: 4px; }
+        #help-messages::-webkit-scrollbar-thumb:hover { background: var(--odit-border-strong); }
+
+        /* Typing animation */
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-3px); opacity: 1; }
+        }
+        .typing-dot {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: var(--odit-brand); display: inline-block;
+            animation: typingBounce 1.2s infinite;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.18s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.36s; }
+
+        /* ── Global dark-mode overrides for Tailwind classes ─────── */
+        html.dark .bg-white { background-color: var(--odit-surface) !important; }
+        html.dark .bg-gray-50 { background-color: var(--odit-surface-2) !important; }
+        html.dark .bg-gray-100 { background-color: var(--odit-surface-hover) !important; }
+        html.dark .bg-gray-200 { background-color: rgba(99,85,224,0.12) !important; }
+        html.dark .bg-slate-50 { background-color: var(--odit-surface-2) !important; }
+
+        html.dark .text-gray-900, html.dark .text-gray-800 { color: var(--odit-text) !important; }
+        html.dark .text-gray-700 { color: #b5b5d8 !important; }
+        html.dark .text-gray-600 { color: #9090b8 !important; }
+        html.dark .text-gray-500 { color: #72728a !important; }
+        html.dark .text-gray-400 { color: #55556a !important; }
+        html.dark .text-gray-300 { color: #424258 !important; }
+
+        html.dark .border-gray-100 { border-color: var(--odit-border) !important; }
+        html.dark .border-gray-200 { border-color: var(--odit-border-md) !important; }
+        html.dark .border-gray-300 { border-color: var(--odit-border-strong) !important; }
+
+        html.dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]),
+        html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) {
+            border-color: var(--odit-border) !important;
+        }
+
+        /* Nav */
+        html.dark #main-nav {
+            background: var(--odit-surface-2) !important;
+            box-shadow: 0 1px 0 var(--odit-border-strong) !important;
+        }
+        html.dark #main-nav .nav-link { color: var(--odit-text-2) !important; }
+        html.dark #main-nav .nav-link:hover { color: var(--odit-text) !important; background: var(--odit-surface-hover) !important; }
+        html.dark .nav-new-btn { background: var(--odit-brand) !important; border-color: transparent !important; }
+        html.dark .nav-new-btn:hover { background: var(--odit-brand-hover) !important; }
+
+        /* Form elements */
+        html.dark input:not([type="checkbox"]):not([type="radio"]),
+        html.dark textarea,
+        html.dark select {
+            background-color: var(--odit-surface-2) !important;
+            border-color: var(--odit-border-strong) !important;
+            color: var(--odit-text) !important;
+        }
+        html.dark input::placeholder,
+        html.dark textarea::placeholder { color: var(--odit-text-3) !important; }
+        html.dark select option { background: var(--odit-surface); color: var(--odit-text); }
+
+        /* Status pill backgrounds */
+        html.dark .bg-green-50, html.dark .bg-emerald-50 { background-color: rgba(16,185,129,0.13) !important; }
+        html.dark .bg-red-50 { background-color: rgba(239,68,68,0.13) !important; }
+        html.dark .bg-orange-50 { background-color: rgba(234,88,12,0.13) !important; }
+        html.dark .bg-yellow-50 { background-color: rgba(234,179,8,0.12) !important; }
+        html.dark .bg-purple-50 { background-color: rgba(167,139,250,0.12) !important; }
+        html.dark .bg-indigo-50 { background-color: rgba(99,102,241,0.12) !important; }
+        html.dark .bg-blue-50 { background-color: rgba(59,130,246,0.12) !important; }
+        html.dark .bg-teal-50 { background-color: rgba(20,184,166,0.12) !important; }
+
+        html.dark .border-red-100, html.dark .border-red-200 { border-color: rgba(239,68,68,0.22) !important; }
+        html.dark .border-orange-100 { border-color: rgba(234,88,12,0.22) !important; }
+        html.dark .border-yellow-100 { border-color: rgba(234,179,8,0.22) !important; }
+        html.dark .border-green-100, html.dark .border-emerald-100 { border-color: rgba(16,185,129,0.22) !important; }
+        html.dark .border-purple-100 { border-color: rgba(167,139,250,0.22) !important; }
+        html.dark .border-indigo-100 { border-color: rgba(99,102,241,0.22) !important; }
+
+        /* Hover/interactive */
+        html.dark .hover\:bg-gray-50:hover,
+        html.dark .hover\:bg-gray-100:hover,
+        html.dark .hover\:bg-slate-50:hover { background-color: var(--odit-surface-hover) !important; }
+        html.dark .hover\:bg-red-50:hover { background-color: rgba(239,68,68,0.1) !important; }
+
+        /* Code / pre */
+        html.dark code:not([class]) {
+            background: var(--odit-surface-hover) !important;
+            color: var(--odit-brand-2) !important;
+        }
+        html.dark pre { background: var(--odit-surface-2) !important; border-color: var(--odit-border) !important; }
+
+        /* Rounded card override for inline border/shadow */
+        html.dark .rounded-xl,
+        html.dark .rounded-2xl,
+        html.dark .rounded-lg { color: inherit; }
+
+        /* Gradient backgrounds (AI analysis sections) */
+        html.dark .from-purple-50 { --tw-gradient-from: rgba(139,92,246,0.1) var(--tw-gradient-from-position) !important; }
+        html.dark .to-indigo-50 { --tw-gradient-to: rgba(99,102,241,0.1) var(--tw-gradient-to-position) !important; }
+
+        /* Brand-colored Tailwind arbitrary-value classes */
+        html.dark .bg-\[\#1800ad\] { background-color: var(--odit-brand) !important; }
+        html.dark .bg-\[\#6355e0\] { background-color: var(--odit-brand) !important; }
+        html.dark .bg-\[\#3820c4\] { background-color: var(--odit-brand-2) !important; }
+        html.dark .bg-\[\#f0eeff\] { background-color: var(--odit-brand-light) !important; }
+        html.dark .bg-\[\#dddaff\] { background-color: rgba(99,85,224,0.18) !important; }
+        html.dark .border-\[\#1800ad\] { border-color: var(--odit-brand) !important; }
+        html.dark .border-\[\#dddaff\] { border-color: var(--odit-border-md) !important; }
+        html.dark .text-\[\#1800ad\] { color: var(--odit-brand) !important; }
+        html.dark .text-\[\#13008a\] { color: var(--odit-brand) !important; }
+        html.dark .text-\[\#3820c4\] { color: var(--odit-brand-2) !important; }
+        html.dark .text-\[\#0e0068\] { color: var(--odit-brand) !important; }
+        html.dark .hover\:bg-\[\#13008a\]:hover,
+        html.dark .hover\:bg-\[\#1800ad\]:hover { background-color: var(--odit-brand-hover) !important; }
+        html.dark .hover\:text-\[\#1800ad\]:hover { color: var(--odit-brand) !important; }
+        html.dark .hover\:text-\[\#0e0068\]:hover { color: var(--odit-brand-hover) !important; }
+        html.dark .has-\[\:checked\]\:bg-\[\#f0eeff\]:has(:checked) { background-color: var(--odit-brand-light) !important; }
+        html.dark .has-\[\:checked\]\:border-\[\#3820c4\]:has(:checked) { border-color: var(--odit-brand) !important; }
+        html.dark .hover\:border-\[\#6355e0\]:hover { border-color: var(--odit-brand) !important; }
+        html.dark .focus\:ring-\[\#3820c4\]:focus { --tw-ring-color: var(--odit-brand); }
+
+        /* More semantic color backgrounds */
+        html.dark .bg-green-100 { background-color: rgba(16,185,129,0.18) !important; }
+        html.dark .bg-yellow-100 { background-color: rgba(234,179,8,0.15) !important; }
+        html.dark .bg-orange-100 { background-color: rgba(249,115,22,0.15) !important; }
+        html.dark .bg-red-100 { background-color: rgba(239,68,68,0.15) !important; }
+        html.dark .bg-purple-100 { background-color: rgba(167,139,250,0.15) !important; }
+        html.dark .border-green-200 { border-color: rgba(16,185,129,0.28) !important; }
+        html.dark .border-yellow-200 { border-color: rgba(234,179,8,0.28) !important; }
+        html.dark .border-orange-200 { border-color: rgba(249,115,22,0.28) !important; }
+        html.dark .border-red-400 { border-color: rgba(239,68,68,0.5) !important; }
+        html.dark .bg-emerald-600 { background-color: #059669 !important; }
+        html.dark .hover\:bg-emerald-700:hover { background-color: #047857 !important; }
+
+        @media (max-width: 900px) {
+            #help-sidebar { display: none; }
+        }
     </style>
 </head>
-<body class="min-h-screen text-gray-800">
-    <nav class="sticky top-0 z-10" style="background:#1800ad; box-shadow:0 2px 12px rgba(24,0,173,0.28)">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-14">
-                <a href="/" class="flex items-center gap-1.5">
-                    <img src="/static/odit.svg" alt="Odit" class="h-7 w-auto" style="filter:brightness(0) invert(1)" />
-                </a>
-                <div class="flex items-center gap-0.5">
-                    <a href="/" class="nav-link text-sm font-medium px-3 py-1.5 rounded-md">Audits</a>
-                    <a href="/settings" class="nav-link text-sm font-medium px-3 py-1.5 rounded-md">Settings</a>
-                    <a href="/audits/new"
-                        class="inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-lg transition-colors ml-2"
-                        style="background:rgba(255,255,255,0.18); color:#fff; border:1px solid rgba(255,255,255,0.25)"
-                        onmouseover="this.style.background='rgba(255,255,255,0.28)'"
-                        onmouseout="this.style.background='rgba(255,255,255,0.18)'">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-                        </svg>
-                        New Audit
+<body class="text-gray-800 dark:text-gray-200" style="display:flex; min-height:100vh;">
+    <!-- Left column: nav + content -->
+    <div class="main-area" style="flex:1; min-width:0; display:flex; flex-direction:column;">
+        <nav id="main-nav" class="sticky top-0 z-30" style="background:#1800ad; box-shadow:0 2px 12px rgba(24,0,173,0.28)">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-14">
+                    <a href="/" class="flex items-center gap-1.5">
+                        <img src="/static/odit.svg" alt="Odit" class="h-7 w-auto" style="filter:brightness(0) invert(1)" />
                     </a>
+                    <div class="flex items-center gap-0.5">
+                        <a href="/" class="nav-link text-sm font-medium px-3 py-1.5 rounded-md">Audits</a>
+                        <a href="/settings" class="nav-link text-sm font-medium px-3 py-1.5 rounded-md">Settings</a>
+                        <!-- Dark mode toggle -->
+                        <button onclick="toggleDarkMode()" id="dark-mode-btn"
+                            class="nav-link rounded-md p-1.5 transition-colors ml-1"
+                            title="Toggle dark mode"
+                            aria-label="Toggle dark mode">
+                            <svg id="dm-sun" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                            <svg id="dm-moon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                            </svg>
+                        </button>
+                        <a href="/audits/new"
+                            class="nav-new-btn inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-lg ml-2">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                            </svg>
+                            New Audit
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
-    </nav>
+        </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {% block content %}{% endblock %}
-    </main>
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+            {% block content %}{% endblock %}
+        </main>
+        <footer class="mt-auto py-5 text-center text-xs" style="color:var(--odit-text-3)">
+            Odit &mdash; Local-first tracking auditor
+        </footer>
+    </div>
 
-    <footer class="mt-16 py-5 text-center text-xs" style="color:rgba(24,0,173,0.35)">
-        Odit &mdash; Local-first tracking auditor
-    </footer>
+        <!-- Persistent help sidebar -->
+        <aside id="help-sidebar">
+            <!-- Collapsed tab (click to expand) -->
+            <div class="sidebar-tab" onclick="toggleSidebar()" title="Toggle help sidebar" aria-label="Toggle help sidebar" role="button" tabindex="0">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                    <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <span class="sidebar-collapsed-label">Help</span>
+                <div id="help-badge" class="hidden w-2 h-2 rounded-full" style="background:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,0.2)"></div>
+            </div>
+
+            <!-- Expanded sidebar body -->
+            <div class="sidebar-body">
+                <!-- Header — same height as nav (h-14 = 56px) for seamless alignment -->
+                <div class="flex items-center justify-between px-4 flex-shrink-0" style="height:56px; background:#1800ad; border-bottom:1px solid rgba(255,255,255,0.08)">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:rgba(255,255,255,0.15)">
+                            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-white leading-none mb-0.5">Help</p>
+                            <p id="help-page-label" class="text-[10px] font-medium truncate" style="color:rgba(255,255,255,0.5); letter-spacing:0.02em">Ask anything</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleSidebar()" title="Toggle help sidebar" aria-label="Toggle help sidebar"
+                        class="flex-shrink-0 ml-1 w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+                        style="color:rgba(255,255,255,0.45)"
+                        onmouseover="this.style.color='rgba(255,255,255,0.9)';this.style.background='rgba(255,255,255,0.1)'"
+                        onmouseout="this.style.color='rgba(255,255,255,0.45)';this.style.background=''">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Messages -->
+                <div id="help-messages" class="flex-1 overflow-y-auto py-4" style="background:var(--odit-surface-2); display:flex; flex-direction:column; gap:12px; padding-left:14px; padding-right:14px; scroll-behavior:smooth">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Input -->
+                <div class="flex-shrink-0 p-3" style="background:var(--odit-surface); border-top:1px solid var(--odit-border-md);">
+                    <div class="flex items-end gap-2">
+                        <textarea id="help-input"
+                            placeholder="Ask a question…"
+                            rows="1"
+                            onkeydown="handleHelpKey(event)"
+                            oninput="autoResize(this)"
+                            class="flex-1 resize-none outline-none leading-relaxed"
+                            style="font-size:0.8125rem; border:1.5px solid var(--odit-border-strong); border-radius:10px; padding:8px 12px; max-height:80px; background:var(--odit-surface-2); color:var(--odit-text); transition:border-color 0.15s;"
+                            onfocus="this.style.borderColor='var(--odit-border-md)'"
+                            onblur="this.style.borderColor='var(--odit-border-strong)'"
+                        ></textarea>
+                        <button onclick="sendHelp()"
+                            id="help-send-btn"
+                            class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+                            style="background:var(--odit-brand); box-shadow:0 2px 8px rgba(24,0,173,0.3)"
+                            onmouseover="this.style.background='var(--odit-brand-hover)'"
+                            onmouseout="this.style.background='var(--odit-brand)'">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    {% block page_context_script %}{% endblock %}
+
+    <script>
+    // ── Dark mode ─────────────────────────────────────────────────
+    const DARK_KEY = 'oditDarkMode';
+
+    function applyDarkMode(dark) {
+        if (dark) {
+            document.documentElement.classList.add('dark');
+            document.getElementById('dm-sun').classList.remove('hidden');
+            document.getElementById('dm-moon').classList.add('hidden');
+        } else {
+            document.documentElement.classList.remove('dark');
+            document.getElementById('dm-sun').classList.add('hidden');
+            document.getElementById('dm-moon').classList.remove('hidden');
+        }
+    }
+
+    function toggleDarkMode() {
+        const isDark = document.documentElement.classList.contains('dark');
+        localStorage.setItem(DARK_KEY, isDark ? 'light' : 'dark');
+        applyDarkMode(!isDark);
+    }
+
+    // Sync icon state on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        applyDarkMode(document.documentElement.classList.contains('dark'));
+    });
+
+    // ── Sidebar ───────────────────────────────────────────────────
+    const SIDEBAR_KEY = 'oditSidebarOpen';
+    const LOG_KEY = 'oditHelpLog';
+    const HIST_KEY = 'oditHelpHistory';
+    const PAGE_KEY = 'oditLastPage';
+
+    let helpHistory = [];
+    let helpLog = [];
+
+    function renderMd(text) {
+        return text
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+            .replace(/`([^`]+)`/g,'<code style="background:var(--odit-brand-light);color:var(--odit-brand);padding:0.15em 0.4em;border-radius:4px;font-size:0.9em;font-family:monospace">$1</code>')
+            .replace(/^### (.+)$/gm,'<p style="font-weight:700;color:var(--odit-brand);margin:0.6em 0 0.25em;font-size:0.875em">$1</p>')
+            .replace(/^## (.+)$/gm,'<p style="font-weight:700;color:var(--odit-text-2);margin:0.7em 0 0.25em;font-size:0.7em;text-transform:uppercase;letter-spacing:0.08em">$1</p>')
+            .replace(/^- (.+)$/gm,'<div style="display:flex;gap:6px;margin:3px 0;align-items:baseline"><span style="color:var(--odit-brand);font-size:6px;flex-shrink:0;margin-top:1px">●</span><span>$1</span></div>')
+            .replace(/\n{2,}/g,'<div style="height:6px"></div>')
+            .replace(/\n/g,' ');
+    }
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('help-sidebar');
+        const collapsed = sidebar.classList.toggle('collapsed');
+        localStorage.setItem(SIDEBAR_KEY, collapsed ? 'closed' : 'open');
+        if (!collapsed) {
+            document.getElementById('help-badge').classList.add('hidden');
+            setTimeout(() => {
+                const msgs = document.getElementById('help-messages');
+                msgs.scrollTop = msgs.scrollHeight;
+            }, 220);
+        }
+    }
+
+    const MSG_STYLE = 'font-size:0.8125rem;line-height:1.55';
+    const AVATAR = `<div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style="background:var(--odit-brand-light);margin-top:1px"><svg style="width:13px;height:13px;color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>`;
+
+    function renderMsgDOM(entry) {
+        const container = document.getElementById('help-messages');
+        const wrap = document.createElement('div');
+
+        if (entry.type === 'user') {
+            wrap.style.cssText = 'display:flex;justify-content:flex-end';
+            const safe = entry.rawText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            wrap.innerHTML = `<div style="${MSG_STYLE};background:var(--odit-brand);color:#fff;padding:9px 13px;border-radius:14px;border-top-right-radius:4px;max-width:88%">${safe}</div>`;
+        } else if (entry.type === 'assistant') {
+            wrap.style.cssText = 'display:flex;gap:8px;align-items:flex-start';
+            wrap.innerHTML = `${AVATAR}<div class="msg-bubble" style="${MSG_STYLE};background:var(--odit-surface);color:var(--odit-text);padding:9px 13px;border-radius:14px;border-top-left-radius:4px;max-width:calc(100% - 34px);border:1px solid var(--odit-border-md);box-shadow:var(--odit-shadow-sm)">${renderMd(entry.rawText)}</div>`;
+        } else if (entry.type === 'nav') {
+            const safe = entry.rawText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            wrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin:4px 0';
+            wrap.innerHTML = `<div style="flex:1;height:1px;background:var(--odit-border-md)"></div><span style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--odit-text-3);flex-shrink:0;padding:0 4px">${safe}</span><div style="flex:1;height:1px;background:var(--odit-border-md)"></div>`;
+        }
+
+        container.appendChild(wrap);
+        container.scrollTop = container.scrollHeight;
+        return wrap.querySelector('.msg-bubble');
+    }
+
+    function saveLog() {
+        try { sessionStorage.setItem(LOG_KEY, JSON.stringify(helpLog.slice(-60))); } catch(e) {}
+    }
+    function saveHistory() {
+        try { sessionStorage.setItem(HIST_KEY, JSON.stringify(helpHistory.slice(-20))); } catch(e) {}
+    }
+
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 80) + 'px';
+    }
+
+    function handleHelpKey(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendHelp(); }
+    }
+
+    async function sendHelp() {
+        const input = document.getElementById('help-input');
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        input.value = '';
+        input.style.height = 'auto';
+        document.getElementById('help-send-btn').disabled = true;
+
+        const userEntry = { type: 'user', rawText: msg };
+        helpLog.push(userEntry);
+        renderMsgDOM(userEntry);
+
+        // Animated typing indicator
+        const container = document.getElementById('help-messages');
+        const thinkWrap = document.createElement('div');
+        thinkWrap.style.cssText = 'display:flex;gap:8px;align-items:flex-start';
+        thinkWrap.innerHTML = `${AVATAR}<div class="msg-bubble" style="background:var(--odit-surface);padding:11px 14px;border-radius:14px;border-top-left-radius:4px;border:1px solid var(--odit-border-md);box-shadow:var(--odit-shadow-sm);display:flex;gap:4px;align-items:center"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+        container.appendChild(thinkWrap);
+        container.scrollTop = container.scrollHeight;
+        const bubble = thinkWrap.querySelector('.msg-bubble');
+
+        const ctx = window.__oditPageContext || {};
+        let rawText = '';
+
+        try {
+            const resp = await fetch('/api/help/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    message: msg,
+                    history: helpHistory,
+                    page_context: ctx.context || null
+                })
+            });
+
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buf = '';
+            bubble.innerHTML = '';
+            bubble.style.cssText = `${MSG_STYLE};background:var(--odit-surface);color:var(--odit-text);padding:9px 13px;border-radius:14px;border-top-left-radius:4px;max-width:calc(100% - 34px);border:1px solid var(--odit-border-md);box-shadow:var(--odit-shadow-sm)`;
+
+            while (true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, {stream: true});
+                const lines = buf.split('\n');
+                buf = lines.pop();
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const payload = line.slice(6);
+                    if (payload === '[DONE]') break;
+                    try {
+                        const chunk = JSON.parse(payload);
+                        if (chunk.text) {
+                            rawText += chunk.text;
+                            bubble.innerHTML = renderMd(rawText);
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    } catch {}
+                }
+            }
+        } catch(e) {
+            bubble.innerHTML = 'Sorry, something went wrong.';
+            rawText = 'Sorry, something went wrong.';
+        }
+
+        helpLog.push({ type: 'assistant', rawText });
+        helpHistory.push({ role: 'user', content: msg });
+        helpHistory.push({ role: 'assistant', content: rawText });
+        if (helpHistory.length > 20) helpHistory = helpHistory.slice(-20);
+        saveLog();
+        saveHistory();
+
+        document.getElementById('help-send-btn').disabled = false;
+    }
+
+    function initSidebar() {
+        // Restore sidebar state
+        const state = localStorage.getItem(SIDEBAR_KEY);
+        if (state === 'closed') {
+            document.getElementById('help-sidebar').classList.add('collapsed');
+        }
+
+        // Restore log and history from session
+        try { helpLog = JSON.parse(sessionStorage.getItem(LOG_KEY) || '[]'); } catch(e) { helpLog = []; }
+        try { helpHistory = JSON.parse(sessionStorage.getItem(HIST_KEY) || '[]'); } catch(e) { helpHistory = []; }
+
+        const ctx = window.__oditPageContext || {};
+        const currentPage = ctx.page || null;
+        const lastPage = sessionStorage.getItem(PAGE_KEY);
+
+        // Update page label in header
+        if (ctx.page) {
+            document.getElementById('help-page-label').textContent = ctx.page;
+        }
+
+        if (helpLog.length === 0) {
+            // First visit — show welcome or page greeting
+            const welcomeText = ctx.greeting ||
+                "Hi! I'm the Odit help assistant. Ask me anything about how to use the app — running audits, reading results, understanding issues, exports, settings, or anything else.";
+            const entry = { type: 'assistant', rawText: welcomeText };
+            helpLog.push(entry);
+            renderMsgDOM(entry);
+            helpHistory.push({ role: 'assistant', content: welcomeText });
+            saveLog();
+            saveHistory();
+        } else {
+            // Re-render persisted messages
+            for (const entry of helpLog) {
+                renderMsgDOM(entry);
+            }
+
+            // If page changed and we have a greeting, add nav separator + proactive message
+            if (currentPage && currentPage !== lastPage && ctx.greeting && helpLog.length > 0) {
+                const navEntry = { type: 'nav', rawText: currentPage };
+                helpLog.push(navEntry);
+                renderMsgDOM(navEntry);
+
+                setTimeout(() => {
+                    const proactiveEntry = { type: 'assistant', rawText: ctx.greeting };
+                    helpLog.push(proactiveEntry);
+                    renderMsgDOM(proactiveEntry);
+                    helpHistory.push({ role: 'assistant', content: ctx.greeting });
+                    saveLog();
+                    saveHistory();
+
+                    // Show badge if sidebar is collapsed
+                    if (document.getElementById('help-sidebar').classList.contains('collapsed')) {
+                        document.getElementById('help-badge').classList.remove('hidden');
+                    }
+                }, 350);
+
+                saveLog();
+            }
+        }
+
+        if (currentPage) sessionStorage.setItem(PAGE_KEY, currentPage);
+    }
+
+    document.addEventListener('DOMContentLoaded', initSidebar);
+    </script>
 </body>
 </html>

@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Settings — Odit{% endblock %}
 
+{% block page_context_script %}
+<script>
+window.__oditPageContext = {
+    page: 'Settings',
+    greeting: 'You\'re on the Settings page. Here you can configure your Anthropic API key to enable AI features, and set default crawl preferences. What do you need help with?',
+    context: 'User is on the Settings page.'
+};
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-2xl mx-auto">
   <h1 class="text-2xl font-semibold text-gray-900 mb-6">Settings</h1>
@@ -79,7 +89,7 @@
           onclick="clearKey()"
           class="text-sm text-red-600 hover:text-red-700 px-4 py-2 rounded-md border border-red-200 hover:bg-red-50 transition-colors"
         >
-          Remove Key
+          Delete key
         </button>
         {% endif %}
         <span id="save-status" class="text-sm hidden"></span>

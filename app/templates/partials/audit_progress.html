@@ -1,17 +1,17 @@
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white rounded-xl p-4" style="border:1px solid rgba(24,0,173,0.1); box-shadow:0 1px 6px rgba(24,0,173,0.05)">
+    <div class="bg-white rounded-xl p-4" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow-sm)" title="Total pages discovered during crawl">
         <div class="text-2xl font-bold text-gray-900">{{ run.pages_discovered }}</div>
         <div class="text-xs text-gray-500 mt-1">Pages Discovered</div>
     </div>
-    <div class="bg-white rounded-xl p-4" style="border:1px solid rgba(24,0,173,0.1); box-shadow:0 1px 6px rgba(24,0,173,0.05)">
+    <div class="bg-white rounded-xl p-4" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow-sm)" title="Pages successfully crawled and analysed">
         <div class="text-2xl font-bold text-[#1800ad]">{{ run.pages_crawled }}</div>
         <div class="text-xs text-gray-500 mt-1">Pages Crawled</div>
     </div>
-    <div class="bg-white rounded-xl p-4" style="border:1px solid rgba(24,0,173,0.1); box-shadow:0 1px 6px rgba(24,0,173,0.05)">
+    <div class="bg-white rounded-xl p-4" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow-sm)" title="Pages that failed to load or returned errors">
         <div class="text-2xl font-bold text-red-500">{{ run.pages_failed }}</div>
         <div class="text-xs text-gray-500 mt-1">Pages Failed</div>
     </div>
-    <div class="bg-white rounded-xl p-4" style="border:1px solid rgba(24,0,173,0.1); box-shadow:0 1px 6px rgba(24,0,173,0.05)">
+    <div class="bg-white rounded-xl p-4" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow-sm)" title="Unique tracking vendors detected across all pages">
         <div class="text-2xl font-bold text-purple-600">{{ vendor_count }}</div>
         <div class="text-xs text-gray-500 mt-1">Vendors Detected</div>
     </div>
@@ -36,7 +36,7 @@
     </div>
 </div>
 
-<div class="bg-white rounded-xl p-4" style="border:1px solid rgba(24,0,173,0.1); box-shadow:0 1px 6px rgba(24,0,173,0.05)" data-status="{{ run.status.value }}">
+<div class="bg-white rounded-xl p-4" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow-sm)" data-status="{{ run.status.value }}">
     <div class="flex items-center justify-between">
         <div>
             <span class="text-sm font-medium text-gray-700">Status: </span>
@@ -83,9 +83,9 @@
 
     {% if run.started_at %}
     <div class="mt-3 text-xs text-gray-400">
-        Started: {{ run.started_at.strftime("%b %d, %Y %H:%M:%S") }}
+        Started: <time class="odit-reltime" datetime="{{ run.started_at.isoformat() }}" title="{{ run.started_at.strftime('%d %b %Y %H:%M:%S') }}">{{ run.started_at.strftime('%d %b %Y %H:%M') }}</time>
         {% if run.completed_at %}
-        &mdash; Completed: {{ run.completed_at.strftime("%b %d, %Y %H:%M:%S") }}
+        &mdash; Completed: <time class="odit-reltime" datetime="{{ run.completed_at.isoformat() }}" title="{{ run.completed_at.strftime('%d %b %Y %H:%M:%S') }}">{{ run.completed_at.strftime('%d %b %Y %H:%M') }}</time>
         {% endif %}
     </div>
     {% endif %}
