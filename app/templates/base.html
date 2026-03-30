@@ -297,6 +297,9 @@
             border-color: var(--odit-border) !important;
         }
 
+        /* Logo — invert to white in dark mode */
+        html.dark .odit-logo { filter: brightness(0) invert(1); }
+
         /* Nav — dark mode handled via CSS variables in #main-nav and .nav-new-btn above */
 
         /* Form elements */
@@ -396,7 +399,7 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-14">
                     <a href="/" class="flex items-center gap-1.5">
-                        <img src="/static/odit.svg" alt="Odit" class="h-7 w-auto" style="filter:none" />
+                        <img src="/static/odit.svg" alt="Odit" class="odit-logo h-7 w-auto" />
                     </a>
                     <div class="flex items-center gap-0.5">
                         <a href="/" class="nav-link text-sm font-medium px-3 py-1.5 rounded-md">Audits</a>
