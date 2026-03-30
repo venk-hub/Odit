@@ -8,7 +8,7 @@ import os
 import posixpath
 
 from app.config import get_settings
-from app.api import audits, pages, issues, vendors, exports, comparisons, suggestions, events
+from app.api import audits, pages, issues, vendors, exports, comparisons, suggestions, events, help as help_api
 from app.api import settings as settings_api
 from app.web import routes as web_routes
 
@@ -49,6 +49,7 @@ app.include_router(comparisons.router)
 app.include_router(settings_api.router)
 app.include_router(suggestions.router)
 app.include_router(events.router)
+app.include_router(help_api.router)
 
 # Include Web (template) router
 app.include_router(web_routes.router)

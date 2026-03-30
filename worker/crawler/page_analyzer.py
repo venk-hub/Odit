@@ -163,14 +163,15 @@ def extract_window_globals(page) -> List[str]:
 def extract_data_layer(page) -> Dict[str, Any]:
     """Extract common data layer objects: dataLayer, utag_data, digitalData, etc."""
     result = {}
+
+    # Primary: collect from the push-interceptor buffer (catches events fired during load)
     try:
-        data_layer = page.evaluate("""
+        dl_buf = page.evaluate("""
             () => {
                 try {
-                    const dl = window.dataLayer;
-                    if (Array.isArray(dl) && dl.length > 0) {
-                        // Return last 10 events, serialisable only
-                        return dl.slice(-10).map(item => {
+                    const buf = window.__oditDLBuf;
+                    if (Array.isArray(buf) && buf.length > 0) {
+                        return buf.map(item => {
                             try { return JSON.parse(JSON.stringify(item)); } catch(e) { return String(item); }
                         });
                     }
@@ -178,10 +179,31 @@ def extract_data_layer(page) -> Dict[str, Any]:
                 return null;
             }
         """)
-        if data_layer:
-            result["dataLayer"] = data_layer
+        if dl_buf:
+            result["dataLayer"] = dl_buf
     except Exception:
         pass
+
+    # Fallback: snapshot window.dataLayer if the interceptor wasn't in place
+    if "dataLayer" not in result:
+        try:
+            data_layer = page.evaluate("""
+                () => {
+                    try {
+                        const dl = window.dataLayer;
+                        if (Array.isArray(dl) && dl.length > 0) {
+                            return dl.slice(-10).map(item => {
+                                try { return JSON.parse(JSON.stringify(item)); } catch(e) { return String(item); }
+                            });
+                        }
+                    } catch(e) {}
+                    return null;
+                }
+            """)
+            if data_layer:
+                result["dataLayer"] = data_layer
+        except Exception:
+            pass
 
     try:
         utag_data = page.evaluate("""
@@ -297,6 +319,81 @@ def take_screenshot(page, output_path: str) -> Optional[str]:
     except Exception as e:
         logger.warning(f"Screenshot failed: {e}")
         return None
+
+
+def extract_service_workers(page) -> List[Dict]:
+    """Detect registered service worker script URLs."""
+    try:
+        result = page.evaluate("""
+            async () => {
+                if (!navigator.serviceWorker) return [];
+                try {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    return regs.map(r => ({
+                        scope: r.scope,
+                        script_url: (r.active || r.installing || r.waiting || {}).scriptURL || null,
+                        state: r.active ? 'active' : r.installing ? 'installing' : 'waiting',
+                    }));
+                } catch(e) { return []; }
+            }
+        """)
+        return result or []
+    except Exception as e:
+        logger.warning(f"Failed to extract service workers: {e}")
+        return []
+
+
+def extract_iframe_signals(page) -> Dict[str, List]:
+    """
+    Extract script srcs and window globals from iframes.
+    Playwright's 'response' event already captures iframe network requests,
+    so this adds DOM-level signals (loaded scripts, globals) from child frames.
+    """
+    IFRAME_GLOBALS = [
+        "gtag", "dataLayer", "ga", "google_tag_manager",
+        "_satellite", "analytics", "rudderanalytics",
+        "mixpanel", "amplitude", "heap",
+        "fbq", "ttq", "optimizely", "VWO", "DY",
+        "OneTrust", "Cookiebot", "utag",
+    ]
+    iframe_urls: List[str] = []
+    extra_script_srcs: List[str] = []
+    extra_globals: List[str] = []
+
+    for frame in page.frames[1:]:  # index 0 is the main frame
+        try:
+            url = frame.url
+            if url and url not in ("about:blank", "", "null"):
+                iframe_urls.append(url)
+        except Exception:
+            pass
+
+        try:
+            srcs = frame.evaluate(
+                "() => Array.from(document.querySelectorAll('script[src]')).map(s => s.src).filter(Boolean)"
+            )
+            if srcs:
+                extra_script_srcs.extend(srcs)
+        except Exception:
+            pass
+
+        try:
+            found = frame.evaluate(
+                "(globals) => globals.filter(g => { "
+                "try { return window[g] !== undefined && window[g] !== null; } "
+                "catch(e) { return false; } })",
+                IFRAME_GLOBALS,
+            )
+            if found:
+                extra_globals.extend(found)
+        except Exception:
+            pass
+
+    return {
+        "iframe_urls": list(dict.fromkeys(iframe_urls)),           # deduped, order-preserved
+        "extra_script_srcs": list(dict.fromkeys(extra_script_srcs)),
+        "extra_globals": list(dict.fromkeys(extra_globals)),
+    }
 
 
 def extract_links(page, base_domain: str) -> List[str]:

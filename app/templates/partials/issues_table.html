@@ -3,7 +3,7 @@
     <form hx-get="/audits/{{ audit_id }}/issues" hx-target="closest div" hx-swap="outerHTML"
         class="flex items-center gap-3 mb-4 flex-wrap">
         <select name="severity" onchange="this.form.requestSubmit()"
-            class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3820c4]">
+            class="odit-input text-sm" style="padding:6px 12px">
             <option value="">All Severities</option>
             <option value="critical" {% if filter_severity == "critical" %}selected{% endif %}>Critical</option>
             <option value="high" {% if filter_severity == "high" %}selected{% endif %}>High</option>
@@ -11,7 +11,7 @@
             <option value="low" {% if filter_severity == "low" %}selected{% endif %}>Low</option>
         </select>
         <select name="category" onchange="this.form.requestSubmit()"
-            class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3820c4]">
+            class="odit-input text-sm" style="padding:6px 12px">
             <option value="">All Categories</option>
             <option value="broken_tracking" {% if filter_category == "broken_tracking" %}selected{% endif %}>Broken Tracking</option>
             <option value="missing_vendor" {% if filter_category == "missing_vendor" %}selected{% endif %}>Missing Vendor</option>
@@ -24,22 +24,22 @@
     </form>
 
     {% if issues %}
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-gray-50">
+    <div class="odit-card overflow-hidden">
+        <table class="min-w-full odit-table text-sm">
+            <thead>
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Severity</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Category</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
-                    <th class="px-4 py-3"></th>
+                    <th class="text-left w-24">Severity</th>
+                    <th class="text-left w-32">Category</th>
+                    <th class="text-left">Issue</th>
+                    <th class="text-left">Vendor</th>
+                    <th class="text-left">URL</th>
+                    <th></th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100">
+            <tbody>
                 {% for issue in issues %}
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3">
+                <tr class="transition-colors">
+                    <td>
                         {% if issue.severity == "critical" %}
                         <span class="inline-flex items-center gap-1 text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
                             <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Critical
@@ -58,33 +58,33 @@
                         </span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3">
-                        <span class="text-xs text-gray-500">{{ issue.category.replace("_", " ").title() }}</span>
+                    <td>
+                        <span class="text-xs" style="color:var(--odit-text-2)">{{ issue.category.replace("_", " ").title() }}</span>
                     </td>
-                    <td class="px-4 py-3">
+                    <td>
                         <a href="/audits/{{ audit_id }}/issue/{{ issue.id }}"
-                            class="text-sm font-medium text-gray-800 hover:text-[#1800ad]">{{ issue.title }}</a>
-                        <p class="text-xs text-gray-400 mt-0.5 truncate max-w-sm">{{ issue.description[:100] }}{% if issue.description|length > 100 %}...{% endif %}</p>
+                            class="text-sm font-medium hover:text-[#1800ad]" style="color:var(--odit-text)">{{ issue.title }}</a>
+                        <p class="text-xs mt-0.5 truncate max-w-sm" style="color:var(--odit-text-2)">{{ issue.description[:100] }}{% if issue.description|length > 100 %}...{% endif %}</p>
                     </td>
-                    <td class="px-4 py-3">
+                    <td>
                         {% if issue.affected_vendor_key %}
                         <span class="text-xs bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-mono">
                             {{ issue.affected_vendor_key }}
                         </span>
                         {% else %}
-                        <span class="text-xs text-gray-300">—</span>
+                        <span class="text-xs" style="color:var(--odit-text-3)">—</span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3">
+                    <td>
                         {% if issue.affected_url %}
-                        <span class="text-xs text-gray-500 font-mono truncate max-w-xs block" title="{{ issue.affected_url }}">
+                        <span class="text-xs font-mono truncate max-w-xs block" style="color:var(--odit-text-2)" title="{{ issue.affected_url }}">
                             {{ issue.affected_url | truncate(50) }}
                         </span>
                         {% else %}
-                        <span class="text-xs text-gray-300">—</span>
+                        <span class="text-xs" style="color:var(--odit-text-3)">—</span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3 text-right">
+                    <td class="text-right">
                         <a href="/audits/{{ audit_id }}/issue/{{ issue.id }}"
                             class="text-xs text-[#1800ad] hover:text-[#0e0068]">Details →</a>
                     </td>

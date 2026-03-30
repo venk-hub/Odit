@@ -35,23 +35,13 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         counts = {row[0]: row[1] for row in issue_counts}
         audits.append({"run": run, "issue_counts": counts})
 
-    return templates.TemplateResponse("dashboard.html", {"request": request, "audits": audits})
+    return templates.TemplateResponse("new_audit.html", {"request": request, "audits": audits})
 
 
 @router.get("/audits/new", response_class=HTMLResponse)
-async def new_audit_form(request: Request, db: AsyncSession = Depends(get_db)):
-    completed_result = await db.execute(
-        select(AuditRun)
-        .where(AuditRun.status == AuditStatus.completed)
-        .order_by(desc(AuditRun.created_at))
-        .limit(50)
-    )
-    completed_runs = completed_result.scalars().all()
-
-    return templates.TemplateResponse(
-        "new_audit.html",
-        {"request": request, "completed_runs": completed_runs}
-    )
+async def new_audit_form(request: Request):
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/", status_code=302)
 
 
 @router.get("/audits/{audit_id}", response_class=HTMLResponse)
@@ -537,7 +527,32 @@ async def partial_audit_summary(
                     md_text = "\n".join(body_lines).strip()
                     try:
                         from markdown_it import MarkdownIt
-                        ai_summary = MarkdownIt().render(md_text)
+                        import re as _re
+                        # Pre-process: convert • bullet lines into markdown list items
+                        processed_lines = []
+                        for line in md_text.splitlines():
+                            stripped = line.strip()
+                            if stripped.startswith("•"):
+                                # Convert "• some text" → "- some text"
+                                processed_lines.append("- " + stripped[1:].strip())
+                            elif stripped.startswith("·"):
+                                processed_lines.append("- " + stripped[1:].strip())
+                            else:
+                                processed_lines.append(line)
+                        processed_md = "\n".join(processed_lines)
+                        raw_html = MarkdownIt().render(processed_md)
+                        # Post-process: split dense <p> paragraphs containing inline • bullets
+                        def split_bullet_para(m):
+                            inner = m.group(1)
+                            if "•" not in inner and "·" not in inner:
+                                return m.group(0)
+                            parts = _re.split(r"\s*[•·]\s*", inner)
+                            parts = [p.strip() for p in parts if p.strip()]
+                            if len(parts) <= 1:
+                                return m.group(0)
+                            items = "".join(f"<li>{p}</li>" for p in parts)
+                            return f"<ul>{items}</ul>"
+                        ai_summary = _re.sub(r"<p>(.*?)</p>", split_bullet_para, raw_html, flags=_re.DOTALL)
                     except Exception:
                         ai_summary = md_text
                 break

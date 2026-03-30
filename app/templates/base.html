@@ -21,42 +21,42 @@
     <style>
         /* ── Design tokens (light mode) ──────────────────────────── */
         :root {
-            --odit-bg:            #f5f4ff;
+            --odit-bg:            #f8fafc;
             --odit-surface:       #ffffff;
-            --odit-surface-2:     #f8f8fc;
-            --odit-surface-hover: #f5f4ff;
-            --odit-border:        rgba(24,0,173,0.08);
-            --odit-border-md:     rgba(24,0,173,0.13);
-            --odit-border-strong: rgba(24,0,173,0.20);
-            --odit-shadow-sm:     0 1px 6px rgba(24,0,173,0.05);
-            --odit-shadow:        0 1px 8px rgba(24,0,173,0.07);
+            --odit-surface-2:     #f1f5f9;
+            --odit-surface-hover: #f8fafc;
+            --odit-border:        rgba(15,23,42,0.07);
+            --odit-border-md:     rgba(15,23,42,0.11);
+            --odit-border-strong: rgba(15,23,42,0.18);
+            --odit-shadow-sm:     0 1px 3px rgba(15,23,42,0.06), 0 0 0 1px rgba(15,23,42,0.04);
+            --odit-shadow:        0 4px 16px rgba(15,23,42,0.08), 0 0 0 1px rgba(15,23,42,0.04);
             --odit-brand:         #1800ad;
             --odit-brand-hover:   #13008a;
             --odit-brand-2:       #3820c4;
-            --odit-brand-light:   #f0eeff;
-            --odit-text:          #111827;
-            --odit-text-2:        #6b7280;
-            --odit-text-3:        #9ca3af;
+            --odit-brand-light:   #eff0ff;
+            --odit-text:          #0f172a;
+            --odit-text-2:        #64748b;
+            --odit-text-3:        #94a3b8;
         }
 
         /* ── Design tokens (dark mode) ───────────────────────────── */
         html.dark {
-            --odit-bg:            #0d0d1c;
-            --odit-surface:       #14142a;
-            --odit-surface-2:     #0f0f22;
-            --odit-surface-hover: #1c1c38;
-            --odit-border:        rgba(99,85,224,0.14);
-            --odit-border-md:     rgba(99,85,224,0.22);
-            --odit-border-strong: rgba(99,85,224,0.34);
-            --odit-shadow-sm:     0 1px 6px rgba(0,0,0,0.4);
-            --odit-shadow:        0 2px 10px rgba(0,0,0,0.5);
-            --odit-brand:         #6355e0;
-            --odit-brand-hover:   #7c6ef0;
-            --odit-brand-2:       #8878ff;
-            --odit-brand-light:   #1c1c3c;
-            --odit-text:          #e2e2f5;
-            --odit-text-2:        #9090bb;
-            --odit-text-3:        #5a5a7a;
+            --odit-bg:            #000000;
+            --odit-surface:       #0d0d0d;
+            --odit-surface-2:     #060606;
+            --odit-surface-hover: #141414;
+            --odit-border:        rgba(255,255,255,0.04);
+            --odit-border-md:     rgba(255,255,255,0.07);
+            --odit-border-strong: rgba(255,255,255,0.10);
+            --odit-shadow-sm:     0 1px 3px rgba(0,0,0,0.8);
+            --odit-shadow:        0 4px 16px rgba(0,0,0,0.9);
+            --odit-brand:         #7c6af0;
+            --odit-brand-hover:   #9585f8;
+            --odit-brand-2:       #a898ff;
+            --odit-brand-light:   #111118;
+            --odit-text:          #e2e8f0;
+            --odit-text-2:        #8888a8;
+            --odit-text-3:        #404060;
         }
 
         /* ── Base ────────────────────────────────────────────────── */
@@ -68,16 +68,124 @@
             background: var(--odit-bg);
             color: var(--odit-text);
         }
-        .nav-link { color: rgba(255,255,255,0.72); transition: color 0.15s, background 0.15s; }
-        .nav-link:hover { color: #fff; background: rgba(255,255,255,0.12); }
-        .nav-new-btn { background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.25); transition: background 0.15s; }
-        .nav-new-btn:hover { background: rgba(255,255,255,0.28); }
+        #main-nav {
+            background: rgba(255,255,255,0.82);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: none;
+            box-shadow: 0 1px 0 var(--odit-border-md), 0 2px 8px rgba(15,23,42,0.06);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        html.dark #main-nav {
+            background: rgba(0,0,0,0.92) !important;
+            box-shadow: none !important;
+        }
+        html.dark #help-sidebar {
+            border-left: none;
+        }
+        .nav-link {
+            color: var(--odit-text-2);
+            border-radius: 8px;
+            padding: 6px 12px;
+            transition: color 0.2s, background 0.2s;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .nav-link:hover {
+            color: var(--odit-text);
+            background: var(--odit-surface-hover);
+        }
+        .nav-link.active {
+            color: var(--odit-brand);
+        }
+        .nav-new-btn {
+            background: var(--odit-brand);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 1px 4px rgba(24,0,173,0.25);
+        }
+        .nav-new-btn:hover {
+            background: var(--odit-brand-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(24,0,173,0.3);
+        }
+        html.dark .nav-new-btn {
+            box-shadow: 0 1px 4px rgba(124,106,240,0.3) !important;
+        }
+        html.dark .nav-new-btn:hover {
+            box-shadow: 0 4px 12px rgba(124,106,240,0.4) !important;
+        }
+
+        /* ── Global utility classes ──────────────────────────────── */
+        .odit-card {
+            background: var(--odit-surface);
+            border-radius: 16px;
+            border: 1px solid var(--odit-border);
+            box-shadow: var(--odit-shadow-sm);
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .odit-card:hover {
+            box-shadow: var(--odit-shadow);
+            border-color: var(--odit-border-md);
+        }
+
+        .odit-input {
+            background: var(--odit-surface);
+            border: 1px solid var(--odit-border-md);
+            border-radius: 8px;
+            color: var(--odit-text);
+            transition: border-color 0.15s, box-shadow 0.15s;
+            padding: 8px 12px;
+        }
+        .odit-input:focus {
+            outline: none;
+            border-color: var(--odit-brand);
+            box-shadow: 0 0 0 3px rgba(24,0,173,0.08);
+        }
+        html.dark .odit-input:focus {
+            box-shadow: 0 0 0 3px rgba(124,106,240,0.15);
+        }
+
+        .odit-table { border-radius: 16px; overflow: hidden; }
+        .odit-table th {
+            background: var(--odit-surface-2);
+            color: var(--odit-text-3);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--odit-border-md);
+        }
+        .odit-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--odit-border);
+            color: var(--odit-text);
+            font-size: 0.875rem;
+        }
+        .odit-table tr:last-child td { border-bottom: none; }
+        .odit-table tbody tr { transition: background 0.12s; }
+        .odit-table tbody tr:hover { background: var(--odit-surface-hover); }
+
+        /* Smooth transitions */
+        * { transition-property: color, background-color, border-color, box-shadow, opacity; transition-duration: 150ms; transition-timing-function: ease; }
+        a, button { transition: color 0.15s, background 0.15s, box-shadow 0.15s, border-color 0.15s, transform 0.15s; }
 
         .main-area { flex: 1; min-width: 0; }
 
         /* ── Sidebar ─────────────────────────────────────────────── */
+        :root { --odit-surface-rgb: 255,255,255; }
+        html.dark { --odit-surface-rgb: 13,13,13; }
+
         #help-sidebar {
             width: 288px;
+            min-width: 220px;
+            max-width: 540px;
             flex-shrink: 0;
             position: sticky;
             top: 0;
@@ -89,9 +197,22 @@
             transition: width 0.2s cubic-bezier(.4,0,.2,1);
             overflow: hidden;
         }
+        #help-sidebar.resizing { transition: none; user-select: none; }
         #help-sidebar.collapsed { width: 46px; }
         #help-sidebar.collapsed .sidebar-body { opacity: 0; pointer-events: none; }
         #help-sidebar.collapsed .sidebar-tab { opacity: 1; pointer-events: auto; }
+        #help-sidebar.collapsed #sidebar-resize { display: none; }
+
+        #sidebar-resize {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 5px;
+            cursor: col-resize;
+            z-index: 20;
+            transition: background 0.15s;
+        }
+        #sidebar-resize:hover { background: var(--odit-brand-light); }
+        #sidebar-resize.active { background: rgba(var(--odit-surface-rgb),0.1); }
 
         .sidebar-body {
             display: flex;
@@ -99,6 +220,14 @@
             height: 100%;
             opacity: 1;
             transition: opacity 0.12s ease;
+            position: relative;
+        }
+
+        .sidebar-input-float {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 6px 12px 14px;
+            background: linear-gradient(to bottom, rgba(var(--odit-surface-rgb),0) 0%, rgba(var(--odit-surface-rgb),1) 18px);
         }
         .sidebar-tab {
             position: absolute;
@@ -168,15 +297,7 @@
             border-color: var(--odit-border) !important;
         }
 
-        /* Nav */
-        html.dark #main-nav {
-            background: var(--odit-surface-2) !important;
-            box-shadow: 0 1px 0 var(--odit-border-strong) !important;
-        }
-        html.dark #main-nav .nav-link { color: var(--odit-text-2) !important; }
-        html.dark #main-nav .nav-link:hover { color: var(--odit-text) !important; background: var(--odit-surface-hover) !important; }
-        html.dark .nav-new-btn { background: var(--odit-brand) !important; border-color: transparent !important; }
-        html.dark .nav-new-btn:hover { background: var(--odit-brand-hover) !important; }
+        /* Nav — dark mode handled via CSS variables in #main-nav and .nav-new-btn above */
 
         /* Form elements */
         html.dark input:not([type="checkbox"]):not([type="radio"]),
@@ -271,11 +392,11 @@
 <body class="text-gray-800 dark:text-gray-200" style="display:flex; min-height:100vh;">
     <!-- Left column: nav + content -->
     <div class="main-area" style="flex:1; min-width:0; display:flex; flex-direction:column;">
-        <nav id="main-nav" class="sticky top-0 z-30" style="background:#1800ad; box-shadow:0 2px 12px rgba(24,0,173,0.28)">
+        <nav id="main-nav" class="sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-14">
                     <a href="/" class="flex items-center gap-1.5">
-                        <img src="/static/odit.svg" alt="Odit" class="h-7 w-auto" style="filter:brightness(0) invert(1)" />
+                        <img src="/static/odit.svg" alt="Odit" class="h-7 w-auto" style="filter:none" />
                     </a>
                     <div class="flex items-center gap-0.5">
                         <a href="/" class="nav-link text-sm font-medium px-3 py-1.5 rounded-md">Audits</a>
@@ -292,7 +413,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                             </svg>
                         </button>
-                        <a href="/audits/new"
+                        <a href="/"
                             class="nav-new-btn inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-lg ml-2">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
@@ -314,6 +435,9 @@
 
         <!-- Persistent help sidebar -->
         <aside id="help-sidebar">
+            <!-- Resize handle -->
+            <div id="sidebar-resize"></div>
+
             <!-- Collapsed tab (click to expand) -->
             <div class="sidebar-tab" onclick="toggleSidebar()" title="Toggle help sidebar" aria-label="Toggle help sidebar" role="button" tabindex="0">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
@@ -327,37 +451,13 @@
 
             <!-- Expanded sidebar body -->
             <div class="sidebar-body">
-                <!-- Header — same height as nav (h-14 = 56px) for seamless alignment -->
-                <div class="flex items-center justify-between px-4 flex-shrink-0" style="height:56px; background:#1800ad; border-bottom:1px solid rgba(255,255,255,0.08)">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                        <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:rgba(255,255,255,0.15)">
-                            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <div class="min-w-0">
-                            <p class="text-sm font-semibold text-white leading-none mb-0.5">Help</p>
-                            <p id="help-page-label" class="text-[10px] font-medium truncate" style="color:rgba(255,255,255,0.5); letter-spacing:0.02em">Ask anything</p>
-                        </div>
-                    </div>
-                    <button onclick="toggleSidebar()" title="Toggle help sidebar" aria-label="Toggle help sidebar"
-                        class="flex-shrink-0 ml-1 w-7 h-7 rounded-lg flex items-center justify-center transition-all"
-                        style="color:rgba(255,255,255,0.45)"
-                        onmouseover="this.style.color='rgba(255,255,255,0.9)';this.style.background='rgba(255,255,255,0.1)'"
-                        onmouseout="this.style.color='rgba(255,255,255,0.45)';this.style.background=''">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </button>
-                </div>
-
                 <!-- Messages -->
-                <div id="help-messages" class="flex-1 overflow-y-auto py-4" style="background:var(--odit-surface-2); display:flex; flex-direction:column; gap:12px; padding-left:14px; padding-right:14px; scroll-behavior:smooth">
+                <div id="help-messages" class="flex-1 overflow-y-auto" style="background:var(--odit-bg); display:flex; flex-direction:column; gap:10px; padding:14px 12px 90px; scroll-behavior:smooth">
                     <!-- Populated by JS -->
                 </div>
 
-                <!-- Input -->
-                <div class="flex-shrink-0 p-3" style="background:var(--odit-surface); border-top:1px solid var(--odit-border-md);">
+                <!-- Floating input -->
+                <div class="sidebar-input-float">
                     <div class="flex items-end gap-2">
                         <textarea id="help-input"
                             placeholder="Ask a question…"
@@ -365,8 +465,8 @@
                             onkeydown="handleHelpKey(event)"
                             oninput="autoResize(this)"
                             class="flex-1 resize-none outline-none leading-relaxed"
-                            style="font-size:0.8125rem; border:1.5px solid var(--odit-border-strong); border-radius:10px; padding:8px 12px; max-height:80px; background:var(--odit-surface-2); color:var(--odit-text); transition:border-color 0.15s;"
-                            onfocus="this.style.borderColor='var(--odit-border-md)'"
+                            style="font-size:0.8125rem; border:1.5px solid var(--odit-border-strong); border-radius:10px; padding:8px 12px; max-height:80px; background:var(--odit-surface); color:var(--odit-text); transition:border-color 0.15s; box-shadow:0 2px 8px rgba(0,0,0,0.08);"
+                            onfocus="this.style.borderColor='var(--odit-brand)';this.style.outline='none'"
                             onblur="this.style.borderColor='var(--odit-border-strong)'"
                         ></textarea>
                         <button onclick="sendHelp()"
@@ -458,14 +558,14 @@
         if (entry.type === 'user') {
             wrap.style.cssText = 'display:flex;justify-content:flex-end';
             const safe = entry.rawText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-            wrap.innerHTML = `<div style="${MSG_STYLE};background:var(--odit-brand);color:#fff;padding:9px 13px;border-radius:14px;border-top-right-radius:4px;max-width:88%">${safe}</div>`;
+            wrap.innerHTML = `<div style="${MSG_STYLE};background:var(--odit-brand);color:#fff;padding:8px 12px;border-radius:12px;max-width:88%;word-break:break-word;overflow-wrap:anywhere">${safe}</div>`;
         } else if (entry.type === 'assistant') {
             wrap.style.cssText = 'display:flex;gap:8px;align-items:flex-start';
-            wrap.innerHTML = `${AVATAR}<div class="msg-bubble" style="${MSG_STYLE};background:var(--odit-surface);color:var(--odit-text);padding:9px 13px;border-radius:14px;border-top-left-radius:4px;max-width:calc(100% - 34px);border:1px solid var(--odit-border-md);box-shadow:var(--odit-shadow-sm)">${renderMd(entry.rawText)}</div>`;
+            wrap.innerHTML = `${AVATAR}<div class="msg-bubble" style="${MSG_STYLE};background:var(--odit-surface);color:var(--odit-text);padding:9px 12px;border-radius:12px;max-width:calc(100% - 34px);border:1px solid var(--odit-border-md);word-break:break-word;overflow-wrap:anywhere">${renderMd(entry.rawText)}</div>`;
         } else if (entry.type === 'nav') {
             const safe = entry.rawText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-            wrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin:4px 0';
-            wrap.innerHTML = `<div style="flex:1;height:1px;background:var(--odit-border-md)"></div><span style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--odit-text-3);flex-shrink:0;padding:0 4px">${safe}</span><div style="flex:1;height:1px;background:var(--odit-border-md)"></div>`;
+            wrap.style.cssText = 'display:flex;justify-content:center;margin:6px 0 2px';
+            wrap.innerHTML = `<span style="font-size:9px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--odit-text-3);background:var(--odit-surface);border:1px solid var(--odit-border-md);border-radius:999px;padding:2px 10px">${safe}</span>`;
         }
 
         container.appendChild(wrap);
@@ -506,7 +606,7 @@
         const container = document.getElementById('help-messages');
         const thinkWrap = document.createElement('div');
         thinkWrap.style.cssText = 'display:flex;gap:8px;align-items:flex-start';
-        thinkWrap.innerHTML = `${AVATAR}<div class="msg-bubble" style="background:var(--odit-surface);padding:11px 14px;border-radius:14px;border-top-left-radius:4px;border:1px solid var(--odit-border-md);box-shadow:var(--odit-shadow-sm);display:flex;gap:4px;align-items:center"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+        thinkWrap.innerHTML = `${AVATAR}<div class="msg-bubble" style="background:var(--odit-surface);padding:11px 14px;border-radius:12px;border:1px solid var(--odit-border-md);display:flex;gap:4px;align-items:center"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
         container.appendChild(thinkWrap);
         container.scrollTop = container.scrollHeight;
         const bubble = thinkWrap.querySelector('.msg-bubble');
@@ -581,11 +681,6 @@
         const currentPage = ctx.page || null;
         const lastPage = sessionStorage.getItem(PAGE_KEY);
 
-        // Update page label in header
-        if (ctx.page) {
-            document.getElementById('help-page-label').textContent = ctx.page;
-        }
-
         if (helpLog.length === 0) {
             // First visit — show welcome or page greeting
             const welcomeText = ctx.greeting ||
@@ -630,6 +725,45 @@
     }
 
     document.addEventListener('DOMContentLoaded', initSidebar);
+
+    // ── Sidebar resize ────────────────────────────────────────────
+    (function() {
+        const RESIZE_KEY = 'oditSidebarWidth';
+        const handle = document.getElementById('sidebar-resize');
+        const sidebar = document.getElementById('help-sidebar');
+        let startX, startW;
+
+        // Restore saved width
+        const savedW = parseInt(localStorage.getItem(RESIZE_KEY));
+        if (savedW && savedW >= 220 && savedW <= 540) {
+            sidebar.style.width = savedW + 'px';
+        }
+
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            startX = e.clientX;
+            startW = sidebar.offsetWidth;
+            sidebar.classList.add('resizing');
+            handle.classList.add('active');
+            document.body.style.cursor = 'col-resize';
+
+            function onMove(e) {
+                const delta = startX - e.clientX; // dragging left = wider
+                const newW = Math.min(540, Math.max(220, startW + delta));
+                sidebar.style.width = newW + 'px';
+            }
+            function onUp() {
+                sidebar.classList.remove('resizing');
+                handle.classList.remove('active');
+                document.body.style.cursor = '';
+                localStorage.setItem(RESIZE_KEY, sidebar.offsetWidth);
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    })();
     </script>
 </body>
 </html>

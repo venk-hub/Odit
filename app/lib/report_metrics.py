@@ -197,56 +197,88 @@ def build_cookie_register(pages) -> List[Dict[str, Any]]:
 # Tag Source Attribution
 # ---------------------------------------------------------------------------
 
-GTM_INDICATORS = {"googletagmanager.com", "gtm.js", "gtag.js"}
+# Short display names for TMS vendors used in attribution badges
+TMS_DISPLAY_NAMES = {
+    "google_tag_manager": "GTM",
+    "adobe_launch": "Adobe Launch",
+    "tealium": "Tealium",
+    "segment": "Segment",
+    "ensighten": "Ensighten",
+    "signal": "Signal",
+}
+
+
+def _vendor_domains_from_evidence(vendors_for_key) -> List[str]:
+    """Extract unique matched_domain values from a vendor's evidence records."""
+    domains = set()
+    for v in vendors_for_key:
+        ev = v.evidence or {}
+        d = ev.get("matched_domain")
+        if d:
+            domains.add(d.lower())
+    return list(domains)
 
 
 def build_tag_attribution(vendors, pages, requests) -> Dict[str, str]:
-    gtm_present = any(
-        any(ind in (req.url or "").lower() for ind in GTM_INDICATORS)
-        for req in requests
-    )
-
     all_script_srcs: set = set()
     for page in pages:
         for src in (page.script_srcs or []):
             all_script_srcs.add(src.lower())
 
-    # Try to load vendor signatures (only available when worker package is present)
-    try:
-        from worker.detectors.vendor_detector import load_vendor_signatures
-        signatures = {s.key: s for s in load_vendor_signatures()}
-    except Exception:
-        signatures = {}
+    # Group audit-level vendors by key (same vendor key may appear multiple times
+    # with different detection methods/evidence)
+    from collections import defaultdict
+    vendors_by_key: Dict[str, list] = defaultdict(list)
+    for v in vendors:
+        vendors_by_key[v.vendor_key].append(v)
+
+    # Identify which TMS vendors are present on this site
+    vendor_keys = set(vendors_by_key.keys())
+    detected_tms = [(vkey, label) for vkey, label in TMS_DISPLAY_NAMES.items() if vkey in vendor_keys]
+    tms_label = detected_tms[0][1] if detected_tms else None
 
     attributions: Dict[str, str] = {}
-    for vendor in vendors:
-        sig = signatures.get(vendor.vendor_key)
-        vendor_domains = sig.domains if sig else []
+    for vkey, vlist in vendors_by_key.items():
+        # TMS vendors themselves don't get a "via" attribution
+        if vkey in TMS_DISPLAY_NAMES:
+            continue
+
+        # Use matched_domain values from evidence to find network requests
+        vendor_domains = _vendor_domains_from_evidence(vlist)
 
         found_in_html = any(
-            any(domain.lower() in src for src in all_script_srcs)
+            any(domain in src for src in all_script_srcs)
             for domain in vendor_domains
         ) if vendor_domains else False
 
         vendor_reqs = [
             r for r in requests
-            if vendor_domains and any(d.lower() in (r.url or "").lower() for d in vendor_domains)
+            if vendor_domains and any(d in (r.url or "").lower() for d in vendor_domains)
         ]
         has_script_reqs = any(r.resource_type == "script" for r in vendor_reqs)
-        has_only_pixel_reqs = vendor_reqs and not has_script_reqs
+        has_pixel_reqs = any(r.resource_type == "image" for r in vendor_reqs)
+        has_beacon_reqs = any(r.resource_type in ("xhr", "fetch", "ping") for r in vendor_reqs)
+        has_only_data_reqs = bool(vendor_reqs) and not has_script_reqs
 
-        if found_in_html:
+        if has_script_reqs and tms_label:
+            # TMS is present — script-loaded vendors are most likely injected by it
+            source = f"Via {tms_label}"
+        elif has_script_reqs:
             source = "Direct (HTML tag)"
-        elif has_only_pixel_reqs:
-            source = "Pixel / API only"
-        elif gtm_present and not found_in_html:
-            source = "Via GTM (inferred)"
+        elif has_only_data_reqs and has_beacon_reqs:
+            # XHR/fetch/ping takes priority over image beacons — indicates a data collection API
+            source = "Beacon / API"
+        elif has_only_data_reqs and has_pixel_reqs:
+            source = "Pixel"
+        elif has_only_data_reqs:
+            source = "Beacon / API"
         elif vendor_reqs:
             source = "Dynamic injection"
         else:
-            source = "Unknown"
+            source = None
 
-        attributions[vendor.vendor_key] = source
+        if source:
+            attributions[vkey] = source
 
     return attributions
 

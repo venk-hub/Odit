@@ -1,28 +1,29 @@
 <div>
     <div class="flex items-center justify-between mb-4">
-        <h2 class="text-sm font-semibold text-gray-700">Pages Crawled ({{ pages|length }})</h2>
+        <h2 class="text-sm font-semibold" style="color:var(--odit-text)">Pages Crawled ({{ pages|length }})</h2>
     </div>
 
     {% if pages %}
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-gray-50">
+    <div class="odit-card overflow-hidden">
+        <div style="max-height:600px;overflow-y:auto">
+        <table class="min-w-full odit-table text-sm">
+            <thead style="position:sticky;top:0;z-index:1;background:var(--odit-surface)">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Group</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Load</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendors</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Errors</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Failed Req</th>
-                    <th class="px-4 py-3"></th>
+                    <th class="text-left">URL</th>
+                    <th class="text-left">Group</th>
+                    <th class="text-left">Status</th>
+                    <th class="text-left">Load</th>
+                    <th class="text-left">Vendors</th>
+                    <th class="text-left">Errors</th>
+                    <th class="text-left">Failed Req</th>
+                    <th></th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100">
+            <tbody>
                 {% for item in pages %}
                 {% set pv = item.visit %}
-                <tr class="hover:bg-[#f0eeff] transition-colors cursor-pointer" onclick="location.href='/audits/{{ audit_id }}/pages/{{ pv.id }}'">
-                    <td class="px-4 py-3 max-w-xs">
+                <tr class="transition-colors cursor-pointer" onclick="location.href='/audits/{{ audit_id }}/pages/{{ pv.id }}'">
+                    <td class="max-w-xs">
                         <div class="truncate text-[#13008a] text-xs font-mono" title="{{ pv.url }}">
                             {{ pv.url | replace("https://", "") | replace("http://", "") | truncate(60) }}
                         </div>
@@ -30,12 +31,12 @@
                         <div class="text-xs text-gray-400 truncate mt-0.5">{{ pv.page_title }}</div>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3">
-                        <span class="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono">
+                    <td>
+                        <span class="text-xs px-1.5 py-0.5 rounded font-mono" style="background:var(--odit-surface-2);color:var(--odit-text-2)">
                             {{ pv.page_group or "/" }}
                         </span>
                     </td>
-                    <td class="px-4 py-3">
+                    <td>
                         {% if pv.status_code %}
                         <span class="text-xs font-medium {% if pv.status_code >= 400 %}text-red-600{% elif pv.status_code >= 300 %}text-yellow-600{% else %}text-green-600{% endif %}">
                             {{ pv.status_code }}
@@ -46,29 +47,29 @@
                         <span class="text-xs text-gray-400">—</span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3 text-xs text-gray-500">
+                    <td class="text-xs" style="color:var(--odit-text-2)">
                         {% if pv.load_time_ms %}
                         {{ "%.0f" | format(pv.load_time_ms) }}ms
                         {% else %}—{% endif %}
                     </td>
-                    <td class="px-4 py-3">
+                    <td>
                         <span class="text-xs font-medium text-purple-600">{{ item.vendor_count }}</span>
                     </td>
-                    <td class="px-4 py-3">
+                    <td>
                         {% if pv.console_error_count > 0 %}
                         <span class="text-xs font-medium text-red-500">{{ pv.console_error_count }}</span>
                         {% else %}
-                        <span class="text-xs text-gray-300">0</span>
+                        <span class="text-xs" style="color:var(--odit-text-3)">0</span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3">
+                    <td>
                         {% if pv.failed_request_count > 0 %}
                         <span class="text-xs font-medium text-orange-500">{{ pv.failed_request_count }}</span>
                         {% else %}
-                        <span class="text-xs text-gray-300">0</span>
+                        <span class="text-xs" style="color:var(--odit-text-3)">0</span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3 text-right">
+                    <td class="text-right">
                         <a href="/audits/{{ audit_id }}/pages/{{ pv.id }}"
                             class="text-xs text-gray-400 hover:text-[#1800ad] font-medium"
                             onclick="event.stopPropagation()">
@@ -79,6 +80,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
     {% else %}
     <div class="text-center py-12 text-gray-400 text-sm">No pages crawled yet.</div>

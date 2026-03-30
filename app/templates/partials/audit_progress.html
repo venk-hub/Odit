@@ -1,45 +1,45 @@
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white rounded-xl p-4" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow-sm)" title="Total pages discovered during crawl">
-        <div class="text-2xl font-bold text-gray-900">{{ run.pages_discovered }}</div>
-        <div class="text-xs text-gray-500 mt-1">Pages Discovered</div>
+    <div class="odit-card p-4" title="Total pages discovered during crawl">
+        <div class="text-2xl font-bold" style="color:var(--odit-text)">{{ run.pages_discovered }}</div>
+        <div class="text-xs mt-1" style="color:var(--odit-text-2)">Pages Discovered</div>
     </div>
-    <div class="bg-white rounded-xl p-4" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow-sm)" title="Pages successfully crawled and analysed">
-        <div class="text-2xl font-bold text-[#1800ad]">{{ run.pages_crawled }}</div>
-        <div class="text-xs text-gray-500 mt-1">Pages Crawled</div>
+    <div class="odit-card p-4" title="Pages successfully crawled and analysed">
+        <div class="text-2xl font-bold" style="color:var(--odit-brand)">{{ run.pages_crawled }}</div>
+        <div class="text-xs mt-1" style="color:var(--odit-text-2)">Pages Crawled</div>
     </div>
-    <div class="bg-white rounded-xl p-4" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow-sm)" title="Pages that failed to load or returned errors">
+    <div class="odit-card p-4" title="Pages that failed to load or returned errors">
         <div class="text-2xl font-bold text-red-500">{{ run.pages_failed }}</div>
-        <div class="text-xs text-gray-500 mt-1">Pages Failed</div>
+        <div class="text-xs mt-1" style="color:var(--odit-text-2)">Pages Failed</div>
     </div>
-    <div class="bg-white rounded-xl p-4" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow-sm)" title="Unique tracking vendors detected across all pages">
+    <div class="odit-card p-4" title="Unique tracking vendors detected across all pages">
         <div class="text-2xl font-bold text-purple-600">{{ vendor_count }}</div>
-        <div class="text-xs text-gray-500 mt-1">Vendors Detected</div>
+        <div class="text-xs mt-1" style="color:var(--odit-text-2)">Vendors Detected</div>
     </div>
 </div>
 
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-    <div class="bg-red-50 border border-red-100 rounded-xl p-4">
+    <div class="bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/30 rounded-xl p-4">
         <div class="text-2xl font-bold text-red-600">{{ issue_counts.get("critical", 0) }}</div>
         <div class="text-xs text-red-500 mt-1">Critical Issues</div>
     </div>
-    <div class="bg-orange-50 border border-orange-100 rounded-xl p-4">
+    <div class="bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/30 rounded-xl p-4">
         <div class="text-2xl font-bold text-orange-600">{{ issue_counts.get("high", 0) }}</div>
         <div class="text-xs text-orange-500 mt-1">High Issues</div>
     </div>
-    <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
+    <div class="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-100 dark:border-yellow-900/30 rounded-xl p-4">
         <div class="text-2xl font-bold text-yellow-600">{{ issue_counts.get("medium", 0) }}</div>
         <div class="text-xs text-yellow-500 mt-1">Medium Issues</div>
     </div>
-    <div class="bg-[#f0eeff] border border-[#dddaff] rounded-xl p-4">
-        <div class="text-2xl font-bold text-[#1800ad]">{{ issue_counts.get("low", 0) }}</div>
-        <div class="text-xs text-[#3820c4] mt-1">Low Issues</div>
+    <div class="rounded-xl p-4" style="background:var(--odit-brand-light);border:1px solid var(--odit-border-md)">
+        <div class="text-2xl font-bold" style="color:var(--odit-brand)">{{ issue_counts.get("low", 0) }}</div>
+        <div class="text-xs mt-1" style="color:var(--odit-brand-2)">Low Issues</div>
     </div>
 </div>
 
-<div class="bg-white rounded-xl p-4" style="border:1px solid var(--odit-border); box-shadow:var(--odit-shadow-sm)" data-status="{{ run.status.value }}">
+<div class="odit-card p-4" data-status="{{ run.status.value }}">
     <div class="flex items-center justify-between">
         <div>
-            <span class="text-sm font-medium text-gray-700">Status: </span>
+            <span class="text-sm font-medium" style="color:var(--odit-text)">Status: </span>
             {% if run.status.value == "running" %}
             <span class="inline-flex items-center gap-1 text-sm text-[#1800ad]">
                 <span class="w-2 h-2 bg-[#3820c4] rounded-full animate-pulse"></span> Running

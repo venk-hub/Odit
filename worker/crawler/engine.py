@@ -24,6 +24,8 @@ from worker.crawler.page_analyzer import (
     extract_window_globals,
     extract_data_layer,
     take_screenshot,
+    extract_service_workers,
+    extract_iframe_signals,
     extract_links,
 )
 from worker.detectors.vendor_detector import detect_vendors_from_page_data, is_tracking_url, get_vendor_key_for_url
@@ -178,6 +180,21 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
 
                 page = context.new_page()
 
+                # Intercept dataLayer pushes before any page scripts run
+                page.add_init_script("""
+                    window.__oditDLBuf = [];
+                    (function() {
+                        if (!window.dataLayer) window.dataLayer = [];
+                        var _origPush = Array.prototype.push.bind(window.dataLayer);
+                        window.dataLayer.push = function() {
+                            for (var i = 0; i < arguments.length; i++) {
+                                try { window.__oditDLBuf.push(JSON.parse(JSON.stringify(arguments[i]))); } catch(e) {}
+                            }
+                            return _origPush.apply(window.dataLayer, arguments);
+                        };
+                    })();
+                """)
+
                 # Collect network events
                 page_requests: List[Dict] = []
                 console_messages: List[Dict] = []
@@ -192,6 +209,13 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                                 post_data = req.post_data
                             except Exception:
                                 pass
+                        timing_ms = None
+                        try:
+                            t = req.timing
+                            if t and t.get("responseEnd", 0) > 0:
+                                timing_ms = t["responseEnd"]
+                        except Exception:
+                            pass
                         page_requests.append({
                             "url": response.url,
                             "method": req.method,
@@ -202,6 +226,7 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                             "post_data": post_data,
                             "failed": response.status >= 400,
                             "failure_reason": None,
+                            "timing_ms": timing_ms,
                         })
                     except Exception as e:
                         logger.debug(f"Response handler error: {e}")
@@ -317,6 +342,38 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                     except Exception as e:
                         logger.warning(f"Data layer extraction failed: {e}")
 
+                    try:
+                        iframe_signals = extract_iframe_signals(page)
+                        # Merge iframe script srcs and globals into main lists
+                        if iframe_signals["extra_script_srcs"]:
+                            script_srcs = list(dict.fromkeys(script_srcs + iframe_signals["extra_script_srcs"]))
+                        if iframe_signals["extra_globals"]:
+                            window_globals_found = list(dict.fromkeys(window_globals_found + iframe_signals["extra_globals"]))
+                        if iframe_signals["iframe_urls"]:
+                            data_layer_data["_iframes"] = iframe_signals["iframe_urls"]
+                    except Exception as e:
+                        logger.warning(f"Iframe signal extraction failed: {e}")
+
+                    try:
+                        service_workers = extract_service_workers(page)
+                        if service_workers:
+                            data_layer_data["_service_workers"] = service_workers
+                            # Inject SW script URLs into page_requests so vendor detection sees them
+                            for sw in service_workers:
+                                if sw.get("script_url"):
+                                    page_requests.append({
+                                        "url": sw["script_url"],
+                                        "method": "GET",
+                                        "status_code": None,
+                                        "resource_type": "service_worker",
+                                        "request_headers": {},
+                                        "response_headers": {},
+                                        "failed": False,
+                                        "failure_reason": None,
+                                    })
+                    except Exception as e:
+                        logger.warning(f"Service worker extraction failed: {e}")
+
                     # Screenshot
                     ss_filename = f"screenshot_{pages_crawled:04d}.png"
                     ss_path = os.path.join(screenshots_dir, ss_filename)
@@ -373,6 +430,7 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                 db.flush()
 
                 # Store network requests
+                page_nr_list = []  # (vendor_key, nr) for back-linking after vendor detection
                 for req_data in page_requests:
                     req_url = req_data["url"]
                     is_tracking = is_tracking_url(req_url)
@@ -391,9 +449,12 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                         failed=req_data["failed"],
                         failure_reason=req_data.get("failure_reason"),
                         is_tracking_related=is_tracking,
+                        timing_ms=req_data.get("timing_ms"),
                         captured_at=datetime.utcnow(),
                     )
                     db.add(nr)
+                    if vendor_key:
+                        page_nr_list.append((vendor_key, nr))
 
                 # Store console events
                 for cm in console_messages:
@@ -419,6 +480,7 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                     cookie_names=cookie_names,
                 )
 
+                created_dvs = []
                 for vm in page_vendor_matches:
                     dv = DetectedVendor(
                         audit_run_id=audit_run.id,
@@ -432,11 +494,20 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                         detected_at=datetime.utcnow(),
                     )
                     db.add(dv)
+                    created_dvs.append(dv)
                     emit(db, audit_run.id, "vendor_detected",
                          f"Detected: {vm.vendor_name} ({vm.category}) via {vm.detection_method}",
                          {"vendor_key": vm.vendor_key, "vendor_name": vm.vendor_name,
                           "category": vm.category, "method": vm.detection_method,
                           "page_url": url})
+
+                # Link NetworkRequests to their DetectedVendor (enables performance stats)
+                if page_nr_list and created_dvs:
+                    db.flush()  # ensure DetectedVendor records have IDs
+                    vkey_to_dv_id = {dv.vendor_key: dv.id for dv in created_dvs}
+                    for vkey, nr in page_nr_list:
+                        if vkey in vkey_to_dv_id:
+                            nr.vendor_id = vkey_to_dv_id[vkey]
 
                 # Emit tracking requests (up to 5 per page to avoid noise)
                 tracking_reqs = [r for r in page_requests if is_tracking_url(r["url"])]

@@ -225,6 +225,31 @@ async def get_audit_progress(audit_id: str, db: AsyncSession = Depends(get_db)):
     }
 
 
+@router.delete("/{audit_id}")
+async def delete_audit(audit_id: str, db: AsyncSession = Depends(get_db)):
+    import shutil, os
+    try:
+        uid = uuid.UUID(audit_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid audit ID")
+
+    result = await db.execute(select(AuditRun).where(AuditRun.id == uid))
+    run = result.scalar_one_or_none()
+    if not run:
+        raise HTTPException(status_code=404, detail="Audit not found")
+
+    # Delete file artifacts
+    data_dir = os.environ.get("DATA_DIR", "/data")
+    audit_dir = os.path.join(data_dir, "audits", str(uid))
+    if os.path.isdir(audit_dir):
+        shutil.rmtree(audit_dir, ignore_errors=True)
+
+    # Delete DB record — cascades to all child tables
+    await db.delete(run)
+    await db.commit()
+    return {"id": str(uid), "deleted": True}
+
+
 @router.delete("/{audit_id}/cancel")
 async def cancel_audit(audit_id: str, db: AsyncSession = Depends(get_db)):
     try:

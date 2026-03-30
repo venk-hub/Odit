@@ -13,10 +13,10 @@ window.__oditPageContext = {
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
-  <h1 class="text-2xl font-semibold text-gray-900 mb-6">Settings</h1>
+  <h1 class="text-2xl font-semibold mb-6" style="color:var(--odit-text)">Settings</h1>
 
   <!-- AI Enrichment -->
-  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-6">
+  <div class="odit-card p-6 mb-6">
     <div class="flex items-start gap-3 mb-4">
       <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
         <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -25,8 +25,8 @@ window.__oditPageContext = {
         </svg>
       </div>
       <div>
-        <h2 class="text-base font-semibold text-gray-900">AI Enrichment</h2>
-        <p class="text-sm text-gray-500 mt-0.5">
+        <h2 class="text-base font-semibold" style="color:var(--odit-text)">AI Enrichment</h2>
+        <p class="text-sm mt-0.5" style="color:var(--odit-text-2)">
           Powers issue descriptions, unknown vendor inference, and narrative summaries using Claude Haiku.
           Optional — audits run fully without it.
         </p>
@@ -34,7 +34,7 @@ window.__oditPageContext = {
     </div>
 
     <!-- Current status -->
-    <div class="mb-4 p-3 rounded-md {% if key_set %}bg-green-50 border border-green-200{% else %}bg-gray-50 border border-gray-200{% endif %}">
+    <div class="mb-4 p-3 {% if key_set %}bg-green-50 border border-green-200{% else %}bg-gray-50 border border-gray-200{% endif %}" style="border-radius:12px">
       <div class="flex items-center gap-2">
         {% if key_set %}
           <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -58,18 +58,18 @@ window.__oditPageContext = {
     <!-- Key input form -->
     <form id="settings-form" class="space-y-3">
       <div>
-        <label for="api-key-input" class="block text-sm font-medium text-gray-700 mb-1">
+        <label for="api-key-input" class="block text-sm font-medium mb-1" style="color:var(--odit-text)">
           Anthropic API Key
         </label>
         <input
           id="api-key-input"
           type="password"
           placeholder="sk-ant-api03-..."
-          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          class="odit-input w-full text-sm font-mono"
           autocomplete="off"
           spellcheck="false"
         />
-        <p class="text-xs text-gray-400 mt-1">
+        <p class="text-xs mt-1" style="color:var(--odit-text-3)">
           Stored in the local database. Never sent anywhere except the Anthropic API.
           Get a key at <a href="https://console.anthropic.com" target="_blank" class="text-purple-600 hover:underline">console.anthropic.com</a>.
         </p>
@@ -79,7 +79,10 @@ window.__oditPageContext = {
         <button
           type="button"
           onclick="saveKey()"
-          class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors"
+          class="text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          style="background:var(--odit-brand);box-shadow:0 1px 4px rgba(24,0,173,0.25)"
+          onmouseover="this.style.background='var(--odit-brand-hover)'"
+          onmouseout="this.style.background='var(--odit-brand)'"
         >
           Save Key
         </button>
@@ -87,7 +90,8 @@ window.__oditPageContext = {
         <button
           type="button"
           onclick="clearKey()"
-          class="text-sm text-red-600 hover:text-red-700 px-4 py-2 rounded-md border border-red-200 hover:bg-red-50 transition-colors"
+          class="text-sm text-red-600 hover:text-red-700 px-4 py-2 border border-red-200 hover:bg-red-50 transition-colors"
+          style="border-radius:8px"
         >
           Delete key
         </button>

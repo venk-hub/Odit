@@ -1,366 +1,335 @@
 {% extends "base.html" %}
-{% block title %}New Audit - Odit{% endblock %}
+{% block title %}Odit{% endblock %}
 
 {% block page_context_script %}
 <script>
 window.__oditPageContext = {
     page: 'New Audit',
-    greeting: 'You\'re setting up a new audit! I can help you choose the right mode (Quick Scan, Full Crawl, or Journey Audit), explain the consent behaviour options, or help you set up URL patterns. What do you need?',
-    context: 'User is on the New Audit creation page.'
+    greeting: {% if audits %}'I can see you have {{ audits|length }} audit{% if audits|length != 1 %}s{% endif %} on your dashboard. The most recent is **{{ audits[0].run.base_url | replace("'", "\\'") }}** ({{ audits[0].run.status.value }}). Want me to explain what was found, or help you start a new audit?'{% else %}'Ready to audit a website! Paste a URL and I\'ll check what tracking tools are live, flag anything broken, and surface things you should know about.'{% endif %},
+    context: '{% if audits %}User is on the home page. They have {{ audits|length }} audit(s). Most recent: {{ audits[0].run.base_url }} ({{ audits[0].run.status.value }}).{% else %}User is on the home page with no audits yet.{% endif %}'
 };
 </script>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="mb-6">
-        <a href="/" class="text-sm text-gray-500 hover:text-[#1800ad]">&larr; Back to Dashboard</a>
-        <h1 class="text-2xl font-bold text-gray-900 mt-2">New Audit</h1>
-        <p class="text-gray-500 text-sm mt-1">Configure and run a tracking audit on a website.</p>
-    </div>
+<div class="flex flex-col items-center justify-center pt-16 pb-10">
+    <div class="w-full max-w-xl px-4">
 
-    <form id="audit-form" hx-post="/api/audits" hx-ext="json-enc"
-        hx-on::after-request="handleAuditCreated(event)"
-        class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5" style="background:var(--odit-brand-light)">
+                <img src="/static/odit.svg" alt="" class="h-8 w-auto" style="opacity:0.85" />
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight mb-2" style="color:var(--odit-text)">Audit a website</h1>
+            <p class="text-base" style="color:var(--odit-text-2)">Paste a URL and we'll handle the rest.</p>
+        </div>
 
-        <!-- Base URL -->
-        <div>
-            <label for="base_url" class="block text-sm font-medium text-gray-700 mb-1">Base URL <span class="text-red-500">*</span></label>
-            <input type="url" id="base_url" name="base_url" required placeholder="https://example.com"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3820c4] focus:border-transparent"
-                onblur="suggestVendors(this.value)" />
-            <div id="vendor-suggestion-status" class="mt-1.5 hidden">
-                <span class="text-xs text-purple-600 flex items-center gap-1">
-                    <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        <form id="audit-form" onsubmit="submitAudit(event)">
+            <div class="flex gap-2">
+                <input
+                    type="url"
+                    id="base_url"
+                    name="base_url"
+                    required
+                    autofocus
+                    placeholder="https://example.com"
+                    class="odit-input flex-1 text-base py-3 px-4"
+                    style="border-radius:12px"
+                />
+                <button
+                    type="submit"
+                    id="submit-btn"
+                    class="text-white font-semibold px-6 py-3 rounded-xl flex items-center gap-2 whitespace-nowrap flex-shrink-0"
+                    style="background:var(--odit-brand);transition:background 0.15s,transform 0.15s,box-shadow 0.15s;box-shadow:0 2px 10px rgba(60,32,196,0.3)"
+                    onmouseover="if(!this.disabled){this.style.background='var(--odit-brand-hover)';this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 16px rgba(60,32,196,0.4)'}"
+                    onmouseout="this.style.background='var(--odit-brand)';this.style.transform='';this.style.boxShadow='0 2px 10px rgba(60,32,196,0.3)'"
+                >
+                    <svg id="btn-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
                     </svg>
-                    AI is suggesting expected vendors...
-                </span>
+                    <span id="btn-label">Start Audit</span>
+                </button>
             </div>
-        </div>
 
-        <!-- Mode -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Audit Mode</label>
-            <div class="grid grid-cols-2 gap-2">
-                {% for mode_val, mode_label, mode_desc in [
-                    ("quick_scan","Quick Scan","Crawls up to 50 pages following links"),
-                    ("full_crawl","Full Crawl","Deep crawl of the entire site structure"),
-                    ("journey_audit","Journey Audit","Follows a scripted user journey"),
-                    ("regression_compare","Regression Compare","Compares two audits for changes")
-                ] %}
-                <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-[#6355e0] transition-colors has-[:checked]:border-[#3820c4] has-[:checked]:bg-[#f0eeff]">
-                    <input type="radio" name="mode" value="{{ mode_val }}" {% if mode_val == "quick_scan" %}checked{% endif %}
-                        class="mt-0.5" onchange="toggleJourneyMode(this.value)" />
-                    <span>
-                        <span class="text-sm font-medium text-gray-700 block">{{ mode_label }}</span>
-                        <span class="text-xs text-gray-400 mt-0.5 block">{{ mode_desc }}</span>
-                    </span>
-                </label>
-                {% endfor %}
+            {# Mode toggle #}
+            <div class="flex items-center justify-center gap-1 mt-4 p-1 rounded-xl" style="background:var(--odit-surface-2);width:fit-content;margin-left:auto;margin-right:auto">
+                <button type="button" id="mode-quick" onclick="setMode('quick_scan')"
+                    class="mode-btn px-4 py-1.5 rounded-lg text-sm font-medium transition-all"
+                    style="background:var(--odit-surface);color:var(--odit-text);box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+                    Quick Scan
+                </button>
+                <button type="button" id="mode-full" onclick="setMode('full_crawl')"
+                    class="mode-btn px-4 py-1.5 rounded-lg text-sm font-medium transition-all"
+                    style="background:transparent;color:var(--odit-text-2)">
+                    Full Crawl
+                </button>
             </div>
-        </div>
 
-        <!-- Config Row -->
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label for="max_pages" class="block text-sm font-medium text-gray-700 mb-1">Max Pages</label>
-                <input type="number" id="max_pages" name="max_pages" value="50" min="1" max="500"
-                    class="w-full max-w-[140px] border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-[#3820c4]" />
+            {# Full crawl options #}
+            <div id="full-crawl-opts" class="hidden mt-3 flex items-center justify-center gap-3">
+                <label class="text-xs font-medium" style="color:var(--odit-text-2)">Pages to crawl</label>
+                <input type="number" id="max-pages-input" value="200" min="50" step="50"
+                    class="odit-input text-sm text-center font-semibold py-1 px-3"
+                    style="width:80px;border-radius:8px" />
             </div>
-            <div>
-                <label for="max_depth" class="block text-sm font-medium text-gray-700 mb-1">Max Depth</label>
-                <input type="number" id="max_depth" name="max_depth" value="3" min="1" max="10"
-                    class="w-full max-w-[140px] border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-[#3820c4]" />
-            </div>
-        </div>
 
-        <!-- Device + Consent -->
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label for="device_type" class="block text-sm font-medium text-gray-700 mb-1">Device Type</label>
-                <select id="device_type" name="device_type"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3820c4]">
-                    <option value="desktop">Desktop</option>
-                    <option value="mobile">Mobile</option>
-                    <option value="both">Both</option>
-                </select>
-            </div>
-            <div>
-                <label for="consent_behavior" class="block text-sm font-medium text-gray-700 mb-1">Consent Behavior</label>
-                <select id="consent_behavior" name="consent_behavior"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3820c4]">
-                    <option value="no_interaction">No Interaction</option>
-                    <option value="accept_consent">Accept Consent</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Expected Vendors -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Expected Vendors</label>
-            <p class="text-xs text-gray-500 mb-3">Flag an issue if any of these expected vendors are missing from the audit.</p>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-52 overflow-y-auto p-1">
-                {% set vendor_list = [
-                    ("google_analytics","Google Analytics"),
-                    ("google_tag_manager","Google Tag Manager"),
-                    ("adobe_launch","Adobe Launch"),
-                    ("adobe_analytics","Adobe Analytics"),
-                    ("tealium","Tealium"),
-                    ("segment","Segment"),
-                    ("rudderstack","RudderStack"),
-                    ("mixpanel","Mixpanel"),
-                    ("amplitude","Amplitude"),
-                    ("heap","Heap"),
-                    ("meta_pixel","Meta Pixel"),
-                    ("linkedin_insight","LinkedIn Insight"),
-                    ("tiktok_pixel","TikTok Pixel"),
-                    ("optimizely","Optimizely"),
-                    ("vwo","VWO"),
-                    ("adobe_target","Adobe Target"),
-                    ("launchdarkly","LaunchDarkly"),
-                    ("dynamic_yield","Dynamic Yield"),
-                    ("onetrust","OneTrust"),
-                    ("cookiebot","Cookiebot"),
-                    ("trustarc","TrustArc"),
-                ] %}
-                {% for v_key, v_name in vendor_list %}
-                <label class="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" name="expected_vendors" value="{{ v_key }}"
-                        class="rounded border-gray-300 text-[#1800ad] focus:ring-[#3820c4]" />
-                    <span class="text-gray-700">{{ v_name }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Include / Exclude Patterns -->
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label for="include_patterns" class="block text-sm font-medium text-gray-700 mb-1">Include Patterns</label>
-                <input type="text" id="include_patterns" name="include_patterns_raw"
-                    placeholder="/blog/*, /products/*"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3820c4]" />
-                <p class="text-xs text-gray-400 mt-1">Comma-separated glob patterns</p>
-            </div>
-            <div>
-                <label for="exclude_patterns" class="block text-sm font-medium text-gray-700 mb-1">Exclude Patterns</label>
-                <input type="text" id="exclude_patterns" name="exclude_patterns_raw"
-                    placeholder="/admin/*, /login"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3820c4]" />
-                <p class="text-xs text-gray-400 mt-1">Comma-separated glob patterns</p>
-            </div>
-        </div>
-
-        <!-- Seed URLs (Journey mode) -->
-        <div id="seed-urls-section" class="hidden">
-            <label for="seed_urls" class="block text-sm font-medium text-gray-700 mb-1">Seed URLs</label>
-            <textarea id="seed_urls" name="seed_urls_raw" rows="4"
-                placeholder="https://example.com/start&#10;https://example.com/checkout"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3820c4]"></textarea>
-            <p class="text-xs text-gray-400 mt-1">One URL per line for journey audit mode</p>
-        </div>
-
-        <!-- Regression Compare: pick prior audit -->
-        <div id="regression-section" class="hidden">
-            <label for="comparison_audit_id" class="block text-sm font-medium text-gray-700 mb-1">Compare Against</label>
-            <select id="comparison_audit_id" name="comparison_audit_id"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3820c4]">
-                <option value="">— Select a previous audit —</option>
-                {% for prev_run in completed_runs %}
-                <option value="{{ prev_run.id }}">{{ prev_run.base_url }} ({{ prev_run.created_at.strftime("%b %d %H:%M") }})</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <!-- Authentication (optional) -->
-        <div class="border border-gray-200 rounded-lg overflow-hidden">
-            <button type="button" onclick="toggleAuth()"
-                class="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left">
-                <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {# Auth section #}
+            <div class="mt-4 text-center">
+                <button type="button" onclick="toggleAuth()"
+                    class="text-xs font-medium inline-flex items-center gap-1 transition-colors"
+                    style="color:var(--odit-text-3)"
+                    id="auth-toggle-btn">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                     </svg>
-                    <span class="text-sm font-medium text-gray-700">Authentication <span class="text-gray-400 font-normal">(optional)</span></span>
-                </div>
-                <svg id="auth-chevron" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-            </button>
-            <div id="auth-section" class="hidden px-4 py-4 space-y-4 border-t border-gray-200">
-                <p class="text-xs text-gray-500">Provide session credentials if the site requires a login. Use one method only.</p>
-
-                <!-- Auth method tabs -->
-                <div class="flex gap-1 bg-gray-100 p-1 rounded-lg">
-                    <button type="button" id="auth-tab-cookies"
-                        onclick="setAuthTab('cookies')"
-                        class="flex-1 text-xs font-medium px-3 py-1.5 rounded-md bg-white text-gray-700 shadow-sm transition-colors">
-                        Cookie JSON
-                    </button>
-                    <button type="button" id="auth-tab-state"
-                        onclick="setAuthTab('state')"
-                        class="flex-1 text-xs font-medium px-3 py-1.5 rounded-md text-gray-500 transition-colors">
-                        Storage State
-                    </button>
-                </div>
-
-                <!-- Cookie JSON -->
-                <div id="auth-panel-cookies" class="space-y-2">
-                    <p class="text-xs text-gray-500">
-                        Export cookies from a logged-in browser session. In Chrome: DevTools → Application → Cookies → right-click domain → <em>Export</em>, or use the <strong>Cookie Editor</strong> extension → Export as JSON.
-                    </p>
-                    <textarea id="auth_cookies_raw" name="auth_cookies_raw" rows="5"
-                        placeholder='[{"name":"session","value":"abc123","domain":".example.com","path":"/","httpOnly":true,"secure":true}]'
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#3820c4] resize-y"></textarea>
-                </div>
-
-                <!-- Storage State JSON -->
-                <div id="auth-panel-state" class="space-y-2 hidden">
-                    <p class="text-xs text-gray-500">
-                        Paste the output of <code class="bg-gray-100 px-1 rounded">await context.storage_state()</code> from a Playwright script where you've already logged in. Includes cookies + localStorage.
-                    </p>
-                    <textarea id="auth_storage_state_raw" name="auth_storage_state_raw" rows="5"
-                        placeholder='{"cookies":[...],"origins":[{"origin":"https://example.com","localStorage":[...]}]}'
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#3820c4] resize-y"></textarea>
-                </div>
-            </div>
-        </div>
-
-        <div class="pt-2">
-            <div class="flex items-center gap-4">
-                <button type="submit"
-                    class="bg-[#1800ad] hover:bg-[#13008a] text-white font-medium py-2.5 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4 htmx-indicator animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    Run Audit
+                    <span id="auth-toggle-label">Audit as logged-in user</span>
                 </button>
-                <a href="/" class="text-sm text-gray-400 hover:text-gray-600">Cancel</a>
             </div>
-        </div>
-    </form>
+
+            <div id="auth-section" class="hidden mt-4 text-left rounded-xl p-4" style="background:var(--odit-surface-2);border:1px solid var(--odit-border)">
+                <p class="text-xs font-semibold mb-1" style="color:var(--odit-text)">Session cookies</p>
+                <p class="text-xs mb-3" style="color:var(--odit-text-3)">
+                    Export cookies from your browser using <a href="https://cookie-editor.com" target="_blank" class="underline">Cookie-Editor</a> (JSON format) and paste below. The crawler will inject them before starting.
+                </p>
+                <textarea
+                    id="auth-cookies-input"
+                    rows="5"
+                    placeholder='[{"name":"session","value":"abc123","domain":"example.com","path":"/"}]'
+                    class="odit-input w-full text-xs font-mono"
+                    style="border-radius:8px;resize:vertical"
+                ></textarea>
+                <p id="auth-error" class="hidden text-xs text-red-500 mt-1"></p>
+            </div>
+
+            <div id="error-msg" class="hidden mt-3 text-sm text-red-500 text-center"></div>
+
+            <p id="mode-hint" class="text-center text-xs mt-4" style="color:var(--odit-text-3)">
+                Crawls up to 50 pages &middot; Captures all network traffic &middot; Takes ~2 minutes
+            </p>
+        </form>
+
+    </div>
 </div>
 
+{% if audits %}
+<div class="max-w-5xl mx-auto px-4">
+    <p class="text-xs font-semibold mb-3" style="color:var(--odit-text-3)">PREVIOUS AUDITS</p>
+    <div class="odit-card overflow-hidden">
+        <table class="min-w-full odit-table">
+            <thead>
+                <tr>
+                    <th class="text-left" style="padding-left:20px">URL</th>
+                    <th class="text-left">Status</th>
+                    <th class="text-left">Issues</th>
+                    <th class="text-left">Mode</th>
+                    <th class="text-left">Pages</th>
+                    <th class="text-left">Created</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in audits %}
+                {% set run = item.run %}
+                {% set counts = item.issue_counts %}
+                <tr class="transition-colors group" id="audit-row-{{ run.id }}">
+                    <td style="padding-left:20px">
+                        <a href="/audits/{{ run.id }}" class="font-medium text-sm hover:text-[#1800ad] transition-colors block truncate max-w-xs" style="color:var(--odit-text)">
+                            {{ run.base_url | replace("https://", "") | replace("http://", "") }}
+                        </a>
+                    </td>
+                    <td>
+                        {% if run.status.value == "pending" %}
+                        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                            <span class="w-1.5 h-1.5 bg-gray-300 rounded-full"></span> Pending
+                        </span>
+                        {% elif run.status.value == "running" %}
+                        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-[#1800ad]">
+                            <span class="w-1.5 h-1.5 bg-[#6355e0] rounded-full animate-pulse"></span> Running
+                        </span>
+                        {% elif run.status.value == "completed" %}
+                        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-green-700">
+                            <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Completed
+                        </span>
+                        {% elif run.status.value == "failed" %}
+                        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-red-600">
+                            <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Failed
+                        </span>
+                        {% elif run.status.value == "cancelled" %}
+                        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-yellow-700">
+                            <span class="w-1.5 h-1.5 bg-yellow-400 rounded-full"></span> Cancelled
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="flex items-center gap-1">
+                            {% if counts.get("critical", 0) > 0 %}
+                            <span class="text-xs bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full font-semibold" title="{{ counts.get('critical',0) }} critical issues">{{ counts.critical }}C</span>
+                            {% endif %}
+                            {% if counts.get("high", 0) > 0 %}
+                            <span class="text-xs bg-orange-50 text-orange-600 border border-orange-100 px-2 py-0.5 rounded-full font-semibold" title="{{ counts.get('high',0) }} high issues">{{ counts.high }}H</span>
+                            {% endif %}
+                            {% if counts.get("medium", 0) > 0 %}
+                            <span class="text-xs bg-yellow-50 text-yellow-700 border border-yellow-100 px-2 py-0.5 rounded-full font-semibold" title="{{ counts.get('medium',0) }} medium issues">{{ counts.medium }}M</span>
+                            {% endif %}
+                            {% if counts.get("low", 0) > 0 %}
+                            <span class="text-xs bg-gray-50 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full font-semibold" title="{{ counts.get('low',0) }} low issues">{{ counts.low }}L</span>
+                            {% endif %}
+                            {% if not counts %}
+                            <span class="text-xs" style="color:var(--odit-text-3)">—</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap" style="background:var(--odit-surface-2);color:var(--odit-text-2)">
+                            {{ run.mode.value.replace("_", " ").title() }}
+                        </span>
+                    </td>
+                    <td class="text-sm font-medium" style="color:var(--odit-text)">{{ run.pages_crawled }}</td>
+                    <td class="text-xs" style="color:var(--odit-text-2)">
+                        <time class="odit-reltime" datetime="{{ run.created_at.isoformat() }}" title="{{ run.created_at.strftime('%d %b %Y %H:%M') }}">{{ run.created_at.strftime('%d %b %Y') }}</time>
+                    </td>
+                    <td class="text-right">
+                        <div class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <a href="/audits/{{ run.id }}"
+                                class="text-xs font-semibold"
+                                style="color:var(--odit-brand)">
+                                View →
+                            </a>
+                            <button
+                                hx-delete="/api/audits/{{ run.id }}"
+                                hx-confirm="Delete this audit and all its data? This cannot be undone."
+                                hx-target="#audit-row-{{ run.id }}"
+                                hx-swap="outerHTML swap:0.2s"
+                                class="text-xs text-red-400 hover:text-red-600 transition-colors"
+                                title="Delete audit"
+                                aria-label="Delete audit">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 <script>
-    function toggleAuth() {
-        const section = document.getElementById('auth-section');
-        const chevron = document.getElementById('auth-chevron');
-        section.classList.toggle('hidden');
-        chevron.style.transform = section.classList.contains('hidden') ? '' : 'rotate(180deg)';
-    }
+(function(){
+  function reltime(dt) {
+    const diff = (Date.now() - new Date(dt).getTime()) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    if (diff < 86400*30) return Math.floor(diff/86400) + 'd ago';
+    return Math.floor(diff/86400/30) + 'mo ago';
+  }
+  document.querySelectorAll('time.odit-reltime').forEach(el => {
+    el.textContent = reltime(el.getAttribute('datetime'));
+  });
+})();
 
-    function setAuthTab(tab) {
-        document.getElementById('auth-panel-cookies').classList.toggle('hidden', tab !== 'cookies');
-        document.getElementById('auth-panel-state').classList.toggle('hidden', tab !== 'state');
-        document.getElementById('auth-tab-cookies').className = 'flex-1 text-xs font-medium px-3 py-1.5 rounded-md transition-colors ' +
-            (tab === 'cookies' ? 'bg-white text-gray-700 shadow-sm' : 'text-gray-500');
-        document.getElementById('auth-tab-state').className = 'flex-1 text-xs font-medium px-3 py-1.5 rounded-md transition-colors ' +
-            (tab === 'state' ? 'bg-white text-gray-700 shadow-sm' : 'text-gray-500');
-    }
+let _auditMode = 'quick_scan';
+let _authOpen = false;
 
-    function toggleJourneyMode(mode) {
-        const seedSection = document.getElementById('seed-urls-section');
-        const regressionSection = document.getElementById('regression-section');
-        seedSection.classList.toggle('hidden', mode !== 'journey_audit');
-        regressionSection.classList.toggle('hidden', mode !== 'regression_compare');
-    }
+function toggleAuth() {
+    _authOpen = !_authOpen;
+    document.getElementById('auth-section').classList.toggle('hidden', !_authOpen);
+    document.getElementById('auth-toggle-label').textContent = _authOpen
+        ? 'Remove auth'
+        : 'Audit as logged-in user';
+}
 
-    function handleAuditCreated(event) {
-        if (event.detail.successful) {
+function setMode(mode) {
+    _auditMode = mode;
+    const qBtn = document.getElementById('mode-quick');
+    const fBtn = document.getElementById('mode-full');
+    const opts = document.getElementById('full-crawl-opts');
+    const hint = document.getElementById('mode-hint');
+
+    if (mode === 'quick_scan') {
+        qBtn.style.background = 'var(--odit-surface)';
+        qBtn.style.color = 'var(--odit-text)';
+        qBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        fBtn.style.background = 'transparent';
+        fBtn.style.color = 'var(--odit-text-2)';
+        fBtn.style.boxShadow = '';
+        opts.classList.add('hidden');
+        hint.textContent = 'Crawls up to 50 pages · Captures all network traffic · Takes ~2 minutes';
+    } else {
+        fBtn.style.background = 'var(--odit-surface)';
+        fBtn.style.color = 'var(--odit-text)';
+        fBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        qBtn.style.background = 'transparent';
+        qBtn.style.color = 'var(--odit-text-2)';
+        qBtn.style.boxShadow = '';
+        opts.classList.remove('hidden');
+        hint.textContent = 'Deep crawl · All network traffic captured · Takes 5–15 minutes';
+    }
+}
+
+async function submitAudit(e) {
+    e.preventDefault();
+    const url = document.getElementById('base_url').value.trim();
+    if (!url) return;
+
+    const mode = _auditMode;
+    const maxPages = mode === 'full_crawl'
+        ? parseInt(document.getElementById('max-pages-input').value, 10) || 200
+        : 50;
+
+    // Parse auth cookies if provided
+    let authCookies = null;
+    if (_authOpen) {
+        const raw = document.getElementById('auth-cookies-input').value.trim();
+        if (raw) {
             try {
-                const resp = JSON.parse(event.detail.xhr.responseText);
-                window.location.href = '/audits/' + resp.id;
+                authCookies = JSON.parse(raw);
+                if (!Array.isArray(authCookies)) throw new Error('Must be a JSON array');
+                document.getElementById('auth-error').classList.add('hidden');
             } catch (e) {
-                console.error('Error parsing response', e);
-            }
-        } else {
-            try {
-                const err = JSON.parse(event.detail.xhr.responseText);
-                alert('Error: ' + (err.detail || 'Unknown error'));
-            } catch (e) {
-                alert('An error occurred. Status: ' + event.detail.xhr.status);
+                document.getElementById('auth-error').textContent = 'Invalid JSON: ' + e.message;
+                document.getElementById('auth-error').classList.remove('hidden');
+                return;
             }
         }
     }
 
-    // Override HTMX form submission to build JSON with arrays
-    document.getElementById('audit-form').addEventListener('htmx:configRequest', function(evt) {
-        const form = document.getElementById('audit-form');
-        const formData = new FormData(form);
+    const btn = document.getElementById('submit-btn');
+    const icon = document.getElementById('btn-icon');
+    const label = document.getElementById('btn-label');
+    const errEl = document.getElementById('error-msg');
 
-        const expectedVendors = formData.getAll('expected_vendors');
-        const includeRaw = formData.get('include_patterns_raw') || '';
-        const excludeRaw = formData.get('exclude_patterns_raw') || '';
-        const seedRaw = formData.get('seed_urls_raw') || '';
+    btn.disabled = true;
+    btn.style.opacity = '0.75';
+    btn.style.cursor = 'not-allowed';
+    icon.outerHTML = `<svg id="btn-icon" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>`;
+    label.textContent = 'Starting…';
+    errEl.classList.add('hidden');
 
-        const include_patterns = includeRaw.split(',').map(s => s.trim()).filter(Boolean);
-        const exclude_patterns = excludeRaw.split(',').map(s => s.trim()).filter(Boolean);
-        const seed_urls = seedRaw.split('\n').map(s => s.trim()).filter(Boolean);
-
-        const comparisonId = formData.get('comparison_audit_id') || null;
-
-        // Parse auth fields
-        let auth_cookies = null;
-        let auth_storage_state = null;
-        const cookiesRaw = (formData.get('auth_cookies_raw') || '').trim();
-        const stateRaw = (formData.get('auth_storage_state_raw') || '').trim();
-        if (cookiesRaw) {
-            try { auth_cookies = JSON.parse(cookiesRaw); } catch(e) { alert('Cookie JSON is invalid — please check the format.'); return; }
+    try {
+        const resp = await fetch('/api/audits', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ base_url: url, mode, max_pages: maxPages, ...(authCookies ? { auth_cookies: authCookies } : {}) })
+        });
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.detail || 'Failed to create audit');
         }
-        if (stateRaw) {
-            try { auth_storage_state = JSON.parse(stateRaw); } catch(e) { alert('Storage state JSON is invalid — please check the format.'); return; }
-        }
-
-        evt.detail.parameters = {
-            base_url: formData.get('base_url'),
-            mode: formData.get('mode'),
-            max_pages: parseInt(formData.get('max_pages')) || 50,
-            max_depth: parseInt(formData.get('max_depth')) || 3,
-            device_type: formData.get('device_type'),
-            consent_behavior: formData.get('consent_behavior'),
-            expected_vendors: expectedVendors,
-            include_patterns: include_patterns,
-            exclude_patterns: exclude_patterns,
-            seed_urls: seed_urls,
-            comparison_audit_id: comparisonId || null,
-            auth_cookies: auth_cookies,
-            auth_storage_state: auth_storage_state,
-        };
-    });
-
-    htmx.config.defaultSwapStyle = 'innerHTML';
-
-    async function suggestVendors(url) {
-        if (!url || !url.startsWith('http')) return;
-        const statusEl = document.getElementById('vendor-suggestion-status');
-        statusEl.classList.remove('hidden');
-        try {
-            const resp = await fetch('/api/suggestions/vendors', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({url})
-            });
-            if (!resp.ok) return;
-            const data = await resp.json();
-            if (data.vendors && data.vendors.length > 0) {
-                data.vendors.forEach(key => {
-                    const checkbox = document.querySelector(`input[name="expected_vendors"][value="${key}"]`);
-                    if (checkbox) checkbox.checked = true;
-                });
-                statusEl.innerHTML = `<span class="text-xs text-purple-700 flex items-center gap-1">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347a3.75 3.75 0 01-5.303 0l-.346-.346a5 5 0 010-7.072z" />
-                    </svg>
-                    AI pre-selected ${data.vendors.length} likely vendor${data.vendors.length > 1 ? 's' : ''} — adjust as needed
-                </span>`;
-            } else {
-                statusEl.classList.add('hidden');
-            }
-        } catch (e) {
-            statusEl.classList.add('hidden');
-        }
+        const data = await resp.json();
+        window.location.href = '/audits/' + data.id;
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.style.cursor = '';
+        document.getElementById('btn-icon').outerHTML = `<svg id="btn-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/></svg>`;
+        label.textContent = 'Start Audit';
     }
+}
 </script>
 {% endblock %}
