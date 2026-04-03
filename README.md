@@ -1,260 +1,228 @@
-# Odit - Tracking Auditor
+<div align="center">
+  <img src="app/static/odit.svg" alt="Odit" height="72" />
+  <br /><br />
+  <strong>Local-first website tracking auditor</strong>
+  <br />
+  Crawl any site with a real browser, capture every network request, detect martech vendors, flag compliance issues — all on your own machine.
+  <br /><br />
 
-A local-first web application that audits a website's client-side tracking and analytics implementation quality. Odit crawls your site using a real browser, captures network traffic through a transparent proxy, detects analytics vendors, and flags implementation issues with detailed recommendations.
+  ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+  ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+  ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white)
+  ![Playwright](https://img.shields.io/badge/Playwright-Chromium-45BA4B?logo=playwright&logoColor=white)
+  ![License](https://img.shields.io/badge/License-MIT-blue)
+</div>
 
-## What Odit Does
+---
 
-- Crawls websites using Playwright (real Chromium browser)
-- Captures all network requests via mitmproxy
-- Detects 21+ analytics, tag management, A/B testing, and consent vendors
-- Flags 10 categories of tracking issues (broken scripts, missing vendors, consent violations, duplicates, etc.)
-- Shows live crawl progress with HTMX-powered UI
-- Exports findings as Excel workbook, HTML report, Markdown, and JSON
+## What is Odit?
 
-## Prerequisites
+Odit is a four-container Docker Compose appliance that turns any website into a complete tracking audit — vendors detected, issues flagged, cookies catalogued, and a full network capture ready to download. No cloud, no subscription, no data leaving your machine.
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop) (includes Docker Compose)
-- macOS, Linux, or Windows
+---
+
+## Features
+
+### Core Auditing
+- **Real browser crawl** — Playwright (headless Chromium) with BFS page discovery
+- **Full network capture** — every request intercepted by mitmproxy, including HTTPS
+- **Vendor detection** — 40+ vendors matched by domain, script, JS global, and cookie signatures
+- **10 issue rules** — broken scripts, consent violations, PII in URLs, duplicate signals, missing vendors, and more
+- **Logged-in user audits** — inject session cookies so the crawler sees the authenticated experience
+
+### Results & Reports
+- **Executive summary** — risk rating, GDPR/CCPA posture, vendor category breakdown
+- **Vendor tag attribution** — each vendor tagged as Via GTM / Via Adobe Launch / Direct / Beacon / Pixel
+- **Performance impact** — estimated request weight and timing per vendor
+- **Cookie register** — every cookie set during the crawl with full metadata
+- **9-sheet Excel export** — summary, vendors, issues, pages, network requests, cookies, data layer, consent analysis, recommendations
+- **HTML, Markdown, JSON reports** — shareable and CI-ready
+
+### AI Features *(requires `ANTHROPIC_API_KEY`)*
+- **AI Audit Brief** — auto-generated structured brief covering tracking inventory, data flows, issues, and priority actions
+- **Issue enrichment** — each issue gets an AI-written description, likely cause, and recommendation
+- **Fix It** — per-issue step-by-step remediation guide with code examples
+- **Contextual help chat** — agentic sidebar assistant that knows your audit data, current page, and app state; answers questions, explains findings, guides you through features
+
+### UI
+- **Live progress** — HTMX-powered real-time crawl updates (no refresh needed)
+- **Dark mode** — full dark/light toggle, persisted across sessions
+- **Resizable chat panel** — collapsible AI assistant sidebar, width saved per session
+- **Contextual `i` triggers** — clickable info buttons that pre-fire relevant chat questions
+
+---
 
 ## Quick Start
 
-```bash
-# Clone or download the project
-cd /path/to/odit
+**Requirements:** [Docker Desktop](https://www.docker.com/products/docker-desktop)
 
-# Start everything
-./start-auditor.sh          # macOS/Linux
-start-auditor.bat           # Windows
+```bash
+git clone https://github.com/venk-hub/Odit.git
+cd Odit
+
+# Copy and configure environment
+cp .env.example .env
+
+# Start all containers
+./start-auditor.sh        # macOS / Linux
+start-auditor.bat         # Windows
 
 # Open the app
 open http://localhost:8000
 ```
 
-## Running Your First Audit
+To enable AI features, add your Anthropic API key to `.env`:
 
-1. Open http://localhost:8000
-2. Click **New Audit**
-3. Enter the website URL (e.g. `https://example.com`)
-4. Choose an audit mode:
-   - **Quick Scan** — Fast scan of the homepage and a few pages (recommended for first run)
-   - **Full Crawl** — BFS crawl up to your configured page limit
-   - **Journey Audit** — Crawl specific seed URLs you define
-   - **Regression Compare** — Compare this audit against a previous one
-5. Configure optional settings (device type, consent behavior, expected vendors)
-6. Click **Run Audit**
-7. Watch the live progress on the audit detail page
-8. View results in the Summary, Issues, Vendors, Pages, and Exports tabs
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+---
+
+## Audit Modes
+
+| Mode | Pages | Use for |
+|------|-------|---------|
+| **Quick Scan** | Up to 50 | Fast overview, first-look audits |
+| **Full Crawl** | Configurable (default 200) | Comprehensive site-wide audit |
+
+---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  User Browser                                            │
-│  http://localhost:8000                                   │
-└───────────────────┬─────────────────────────────────────┘
-                    │ HTTP
-┌───────────────────▼─────────────────────────────────────┐
-│  FastAPI App Container                                   │
-│  - Jinja2 + HTMX UI                                     │
-│  - REST API (/api/*)                                     │
-│  - Async SQLAlchemy                                      │
-│  - Alembic migrations                                    │
-└──────────┬──────────────────────────────────────────────┘
-           │ PostgreSQL
-┌──────────▼──────────────────────────────────────────────┐
-│  PostgreSQL Container                                    │
-│  - All audit data                                       │
-│  - Job queue (pending/running/completed)                 │
-└──────────┬──────────────────────────────────────────────┘
-           │ SQL polling
-┌──────────▼──────────────────────────────────────────────┐
-│  Worker Container                                        │
-│  - Playwright (headless Chromium)                       │
-│  - Vendor detection (YAML signatures)                   │
-│  - Issue rule engine (10 rules)                         │
-│  - Export generators (Excel, HTML, MD, JSON)            │
-└──────────┬──────────────────────────────────────────────┘
-           │ HTTP Proxy
-┌──────────▼──────────────────────────────────────────────┐
-│  mitmproxy Container (port 8080)                        │
-│  - Intercepts all HTTPS traffic                         │
-│  - Writes flow records to /data/proxy_flows/            │
-└─────────────────────────────────────────────────────────┘
+postgres   ← shared DB (SQLAlchemy models, Alembic migrations)
+   ↕
+app        ← FastAPI + Jinja2/HTMX UI (port 8000)
+   ↕
+worker     ← Playwright crawler, vendor detection, rule engine, AI enrichment
+   ↕
+proxy      ← mitmproxy (port 8080) — intercepts all browser traffic
 ```
 
-## Folder Structure
+**Data flow:**
+1. Paste URL → click Start Audit → `AuditRun` created (status: pending)
+2. Worker picks up the job, launches Playwright routed through mitmproxy
+3. Evidence written to `/data/audits/{id}/` and normalised into Postgres
+4. Vendor detection + rule engine run after crawl
+5. AI enrichment runs (if API key configured)
+6. Exports generated — Excel, HTML, Markdown, JSON
+7. UI polls progress every 3s via HTMX
 
-```
-odit/
-├── app/                    # FastAPI application
-│   ├── api/                # REST API route modules
-│   ├── web/                # Jinja2 template routes
-│   ├── models/             # SQLAlchemy models
-│   ├── templates/          # HTML templates (Jinja2)
-│   ├── static/             # Static assets
-│   ├── main.py             # FastAPI app entrypoint
-│   ├── config.py           # Settings (pydantic-settings)
-│   ├── database.py         # DB engine + session
-│   └── requirements.txt
-├── worker/                 # Background crawl worker
-│   ├── crawler/            # Playwright crawl engine
-│   ├── detectors/          # Vendor detection (vendors.yaml)
-│   ├── rules/              # Issue detection rules
-│   ├── exports/            # Excel/HTML/MD/JSON exporters
-│   ├── main.py             # Worker entrypoint (DB polling loop)
-│   ├── config.py
-│   └── requirements.txt
-├── proxy/                  # mitmproxy container
-│   ├── mitm_addon.py       # Intercept + logging addon
-│   └── Dockerfile
-├── alembic/                # DB migrations
-│   ├── versions/
-│   └── env.py
-├── docker/                 # Dockerfiles + entrypoints
-├── tests/                  # Unit tests
-├── docs/                   # Documentation
-├── data/                   # Artifact storage (gitignored)
-│   ├── audits/{id}/        # Per-audit artifacts
-│   │   ├── screenshots/    # PNG screenshots
-│   │   ├── har/            # HAR network archives
-│   │   └── reports/        # Excel, HTML, MD, JSON exports
-│   └── proxy_flows/        # mitmproxy JSONL flow records
-├── docker-compose.yml
-├── .env.example
-├── start-auditor.sh
-└── stop-auditor.sh
-```
-
-## Exports
-
-After an audit completes, the following exports are automatically generated:
-
-| Export | File | Description |
-|--------|------|-------------|
-| Excel Workbook | `audit_report.xlsx` | 9 sheets: Summary, Pages, Vendors, Issues, Broken Requests, Console Errors, Scripts, Cookies/Storage, Recommendations |
-| HTML Report | `audit_summary.html` | Styled standalone HTML — share with stakeholders |
-| Markdown Report | `audit_summary.md` | Plain text for Confluence/Notion/GitHub Issues |
-| JSON Summary | `audit_summary.json` | Machine-readable for CI/CD integration |
-| Screenshots | `screenshots/*.png` | Full-page screenshots of each crawled page |
-| HAR Files | `har/*.har` | Complete network traffic archives (open in Chrome DevTools) |
-
-All exports are available via the **Exports** tab in the audit detail view.
+---
 
 ## Vendor Detection
 
-Odit detects 21 vendors across 5 categories:
+Vendors are detected via four signal types matched against `worker/detectors/vendors.yaml`:
 
-**Analytics:** Google Analytics/GA4, Adobe Analytics, Tealium, Segment, RudderStack, Mixpanel, Amplitude, Heap
+| Signal | Example |
+|--------|---------|
+| Domain | requests to `analytics.google.com` |
+| Script | `gtm.js`, `analytics.js` loaded on page |
+| JS global | `window.gtag`, `window.fbq`, `window._satellite` |
+| Cookie | `_ga`, `_fbp`, `OptanonConsent` |
 
-**Tag Management:** Google Tag Manager, Adobe Launch
+**To add a vendor** — edit `vendors.yaml`, no code change needed:
 
-**A/B Testing:** Optimizely, VWO, Adobe Target, LaunchDarkly, Dynamic Yield
+```yaml
+vendors:
+  - key: my_vendor
+    name: My Vendor
+    category: analytics
+    signatures:
+      domains: [cdn.myvendor.com]
+      script_patterns: [myvendor.js]
+      window_globals: [window.myVendor]
+      cookie_patterns: [_mv_]
+```
 
-**Consent (CMP):** OneTrust, Cookiebot, TrustArc
+---
 
-**Pixels:** Meta Pixel, LinkedIn Insight Tag, TikTok Pixel
+## Issue Detection
 
-Detection uses four methods (in priority order):
-1. Network request domain matching
-2. Script src URL pattern matching
-3. Window global variable detection (`window.gtag`, `window.OneTrust`, etc.)
-4. Cookie name pattern matching
+| Rule | Severity |
+|------|----------|
+| Tracking script failed to load | Critical |
+| Broken tracking request (4xx/5xx) | High |
+| Tracking fires before consent | High |
+| Missing consent manager | High |
+| PII detected in page URL | High |
+| Unexpected vendor detected | Medium |
+| Missing expected vendor | Medium |
+| Duplicate tracking signals | Medium |
+| Inconsistent vendor coverage | Medium |
+| High request volume | Low |
 
-## Issue Detection Rules
+---
 
-| Rule | Severity | Description |
-|------|----------|-------------|
-| Broken tracking request | High | 4xx/5xx responses from tracking endpoints |
-| Failed script load | Critical | Tracking JS files fail to load |
-| Console JS errors | High/Medium | Pages with 3+ JS errors |
-| Missing expected vendor | High | Configured vendor not detected anywhere |
-| Inconsistent vendor coverage | Medium | Vendor present on some pages in a template group but not others |
-| Duplicate pageview signal | Medium | Same vendor endpoint hit 3+ times on one page |
-| Consent issue (no interaction) | High | Tracking fires before consent when CMP is present |
-| A/B vendor broken | High | A/B testing vendor has >50% request failure rate |
-| Redirect tracking loss | Low | Redirected pages may lose attribution data |
-| Template inconsistency | Medium | Same URL group has different vendor sets |
+## Exports
 
-## Audit Modes
+| Format | Contents |
+|--------|----------|
+| **Excel (.xlsx)** | 9 sheets — summary, vendors, issues, pages, network, cookies, data layer, consent, recommendations |
+| **HTML report** | Styled standalone file — shareable with stakeholders |
+| **Markdown** | Plain text for Confluence, Notion, or GitHub Issues |
+| **JSON** | Machine-readable — CI/CD integration ready |
+| **Screenshots** | Full-page PNG per crawled page |
+| **HAR files** | Full network archive, openable in Chrome DevTools |
 
-| Mode | Description |
-|------|-------------|
-| Quick Scan | Crawls homepage + linked pages, low page limit |
-| Full Crawl | BFS crawl up to max_pages (default: 50) |
-| Journey Audit | Crawls only specific seed URLs you provide |
-| Regression Compare | Runs audit then compares to a previous audit |
+---
 
 ## Configuration
 
-Copy `.env.example` to `.env` and adjust as needed:
-
 ```env
-POSTGRES_DB=odit
-POSTGRES_USER=odit
-POSTGRES_PASSWORD=odit_local_pass
+# .env
 DATABASE_URL=postgresql://odit:odit_local_pass@postgres:5432/odit
 DATA_DIR=/data
 PROXY_HOST=proxy
 PROXY_PORT=8080
 APP_PORT=8000
-LOG_LEVEL=INFO
+ANTHROPIC_API_KEY=        # optional — enables AI features
 ```
+
+---
 
 ## Troubleshooting
 
-**App won't start:**
 ```bash
-docker compose logs app
-docker compose logs postgres
-```
+# View logs
+docker compose logs -f app
+docker compose logs -f worker
+docker compose logs -f proxy
 
-**Worker not picking up jobs:**
-```bash
-docker compose logs worker
-```
-Check that `DATABASE_URL` is correct and Playwright installed successfully.
-
-**Proxy cert issues (sites not crawling):**
-```bash
-docker compose logs proxy
-ls data/certs/
-```
-The worker waits up to 60s for the mitmproxy CA cert to appear in `data/certs/`.
-
-**No vendor detected despite it being present:**
-- Some vendors only fire on user interaction (click, scroll). Odit currently captures page load traffic only.
-- Ad blockers in the network may block vendor scripts — Odit crawls without ad blockers.
-
-**Audit stuck in "running" state:**
-```bash
+# Worker stuck — restart it
 docker compose restart worker
-```
-The worker will pick up pending/running audits on restart.
 
-**Reset all data:**
-```bash
-./stop-auditor.sh
-docker volume rm odit_postgres_data
+# Wipe everything and start fresh
+docker compose down -v
 rm -rf data/audits data/proxy_flows
-./start-auditor.sh
+docker compose up -d
 ```
 
-## Running Tests
+---
+
+## Development
 
 ```bash
-# From the project root (with Python + dependencies installed)
-pip install -r worker/requirements.txt
-pip install pytest
+# Run app locally (no Docker)
+cd app && pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+
+# Run worker locally
+cd worker && pip install -r requirements.txt
+playwright install chromium
+python worker/main.py
+
+# DB migrations
+alembic upgrade head
+alembic revision --autogenerate -m "description"
+
+# Tests
 pytest tests/ -v
 ```
 
-## Stopping Odit
+---
 
-```bash
-./stop-auditor.sh
-```
-
-Or to stop and remove volumes (deletes all audit data):
-```bash
-docker compose down -v
-```
+<div align="center">
+  <sub>Odit — local-first tracking auditor</sub>
+</div>
