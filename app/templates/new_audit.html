@@ -99,7 +99,7 @@ window.__oditPageContext = {
 
             <div id="error-msg" class="hidden mt-3 text-sm text-red-500 text-center"></div>
 
-            <p id="mode-hint" class="text-center text-xs mt-4" style="color:var(--odit-text-3)">
+            <p id="mode-hint" class="text-center text-xs mt-4" style="color:var(--odit-text-2)">
                 Crawls up to 50 pages &middot; Captures all network traffic &middot; Takes ~2 minutes
             </p>
         </form>
@@ -109,7 +109,7 @@ window.__oditPageContext = {
 
 {% if audits %}
 <div class="max-w-5xl mx-auto px-4">
-    <p class="text-xs font-semibold mb-3" style="color:var(--odit-text-3)">PREVIOUS AUDITS</p>
+    <p class="text-xs font-semibold mb-3 uppercase tracking-widest" style="color:var(--odit-text-2)">Previous Audits</p>
     <div class="odit-card overflow-hidden">
         <table class="min-w-full odit-table">
             <thead>
@@ -254,6 +254,7 @@ function setMode(mode) {
         fBtn.style.color = 'var(--odit-text-2)';
         fBtn.style.boxShadow = '';
         opts.classList.add('hidden');
+        hint.style.color = 'var(--odit-text-2)';
         hint.textContent = 'Crawls up to 50 pages · Captures all network traffic · Takes ~2 minutes';
     } else {
         fBtn.style.background = 'var(--odit-surface)';
@@ -263,6 +264,7 @@ function setMode(mode) {
         qBtn.style.color = 'var(--odit-text-2)';
         qBtn.style.boxShadow = '';
         opts.classList.remove('hidden');
+        hint.style.color = 'var(--odit-text-2)';
         hint.textContent = 'Deep crawl · All network traffic captured · Takes 5–15 minutes';
     }
 }
