@@ -220,7 +220,102 @@ The worker polls the database for pending audit jobs, runs the crawler, writes e
 
 ---
 
+You have access to tools that can query live audit data from the database. Use them when the user asks about specific audits, vendors, issues, or pages — don't guess, look it up. When answering questions about data, always use the tools to get current information.
+
 Answer the user's question based on the above. If they ask something not covered here, say so honestly. Do not make up features that don't exist."""
+
+
+AGENT_TOOLS = [
+    {
+        "name": "list_audits",
+        "description": "List the most recent audits with summary stats. Use this to answer questions like 'what audits do I have', 'show me recent audits', or when you need to find an audit ID.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of audits to return (default 10, max 20)",
+                    "default": 10,
+                }
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "get_audit",
+        "description": "Get full details for a specific audit including vendors, issue counts, pages crawled, cookie count, and top issues.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "audit_id": {
+                    "type": "string",
+                    "description": "The UUID of the audit run",
+                }
+            },
+            "required": ["audit_id"],
+        },
+    },
+    {
+        "name": "get_issues",
+        "description": "Get issues detected in an audit, optionally filtered by severity.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "audit_id": {
+                    "type": "string",
+                    "description": "The UUID of the audit run",
+                },
+                "severity": {
+                    "type": "string",
+                    "enum": ["critical", "high", "medium", "low"],
+                    "description": "Filter by severity (optional — omit to get all severities)",
+                },
+            },
+            "required": ["audit_id"],
+        },
+    },
+    {
+        "name": "get_vendors",
+        "description": "Get all vendors detected in an audit with their category, page count, detection method, and evidence.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "audit_id": {
+                    "type": "string",
+                    "description": "The UUID of the audit run",
+                }
+            },
+            "required": ["audit_id"],
+        },
+    },
+    {
+        "name": "get_pages",
+        "description": "Get pages crawled in an audit with their URL, status code, vendor count, issue count, and load time.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "audit_id": {
+                    "type": "string",
+                    "description": "The UUID of the audit run",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of pages to return (default 20, max 100)",
+                    "default": 20,
+                },
+            },
+            "required": ["audit_id"],
+        },
+    },
+]
+
+TOOL_LABELS = {
+    "list_audits": "Looking up your audits...",
+    "get_audit": "Loading audit details...",
+    "get_issues": "Fetching issues...",
+    "get_vendors": "Fetching vendor list...",
+    "get_pages": "Loading pages...",
+}
 
 
 class ChatMessage(BaseModel):
@@ -249,7 +344,6 @@ async def _get_audit_context(db) -> str:
 
         lines = ["The user has the following audits (most recent first):"]
         for run in runs:
-            # Issue counts
             issue_result = await db.execute(
                 select(Issue.severity, func.count(Issue.id))
                 .where(Issue.audit_run_id == run.id)
@@ -257,7 +351,6 @@ async def _get_audit_context(db) -> str:
             )
             counts = {row[0]: row[1] for row in issue_result}
 
-            # Vendor count
             vendor_result = await db.execute(
                 select(func.count(DetectedVendor.id))
                 .where(DetectedVendor.audit_run_id == run.id)
@@ -265,7 +358,6 @@ async def _get_audit_context(db) -> str:
             )
             vendor_count = vendor_result.scalar() or 0
 
-            # Top issues
             top_issues_result = await db.execute(
                 select(Issue.title, Issue.severity)
                 .where(Issue.audit_run_id == run.id)
@@ -317,12 +409,234 @@ async def _get_api_key(db) -> str:
     return ""
 
 
+async def _execute_tool(tool_name: str, tool_input: dict, db) -> str:
+    """Execute a tool call and return a JSON string result."""
+    try:
+        from sqlalchemy import select, func, desc
+        from app.models import AuditRun, Issue, DetectedVendor, PageVisit, NetworkRequest
+
+        if tool_name == "list_audits":
+            limit = min(int(tool_input.get("limit", 10)), 20)
+            result = await db.execute(
+                select(AuditRun).order_by(desc(AuditRun.created_at)).limit(limit)
+            )
+            runs = result.scalars().all()
+            if not runs:
+                return json.dumps({"audits": [], "message": "No audits found."})
+
+            audits = []
+            for run in runs:
+                issue_result = await db.execute(
+                    select(Issue.severity, func.count(Issue.id))
+                    .where(Issue.audit_run_id == run.id)
+                    .group_by(Issue.severity)
+                )
+                issue_counts = {row[0]: row[1] for row in issue_result}
+
+                vendor_result = await db.execute(
+                    select(func.count(DetectedVendor.id))
+                    .where(DetectedVendor.audit_run_id == run.id)
+                    .where(DetectedVendor.page_visit_id == None)
+                )
+                vendor_count = vendor_result.scalar() or 0
+
+                audits.append({
+                    "id": str(run.id),
+                    "url": run.base_url,
+                    "status": run.status.value,
+                    "mode": run.mode.value,
+                    "pages_crawled": run.pages_crawled,
+                    "created_at": run.created_at.isoformat() if run.created_at else None,
+                    "vendors": vendor_count,
+                    "issues": {
+                        "critical": issue_counts.get("critical", 0),
+                        "high": issue_counts.get("high", 0),
+                        "medium": issue_counts.get("medium", 0),
+                        "low": issue_counts.get("low", 0),
+                    },
+                })
+            return json.dumps({"audits": audits})
+
+        elif tool_name == "get_audit":
+            audit_id = tool_input["audit_id"]
+            result = await db.execute(select(AuditRun).where(AuditRun.id == audit_id))
+            run = result.scalar_one_or_none()
+            if not run:
+                return json.dumps({"error": f"Audit {audit_id} not found."})
+
+            issue_result = await db.execute(
+                select(Issue.severity, func.count(Issue.id))
+                .where(Issue.audit_run_id == run.id)
+                .group_by(Issue.severity)
+            )
+            issue_counts = {row[0]: row[1] for row in issue_result}
+
+            top_issues_result = await db.execute(
+                select(Issue.title, Issue.severity)
+                .where(Issue.audit_run_id == run.id)
+                .order_by(desc(Issue.severity))
+                .limit(10)
+            )
+            top_issues = [{"title": r[0], "severity": r[1]} for r in top_issues_result]
+
+            vendors_result = await db.execute(
+                select(DetectedVendor.vendor_name, DetectedVendor.category, DetectedVendor.page_count)
+                .where(DetectedVendor.audit_run_id == run.id)
+                .where(DetectedVendor.page_visit_id == None)
+                .order_by(desc(DetectedVendor.page_count))
+            )
+            vendors = [{"name": r[0], "category": r[1], "pages": r[2]} for r in vendors_result]
+
+            request_count_result = await db.execute(
+                select(func.count(NetworkRequest.id))
+                .where(NetworkRequest.audit_run_id == run.id)
+            )
+            request_count = request_count_result.scalar() or 0
+
+            cookie_count = 0
+            pages_result = await db.execute(
+                select(PageVisit.cookies)
+                .where(PageVisit.audit_run_id == run.id)
+            )
+            all_cookie_sets = pages_result.scalars().all()
+            seen_cookies = set()
+            for cookie_list in all_cookie_sets:
+                if isinstance(cookie_list, list):
+                    for c in cookie_list:
+                        if isinstance(c, dict):
+                            key = (c.get("name", ""), c.get("domain", ""))
+                            seen_cookies.add(key)
+            cookie_count = len(seen_cookies)
+
+            return json.dumps({
+                "id": str(run.id),
+                "url": run.base_url,
+                "status": run.status.value,
+                "mode": run.mode.value,
+                "pages_crawled": run.pages_crawled,
+                "pages_discovered": run.pages_discovered,
+                "pages_failed": run.pages_failed,
+                "created_at": run.created_at.isoformat() if run.created_at else None,
+                "started_at": run.started_at.isoformat() if run.started_at else None,
+                "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+                "total_network_requests": request_count,
+                "unique_cookies": cookie_count,
+                "issue_counts": {
+                    "critical": issue_counts.get("critical", 0),
+                    "high": issue_counts.get("high", 0),
+                    "medium": issue_counts.get("medium", 0),
+                    "low": issue_counts.get("low", 0),
+                },
+                "top_issues": top_issues,
+                "vendors": vendors,
+            })
+
+        elif tool_name == "get_issues":
+            audit_id = tool_input["audit_id"]
+            severity = tool_input.get("severity")
+
+            query = select(Issue).where(Issue.audit_run_id == audit_id)
+            if severity:
+                query = query.where(Issue.severity == severity)
+            severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+            result = await db.execute(query)
+            issues_raw = result.scalars().all()
+            issues_raw = sorted(issues_raw, key=lambda i: severity_order.get(i.severity, 9))
+
+            issues = []
+            for issue in issues_raw[:50]:
+                issues.append({
+                    "id": str(issue.id),
+                    "title": issue.title,
+                    "severity": issue.severity,
+                    "category": issue.category,
+                    "description": (issue.description or "")[:300],
+                    "recommendation": (issue.recommendation or "")[:200],
+                    "affected_vendor_key": issue.affected_vendor_key,
+                })
+            return json.dumps({
+                "audit_id": audit_id,
+                "severity_filter": severity,
+                "total_shown": len(issues),
+                "issues": issues,
+            })
+
+        elif tool_name == "get_vendors":
+            audit_id = tool_input["audit_id"]
+            result = await db.execute(
+                select(DetectedVendor)
+                .where(DetectedVendor.audit_run_id == audit_id)
+                .where(DetectedVendor.page_visit_id == None)
+                .order_by(desc(DetectedVendor.page_count))
+            )
+            vendors_raw = result.scalars().all()
+
+            vendors = []
+            for v in vendors_raw:
+                evidence_summary = []
+                if isinstance(v.evidence, dict):
+                    for k, vals in v.evidence.items():
+                        if vals:
+                            summary = f"{k}: {', '.join(str(x) for x in (vals[:2] if isinstance(vals, list) else [vals]))}"
+                            evidence_summary.append(summary)
+                vendors.append({
+                    "vendor_key": v.vendor_key,
+                    "vendor_name": v.vendor_name,
+                    "category": v.category,
+                    "page_count": v.page_count,
+                    "detection_method": v.detection_method,
+                    "evidence_summary": "; ".join(evidence_summary[:3]),
+                })
+            return json.dumps({"audit_id": audit_id, "vendors": vendors})
+
+        elif tool_name == "get_pages":
+            audit_id = tool_input["audit_id"]
+            limit = min(int(tool_input.get("limit", 20)), 100)
+
+            result = await db.execute(
+                select(PageVisit)
+                .where(PageVisit.audit_run_id == audit_id)
+                .order_by(PageVisit.crawled_at)
+                .limit(limit)
+            )
+            pages_raw = result.scalars().all()
+
+            pages = []
+            for page in pages_raw:
+                vendor_count_result = await db.execute(
+                    select(func.count(DetectedVendor.id))
+                    .where(DetectedVendor.page_visit_id == page.id)
+                )
+                vendor_count = vendor_count_result.scalar() or 0
+
+                issue_count_result = await db.execute(
+                    select(func.count(Issue.id))
+                    .where(Issue.page_visit_id == page.id)
+                )
+                issue_count = issue_count_result.scalar() or 0
+
+                pages.append({
+                    "url": page.url,
+                    "status_code": page.status_code,
+                    "load_time_ms": page.load_time_ms,
+                    "vendor_count": vendor_count,
+                    "issue_count": issue_count,
+                })
+            return json.dumps({"audit_id": audit_id, "pages": pages})
+
+        else:
+            return json.dumps({"error": f"Unknown tool: {tool_name}"})
+
+    except Exception as e:
+        logger.warning(f"Tool {tool_name} error: {e}")
+        return json.dumps({"error": str(e)})
+
+
 @router.post("/chat")
 async def help_chat(payload: HelpChatRequest, db: AsyncSession = Depends(get_db)):
     api_key = await _get_api_key(db)
 
     if not api_key:
-        # Return a helpful static response if no API key
         async def no_key_stream():
             msg = (
                 "The AI help assistant requires an `ANTHROPIC_API_KEY` to be set in your environment. "
@@ -344,7 +658,6 @@ async def help_chat(payload: HelpChatRequest, db: AsyncSession = Depends(get_db)
             yield "data: [DONE]\n\n"
         return StreamingResponse(no_sdk_stream(), media_type="text/event-stream")
 
-    # Fetch live audit context
     audit_context = await _get_audit_context(db)
 
     system = SYSTEM_PROMPT
@@ -353,9 +666,8 @@ async def help_chat(payload: HelpChatRequest, db: AsyncSession = Depends(get_db)
     if payload.page_context:
         system += f"\n\n---\n\n## CURRENT PAGE CONTEXT\n\n{payload.page_context}\n\nUse this to give context-aware answers about what the user is currently looking at."
 
-    # Build messages list from history + new message
     messages = []
-    for msg in payload.history[-10:]:  # cap context at last 10 turns
+    for msg in payload.history[-10:]:
         messages.append({"role": msg.role, "content": msg.content})
     messages.append({"role": "user", "content": payload.message})
 
@@ -377,3 +689,127 @@ async def help_chat(payload: HelpChatRequest, db: AsyncSession = Depends(get_db)
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(stream_response(), media_type="text/event-stream")
+
+
+
+@router.post("/agent")
+async def help_agent(payload: HelpChatRequest, db: AsyncSession = Depends(get_db)):
+    api_key = await _get_api_key(db)
+
+    if not api_key:
+        async def no_key_stream():
+            msg = (
+                "The AI help assistant requires an `ANTHROPIC_API_KEY` to be set in your environment. "
+                "Add it to your `.env` file and restart the app.\n\n"
+                "In the meantime, here are some quick links:\n"
+                "- **New Audit** — top right button or nav\n"
+                "- **Dashboard** — lists all audits with status and issue counts\n"
+                "- **Audit detail** — click any audit row to see vendors, issues, pages, and reports"
+            )
+            yield "data: " + json.dumps({"type": "text", "text": msg}) + "\n\n"
+            yield "data: [DONE]\n\n"
+        return StreamingResponse(no_key_stream(), media_type="text/event-stream")
+
+    try:
+        import anthropic
+    except ImportError:
+        async def no_sdk_stream():
+            yield "data: " + json.dumps({"type": "text", "text": "The `anthropic` package is not installed in this environment."}) + "\n\n"
+            yield "data: [DONE]\n\n"
+        return StreamingResponse(no_sdk_stream(), media_type="text/event-stream")
+
+    system = SYSTEM_PROMPT
+    if payload.page_context:
+        system += (
+            "\n\n---\n\n## CURRENT PAGE CONTEXT\n\n"
+            + payload.page_context
+            + "\n\nUse this to give context-aware answers about what the user is currently looking at."
+        )
+
+    initial_messages = []
+    for msg in payload.history[-10:]:
+        initial_messages.append({"role": msg.role, "content": msg.content})
+    initial_messages.append({"role": "user", "content": payload.message})
+
+    async def agent_stream():
+        try:
+            client = anthropic.Anthropic(api_key=api_key)
+            current_messages = list(initial_messages)
+            tools_were_used = False
+
+            for iteration in range(8):
+                if iteration < 7:
+                    response = client.messages.create(
+                        model="claude-haiku-4-5",
+                        max_tokens=1024,
+                        system=system,
+                        tools=AGENT_TOOLS,
+                        messages=current_messages,
+                    )
+
+                    if response.stop_reason == "tool_use":
+                        tools_were_used = True
+                        tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
+                        tool_results = []
+
+                        for tool_block in tool_use_blocks:
+                            label = TOOL_LABELS.get(tool_block.name, "Working...")
+                            yield "data: " + json.dumps({"type": "tool_use", "tool": tool_block.name, "label": label}) + "\n\n"
+                            result_str = await _execute_tool(tool_block.name, tool_block.input, db)
+                            tool_results.append({
+                                "type": "tool_result",
+                                "tool_use_id": tool_block.id,
+                                "content": result_str,
+                            })
+
+                        current_messages = current_messages + [
+                            {"role": "assistant", "content": response.content},
+                            {"role": "user", "content": tool_results},
+                        ]
+                        continue
+
+                    elif response.stop_reason == "end_turn" and not tools_were_used:
+                        # No tools were used — redo as a streaming call for real-time UX
+                        with client.messages.stream(
+                            model="claude-haiku-4-5",
+                            max_tokens=1024,
+                            system=system,
+                            tools=AGENT_TOOLS,
+                            tool_choice={"type": "none"},
+                            messages=current_messages,
+                        ) as stream:
+                            for text in stream.text_stream:
+                                yield "data: " + json.dumps({"type": "text", "text": text}) + "\n\n"
+                        break
+
+                    else:
+                        # end_turn after tool use — emit text chunks and finish
+                        text_blocks = [b for b in response.content if b.type == "text"]
+                        full_text = "".join(b.text for b in text_blocks)
+                        if full_text:
+                            chunk_size = 4
+                            for i in range(0, len(full_text), chunk_size):
+                                yield "data: " + json.dumps({"type": "text", "text": full_text[i:i+chunk_size]}) + "\n\n"
+                        break
+
+                else:
+                    # Last iteration — stream with tools disabled
+                    with client.messages.stream(
+                        model="claude-haiku-4-5",
+                        max_tokens=1024,
+                        system=system,
+                        tools=AGENT_TOOLS,
+                        tool_choice={"type": "none"},
+                        messages=current_messages,
+                    ) as stream:
+                        for text in stream.text_stream:
+                            yield "data: " + json.dumps({"type": "text", "text": text}) + "\n\n"
+                    break
+
+        except Exception as e:
+            logger.warning("Help agent error: %s", e)
+            yield "data: " + json.dumps({"type": "text", "text": "Sorry, something went wrong: " + str(e)}) + "\n\n"
+        finally:
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(agent_stream(), media_type="text/event-stream")

@@ -627,19 +627,29 @@
         helpLog.push(userEntry);
         renderMsgDOM(userEntry);
 
-        // Animated typing indicator
         const container = document.getElementById('help-messages');
         const thinkWrap = document.createElement('div');
         thinkWrap.style.cssText = 'display:flex;gap:8px;align-items:flex-start';
-        thinkWrap.innerHTML = `${AVATAR}<div class="msg-bubble" style="background:var(--odit-surface);padding:11px 14px;border-radius:12px;border:1px solid var(--odit-border-md);display:flex;gap:4px;align-items:center"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+        thinkWrap.innerHTML = `${AVATAR}<div class="msg-bubble" style="background:var(--odit-surface);padding:11px 14px;border-radius:12px;border:1px solid var(--odit-border-md);display:flex;gap:6px;align-items:center"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span><span id="think-label" style="font-size:12px;color:var(--odit-text-muted);margin-left:2px"></span></div>`;
         container.appendChild(thinkWrap);
         container.scrollTop = container.scrollHeight;
-        const bubble = thinkWrap.querySelector('.msg-bubble');
 
         let rawText = '';
+        let responseBubble = null;
+
+        function getOrCreateResponseBubble() {
+            if (responseBubble) return responseBubble;
+            thinkWrap.remove();
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'display:flex;gap:8px;align-items:flex-start';
+            wrap.innerHTML = AVATAR + '<div class="msg-bubble" style="' + MSG_STYLE + ';background:var(--odit-surface);color:var(--odit-text);padding:9px 13px;border-radius:14px;border-top-left-radius:4px;max-width:calc(100% - 34px);border:1px solid var(--odit-border-md);box-shadow:var(--odit-shadow-sm)"></div>';
+            container.appendChild(wrap);
+            responseBubble = wrap.querySelector('.msg-bubble');
+            return responseBubble;
+        }
 
         try {
-            const resp = await fetch('/api/help/chat', {
+            const resp = await fetch('/api/help/agent', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -652,8 +662,6 @@
             const reader = resp.body.getReader();
             const decoder = new TextDecoder();
             let buf = '';
-            bubble.innerHTML = '';
-            bubble.style.cssText = `${MSG_STYLE};background:var(--odit-surface);color:var(--odit-text);padding:9px 13px;border-radius:14px;border-top-left-radius:4px;max-width:calc(100% - 34px);border:1px solid var(--odit-border-md);box-shadow:var(--odit-shadow-sm)`;
 
             while (true) {
                 const {done, value} = await reader.read();
@@ -667,8 +675,12 @@
                     if (payload === '[DONE]') break;
                     try {
                         const chunk = JSON.parse(payload);
-                        if (chunk.text) {
+                        if (chunk.type === 'tool_use') {
+                            const label = document.getElementById('think-label');
+                            if (label) label.textContent = chunk.label || '';
+                        } else if (chunk.type === 'text' && chunk.text) {
                             rawText += chunk.text;
+                            const bubble = getOrCreateResponseBubble();
                             bubble.innerHTML = renderMd(rawText);
                             container.scrollTop = container.scrollHeight;
                         }
@@ -676,8 +688,13 @@
                 }
             }
         } catch(e) {
+            const bubble = getOrCreateResponseBubble();
             bubble.innerHTML = 'Sorry, something went wrong.';
             rawText = 'Sorry, something went wrong.';
+        }
+
+        if (!responseBubble) {
+            thinkWrap.remove();
         }
 
         helpLog.push({ type: 'assistant', rawText });
