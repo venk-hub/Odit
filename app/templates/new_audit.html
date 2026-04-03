@@ -8,6 +8,18 @@ window.__oditPageContext = {
     greeting: {% if audits %}'I can see you have {{ audits|length }} audit{% if audits|length != 1 %}s{% endif %} on your dashboard. The most recent is **{{ audits[0].run.base_url | replace("'", "\\'") }}** ({{ audits[0].run.status.value }}). Want me to explain what was found, or help you start a new audit?'{% else %}'Ready to audit a website! Paste a URL and I\'ll check what tracking tools are live, flag anything broken, and surface things you should know about.'{% endif %},
     context: '{% if audits %}User is on the home page. They have {{ audits|length }} audit(s). Most recent: {{ audits[0].run.base_url }} ({{ audits[0].run.status.value }}).{% else %}User is on the home page with no audits yet.{% endif %}'
 };
+
+// Live context snapshot — called at message send time so AI sees current form state
+window.__oditLiveContext = function() {
+    const parts = [];
+    const url = document.getElementById('base_url')?.value?.trim();
+    if (url) parts.push('User has typed URL: ' + url);
+    const mode = typeof _auditMode !== 'undefined' ? _auditMode : null;
+    if (mode) parts.push('Selected mode: ' + mode.replace('_', ' '));
+    const authOpen = typeof _authOpen !== 'undefined' && _authOpen;
+    if (authOpen) parts.push('Auth/cookie section is expanded — user is setting up a logged-in audit.');
+    return parts.length ? parts.join('. ') + '.' : '';
+};
 </script>
 {% endblock %}
 
@@ -70,7 +82,7 @@ window.__oditPageContext = {
             </div>
 
             {# Auth section #}
-            <div class="mt-4 text-center">
+            <div class="mt-4 text-center flex items-center justify-center gap-2">
                 <button type="button" onclick="toggleAuth()"
                     class="text-xs font-medium inline-flex items-center gap-1 transition-colors"
                     style="color:var(--odit-text-3)"
@@ -79,6 +91,15 @@ window.__oditPageContext = {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                     </svg>
                     <span id="auth-toggle-label">Audit as logged-in user</span>
+                </button>
+                <button type="button"
+                    onclick="triggerHelpChat('How do I audit as a logged-in user? Walk me through exporting my session cookies and using them in Odit.')"
+                    title="How does this work?"
+                    class="transition-colors rounded-full flex items-center justify-center"
+                    style="color:var(--odit-text-3); width:16px; height:16px; border:1.5px solid var(--odit-border-strong); font-size:9px; font-weight:700; flex-shrink:0"
+                    onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+                    onmouseout="this.style.color='var(--odit-text-3)';this.style.borderColor='var(--odit-border-strong)'">
+                    i
                 </button>
             </div>
 

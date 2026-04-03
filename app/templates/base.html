@@ -593,6 +593,27 @@
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendHelp(); }
     }
 
+    // ── Triggered help — open sidebar and send a canned message ──
+    function triggerHelpChat(message) {
+        const sidebar = document.getElementById('help-sidebar');
+        const wasCollapsed = sidebar.classList.contains('collapsed');
+        if (wasCollapsed) toggleSidebar();
+        const input = document.getElementById('help-input');
+        input.value = message;
+        autoResize(input);
+        setTimeout(sendHelp, wasCollapsed ? 260 : 30);
+    }
+
+    // ── Live page context — snapshot of current UI state at send time ──
+    function getPageContext() {
+        const base = (window.__oditPageContext || {}).context || '';
+        if (typeof window.__oditLiveContext === 'function') {
+            const live = window.__oditLiveContext();
+            return live ? base + '\n\n' + live : base;
+        }
+        return base;
+    }
+
     async function sendHelp() {
         const input = document.getElementById('help-input');
         const msg = input.value.trim();
@@ -615,7 +636,6 @@
         container.scrollTop = container.scrollHeight;
         const bubble = thinkWrap.querySelector('.msg-bubble');
 
-        const ctx = window.__oditPageContext || {};
         let rawText = '';
 
         try {
@@ -625,7 +645,7 @@
                 body: JSON.stringify({
                     message: msg,
                     history: helpHistory,
-                    page_context: ctx.context || null
+                    page_context: getPageContext() || null
                 })
             });
 
