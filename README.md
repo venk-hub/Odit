@@ -10,7 +10,7 @@
   ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
   ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white)
   ![Playwright](https://img.shields.io/badge/Playwright-Chromium-45BA4B?logo=playwright&logoColor=white)
-  ![License](https://img.shields.io/badge/License-MIT-blue)
+  ![License](https://img.shields.io/badge/License-AGPL_v3-blue)
 </div>
 
 ---
