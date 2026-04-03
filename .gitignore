@@ -25,3 +25,6 @@ env/
 
 # Logs
 *.log
+
+# Local agent/principles docs (not for public repo)
+AgentPrinciples.md
