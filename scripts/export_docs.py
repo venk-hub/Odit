@@ -142,10 +142,7 @@ window.addEventListener('DOMContentLoaded', function() {
 NAV_HTML = """
 <nav id="docs-nav">
     <a class="nav-logo" href="https://github.com/venk-hub/Odit">
-        <svg width="22" height="22" viewBox="0 0 40 40" fill="none">
-            <circle cx="20" cy="20" r="20" fill="#1800ad"/>
-            <text x="20" y="27" text-anchor="middle" font-size="18" font-weight="800" fill="white" font-family="-apple-system,sans-serif">O</text>
-        </svg>
+        <img src="odit.svg" alt="Odit" height="28" width="28" style="object-fit:contain;" />
         Odit
     </a>
     <div class="nav-links">
@@ -203,11 +200,17 @@ def build():
     else:
         print(f"  Warning: screenshots dir not found at {SCREENSHOTS_SRC}")
 
-    # 2. Render help template
+    # 2. Copy logo
+    logo_src = os.path.join(ROOT, "Odit.svg")
+    if os.path.exists(logo_src):
+        shutil.copy2(logo_src, os.path.join(DOCS_DIR, "odit.svg"))
+        print("  Copied logo: odit.svg")
+
+    # 3. Render help template
     print("  Rendering help template...")
     content_html = render_help_template()
 
-    # 3. Assemble final HTML
+    # 4. Assemble final HTML
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
