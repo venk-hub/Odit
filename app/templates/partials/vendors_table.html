@@ -2,75 +2,116 @@
     <h2 class="text-sm font-semibold mb-4" style="color:var(--odit-text)">Detected Vendors ({{ vendors|length }})</h2>
 
     {% if vendors %}
-    <div class="odit-card overflow-hidden">
-        <table class="min-w-full odit-table text-sm">
-            <thead>
-                <tr>
-                    <th class="text-left">Vendor</th>
-                    <th class="text-left">Category</th>
-                    <th class="text-left">Detection Method</th>
-                    <th class="text-left">Pages</th>
-                    <th class="text-left">Evidence</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for vendor in vendors %}
-                <tr>
-                    <td>
-                        <div class="font-medium" style="color:var(--odit-text)">{{ vendor.vendor_name }}</div>
-                        <div class="text-xs font-mono" style="color:var(--odit-text-2)">{{ vendor.vendor_key }}</div>
-                    </td>
-                    <td>
-                        {% set cat_colors = {
-                            "analytics": "bg-[#f0eeff] text-[#13008a]",
-                            "tag_manager": "bg-purple-50 text-purple-700",
-                            "ab_testing": "bg-green-50 text-green-700",
-                            "consent": "bg-yellow-50 text-yellow-700",
-                            "pixel": "bg-pink-50 text-pink-700",
-                            "other": "bg-gray-100 text-gray-600"
-                        } %}
-                        <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ cat_colors.get(vendor.category, 'bg-gray-100 text-gray-600') }}">
-                            {{ vendor.category.replace("_", " ").title() }}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-xs" style="color:var(--odit-text-2)">{{ vendor.detection_method.replace("_", " ").title() }}</span>
+    <div class="flex flex-col gap-3">
+        {% for vendor in vendors %}
+        {% set pa = vendor.evidence.get('payload_analysis') if vendor.evidence else None %}
+        <div class="odit-card p-4">
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+                <!-- Left: name + badges -->
+                <div class="flex items-start gap-3 min-w-0">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-semibold text-sm" style="color:var(--odit-text)">{{ vendor.vendor_name }}</span>
+                            {% set cat_colors = {
+                                "analytics": "bg-[#f0eeff] text-[#13008a]",
+                                "tag_manager": "bg-purple-50 text-purple-700",
+                                "ab_testing": "bg-green-50 text-green-700",
+                                "consent": "bg-yellow-50 text-yellow-700",
+                                "pixel": "bg-pink-50 text-pink-700",
+                                "session_replay": "bg-orange-50 text-orange-700",
+                                "other_tracking": "bg-red-50 text-red-700",
+                                "other": "bg-gray-100 text-gray-600"
+                            } %}
+                            <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ cat_colors.get(vendor.category, 'bg-gray-100 text-gray-600') }}">
+                                {{ (vendor.category or 'other').replace("_", " ").title() }}
+                            </span>
                             {% if vendor.detection_method == "ai_inferred" %}
-                            <span class="inline-flex items-center gap-0.5 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium" title="Identified by AI — not directly observed in network traffic">
+                            <span class="inline-flex items-center gap-0.5 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">
                                 <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347a3.75 3.75 0 01-5.303 0l-.346-.346a5 5 0 010-7.072z" />
                                 </svg>
-                                AI
+                                AI inferred
                             </span>
                             {% endif %}
-                        </div>
-                    </td>
-                    <td>
-                        <span class="text-sm font-medium" style="color:var(--odit-text)">{{ vendor.page_count }}</span>
-                    </td>
-                    <td>
-                        {% if vendor.evidence %}
-                        <div class="text-xs font-mono truncate max-w-xs" style="color:var(--odit-text-2)">
-                            {% for key, val in vendor.evidence.items() %}
-                            {% if loop.first %}
-                            <span style="color:var(--odit-text-3)">{{ key }}:</span>
-                            {% if val is iterable and val is not string %}
-                            {{ val | first | truncate(40) }}
-                            {% else %}
-                            {{ val | truncate(40) }}
+                            {% if pa %}
+                            {% set risk = pa.get('pii_risk', 'none') %}
+                            {% if risk in ('high', 'critical') %}
+                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-red-100 text-red-700">⚠ PII risk: {{ risk }}</span>
+                            {% elif risk == 'medium' %}
+                            <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">PII risk: medium</span>
                             {% endif %}
                             {% endif %}
-                            {% endfor %}
                         </div>
-                        {% else %}
-                        <span class="text-xs" style="color:var(--odit-text-3)">—</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        <div class="text-xs font-mono mt-0.5" style="color:var(--odit-text-3)">{{ vendor.vendor_key }}</div>
+                    </div>
+                </div>
+                <!-- Right: pages + detection -->
+                <div class="flex items-center gap-4 flex-shrink-0 text-xs" style="color:var(--odit-text-2)">
+                    <span><strong style="color:var(--odit-text)">{{ vendor.page_count }}</strong> pages</span>
+                    <span>{{ (vendor.detection_method or '').replace("_"," ").title() }}</span>
+                </div>
+            </div>
+
+            {% if pa %}
+            <!-- AI Payload Analysis -->
+            <div class="mt-3 pt-3 border-t grid grid-cols-1 sm:grid-cols-2 gap-3" style="border-color:var(--odit-border)">
+                <!-- Purpose -->
+                {% if pa.get('purpose') %}
+                <div class="sm:col-span-2">
+                    <span class="text-xs font-semibold uppercase tracking-wide" style="color:var(--odit-text-3)">Purpose</span>
+                    <p class="text-xs mt-0.5" style="color:var(--odit-text-2)">{{ pa.purpose }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Data collected -->
+                {% if pa.get('data_collected') %}
+                <div>
+                    <span class="text-xs font-semibold uppercase tracking-wide" style="color:var(--odit-text-3)">Data Collected</span>
+                    <ul class="mt-1 flex flex-wrap gap-1">
+                        {% for item in pa.data_collected[:8] %}
+                        <li class="text-xs px-2 py-0.5 rounded" style="background:var(--odit-surface-2);color:var(--odit-text-2)">{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Identifiers -->
+                {% if pa.get('identifiers') %}
+                <div class="sm:col-span-2">
+                    <span class="text-xs font-semibold uppercase tracking-wide" style="color:var(--odit-text-3)">Identifiers Assigned</span>
+                    <ul class="mt-1 flex flex-wrap gap-1">
+                        {% for item in pa.identifiers[:6] %}
+                        <li class="text-xs px-2 py-0.5 rounded font-mono break-all" style="background:var(--odit-brand-light);color:var(--odit-brand)">{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- PII detected -->
+                {% if pa.get('pii_detected') %}
+                <div class="sm:col-span-2 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-lg p-3">
+                    <span class="text-xs font-semibold uppercase tracking-wide text-red-700">⚠ PII Detected in Requests</span>
+                    <ul class="mt-1 flex flex-col gap-1">
+                        {% for item in pa.pii_detected %}
+                        <li class="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 font-mono break-all">{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Notable -->
+                {% if pa.get('notable') %}
+                <div class="sm:col-span-2">
+                    <span class="text-xs font-semibold uppercase tracking-wide" style="color:var(--odit-text-3)">Notable</span>
+                    <p class="text-xs mt-0.5 italic" style="color:var(--odit-text-2)">{{ pa.notable }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% elif vendor.evidence and vendor.evidence.get('ai_description') %}
+            <p class="text-xs mt-2" style="color:var(--odit-text-2)">{{ vendor.evidence.ai_description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
     </div>
     {% else %}
     <div class="text-center py-12 text-gray-400 text-sm">No vendors detected yet.</div>

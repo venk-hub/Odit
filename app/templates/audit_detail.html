@@ -159,7 +159,7 @@ window.__oditPageContext = {
     <div class="mt-8">
         <div style="border-bottom:1px solid var(--odit-border-md)" class="mb-0">
             <nav class="-mb-px flex gap-0" id="explorer-nav">
-                {% for ex_id, ex_label in [("pages","Pages"),("issues","Issues")] %}
+                {% for ex_id, ex_label in [("pages","Pages"),("issues","Issues"),("vendors","Vendors")] %}
                 <button
                     onclick="showExplorer('{{ ex_id }}')"
                     id="ex-btn-{{ ex_id }}"
@@ -182,12 +182,17 @@ window.__oditPageContext = {
                 <div class="text-center py-8 text-sm" style="color:var(--odit-text-3)">Loading issues…</div>
             </div>
         </div>
+        <div id="ex-vendors" class="pt-4 hidden">
+            <div hx-get="/audits/{{ audit_id }}/vendors" hx-trigger="intersect once" hx-swap="innerHTML">
+                <div class="text-center py-8 text-sm" style="color:var(--odit-text-3)">Loading vendors…</div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
 // ── Explorer tab switching ─────────────────────────────────────────
-const EXPLORER_TABS = ['pages', 'issues'];
+const EXPLORER_TABS = ['pages', 'issues', 'vendors'];
 function showExplorer(id) {
     EXPLORER_TABS.forEach(t => {
         const pane = document.getElementById('ex-' + t);

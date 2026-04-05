@@ -213,7 +213,7 @@ def _run_ai_enrichment(db, run) -> None:
     from app.models import Issue, NetworkRequest, DetectedVendor
     from worker.ai.claude_client import (
         enrich_issue, infer_unknown_domains, generate_narrative_summary,
-        generate_remediation_steps,
+        generate_remediation_steps, analyze_tracking_payloads, scan_requests_for_pii,
         reset_session_tokens, get_session_tokens,
     )
     import os
@@ -338,6 +338,211 @@ def _run_ai_enrichment(db, run) -> None:
                 db.add(vendor)
         db.commit()
         logger.info(f"AI inferred {len(inferred)} unknown vendors for audit {audit_id}")
+
+    # Steps 2b+2c: Single-pass over network requests — PII regex scan + vendor payload grouping.
+    # One DB query, one Python loop, one AI call total. No per-request API calls.
+    try:
+        from urllib.parse import urlparse as _up, parse_qs as _pqs
+        from datetime import datetime as _dt
+
+        base_netloc = _up(run.base_url).netloc
+        base_bare = base_netloc.lstrip("www.")
+
+        # Build domain → vendor map once.
+        # Evidence stores matched_domain (string) or domains (list) or ai_inferred domain.
+        # Also load signature domains from vendors.yaml so we catch all known CDN domains.
+        all_vendors = db.query(DetectedVendor).filter(
+            DetectedVendor.audit_run_id == audit_id,
+            DetectedVendor.page_visit_id == None,
+        ).all()
+
+        # Load vendor signature domains from YAML (key → [domains])
+        _sig_domains: dict = {}
+        try:
+            import yaml as _yaml
+            _sig_path = os.path.join(os.path.dirname(__file__), "detectors", "vendors.yaml")
+            with open(_sig_path) as _f:
+                _sig_data = _yaml.safe_load(_f)
+            for _sig in _sig_data.get("vendors", []):
+                _sig_domains[_sig["key"]] = _sig.get("signatures", {}).get("domains", [])
+        except Exception:
+            pass
+
+        domain_to_vendor: dict = {}
+        for v in all_vendors:
+            ev = v.evidence or {}
+            # From evidence: list of domains
+            for d in ev.get("domains", []):
+                domain_to_vendor[d] = v
+            # From evidence: matched_domain (single string)
+            md = ev.get("matched_domain", "")
+            if md:
+                domain_to_vendor[md] = v
+            # From signature registry: all known CDN/API domains for this vendor key
+            for d in _sig_domains.get(v.vendor_key, []):
+                domain_to_vendor[d] = v
+            # AI-inferred vendors
+            if v.detection_method == "ai_inferred":
+                d = ev.get("domain", "")
+                if d:
+                    domain_to_vendor[d] = v
+
+        # Single minimal query — only columns we need
+        raw_rows = db.query(
+            NetworkRequest.url,
+            NetworkRequest.method,
+            NetworkRequest.post_data,
+            NetworkRequest.resource_type,
+        ).filter(
+            NetworkRequest.audit_run_id == audit_id
+        ).all()
+
+        total_requests = len(raw_rows)
+
+        # Per-vendor buckets: deduplicated by (host + path) so we never send
+        # 500 identical GA beacon hits — just unique endpoint patterns
+        vendor_request_map: dict = {}   # key → {name, category, seen_paths: set, requests: []}
+        pii_scan_dedupe: list = []       # deduplicated subset for PII regex
+        seen_url_patterns: set = set()
+
+        for row in raw_rows:
+            url = row.url or ""
+            body = row.post_data or ""
+            rtype = row.resource_type or ""
+
+            try:
+                parsed = _up(url)
+                host = parsed.netloc
+                path = parsed.path
+            except Exception:
+                continue
+
+            # ── PII scan: deduplicate by host+path, cap at 500 unique patterns ──
+            pat = f"{host}{path}"
+            if pat not in seen_url_patterns and len(seen_url_patterns) < 500:
+                seen_url_patterns.add(pat)
+                pii_scan_dedupe.append({"url": url, "post_data": body})
+
+            # ── Payload grouping: only tracking-relevant resource types ──
+            if rtype not in ("xhr", "fetch", "beacon", "ping", "script"):
+                continue
+            if base_bare in host:
+                continue  # skip first-party
+
+            # Match to vendor
+            matched = None
+            for d, v in domain_to_vendor.items():
+                if d in host or host.endswith("." + d) or host == d:
+                    matched = v
+                    break
+
+            if matched:
+                key = matched.vendor_key
+                if key not in vendor_request_map:
+                    vendor_request_map[key] = {
+                        "name": matched.vendor_name,
+                        "category": matched.category or "other",
+                        "seen_paths": set(),
+                        "requests": [],
+                    }
+            else:
+                key = f"unknown_{host.replace('.', '_').replace('-', '_')}"
+                if key not in vendor_request_map:
+                    vendor_request_map[key] = {
+                        "name": host, "category": "unknown",
+                        "seen_paths": set(), "requests": [],
+                    }
+
+            entry = vendor_request_map[key]
+            # Only keep one example per unique path (deduplicates repeated beacons)
+            if path not in entry["seen_paths"] and len(entry["requests"]) < 8:
+                entry["seen_paths"].add(path)
+                entry["requests"].append({
+                    "url": url[:300],
+                    "method": row.method or "GET",
+                    "body": body[:400],
+                })
+
+        # ── PII regex scan (pure Python, no AI) ──
+        pii_hits = scan_requests_for_pii(pii_scan_dedupe)
+        if pii_hits:
+            db.add(Issue(
+                audit_run_id=audit_id,
+                created_at=_dt.utcnow(),
+                severity="critical",
+                category="pii_in_requests",
+                title=f"PII detected in network requests ({len(pii_hits)} instance(s))",
+                description=(
+                    f"Regex scan across {len(pii_scan_dedupe)} unique request patterns "
+                    f"(from {total_requests} total) found {len(pii_hits)} PII instance(s). "
+                    f"Types: {', '.join(sorted(set(h['pii_type'] for h in pii_hits)))}."
+                ),
+                evidence_refs=[{"findings": pii_hits[:20], "patterns_scanned": len(pii_scan_dedupe)}],
+                likely_cause="PII embedded in tracking request URLs or POST bodies.",
+                recommendation=(
+                    "Review flagged requests. PII in tracking payloads may violate GDPR Article 5 "
+                    "(data minimisation). Replace with pseudonymous identifiers or hashed values."
+                ),
+            ))
+            db.commit()
+            logger.info(f"PII scan: {len(pii_hits)} hits across {len(pii_scan_dedupe)} unique patterns")
+
+        # ── AI payload analysis: ONE call covering all vendors ──
+        vendor_request_map = {k: v for k, v in vendor_request_map.items() if v["requests"]}
+        priority_cats = {"analytics", "pixel", "session_replay", "ab_testing", "tag_manager", "consent"}
+        sorted_keys = sorted(
+            vendor_request_map.keys(),
+            key=lambda k: (0 if vendor_request_map[k]["category"] in priority_cats else 1,
+                           -len(vendor_request_map[k]["requests"]))
+        )[:15]
+        analysis_input = {k: vendor_request_map[k] for k in sorted_keys}
+
+        if analysis_input:
+            vendor_count = len(analysis_input)
+            req_count = sum(len(v["requests"]) for v in analysis_input.values())
+            emit(db, run.id, "ai_call",
+                 f"Analysing payloads: {vendor_count} vendor(s), {req_count} representative requests — 1 AI call",
+                 {"vendors": sorted_keys[:10]})
+            db.commit()
+
+            site = _up(run.base_url).netloc
+            payload_results = analyze_tracking_payloads(site, analysis_input)
+
+            if payload_results:
+                for vendor_key, analysis in payload_results.items():
+                    # Update ALL records with this vendor_key (one per detection_method)
+                    vendor_rows = db.query(DetectedVendor).filter(
+                        DetectedVendor.audit_run_id == audit_id,
+                        DetectedVendor.vendor_key == vendor_key,
+                    ).all()
+                    for v in vendor_rows:
+                        ev = dict(v.evidence or {})
+                        ev["payload_analysis"] = analysis
+                        v.evidence = ev
+                    pii = analysis.get("pii_detected", [])
+                    if pii and analysis.get("pii_risk") in ("high", "critical"):
+                        vname = analysis_input[vendor_key]["name"]
+                        db.add(Issue(
+                            audit_run_id=audit_id,
+                            created_at=_dt.utcnow(),
+                            severity="critical",
+                            category="pii_in_requests",
+                            title=f"PII transmitted to {vname} in network requests",
+                            description=(
+                                f"AI payload analysis found PII being sent to {vname}: "
+                                f"{'; '.join(str(p) for p in pii[:5])}."
+                            ),
+                            evidence_refs=[{"vendor": vendor_key, "pii": pii, "analysis": analysis}],
+                            likely_cause=analysis.get("notable", ""),
+                            recommendation=(
+                                "Ensure PII is not transmitted to third parties without explicit consent "
+                                "and a valid legal basis under GDPR Article 6."
+                            ),
+                        ))
+                db.commit()
+                logger.info(f"Payload analysis complete: {len(payload_results)} vendors, 1 API call")
+    except Exception as e:
+        logger.warning(f"Payload analysis/PII scan failed: {e}")
 
     # Step 3: Generate narrative summary and store as an artifact
     from worker.exports.artifact_manager import get_artifact_dir, register_artifact

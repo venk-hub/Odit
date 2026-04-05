@@ -7,6 +7,8 @@ from app.ai.claude_client import (  # noqa: F401
     enrich_issue,
     batch_enrich_issues,
     infer_unknown_domains,
+    analyze_tracking_payloads,
+    scan_requests_for_pii,
     generate_narrative_summary,
     explain_audit_comparison,
     suggest_vendors_for_url,

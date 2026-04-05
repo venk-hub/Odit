@@ -16,20 +16,24 @@ window.__oditPageContext = {
 
     <div class="mb-8">
         <h1 class="text-3xl font-bold mb-2" style="color:var(--odit-text)">Help &amp; Documentation</h1>
-        <p class="text-base" style="color:var(--odit-text-2)">Everything you need to get value from Odit — from first audit to export.</p>
+        <p class="text-base" style="color:var(--odit-text-2)">A complete walkthrough of every screen, tab, and button in Odit.</p>
     </div>
 
-    <!-- Quick-nav anchors -->
+    <!-- Quick-nav -->
     <div class="flex flex-wrap gap-2 mb-10">
         {% for label, anchor in [
             ('What is Odit?', 'what'),
-            ('Quick Start', 'quickstart'),
-            ('Example Use Case', 'example'),
-            ('Reading Results', 'results'),
+            ('Starting an Audit', 'start'),
+            ('Audit Detail', 'detail'),
+            ('Executive Summary', 'summary'),
+            ('Issues Tab', 'issues'),
+            ('Vendors Tab', 'vendors'),
+            ('Pages Tab', 'pages'),
             ('AI Assistant', 'ai'),
+            ('Settings', 'settings'),
             ('Exports', 'exports'),
             ('Troubleshooting', 'troubleshooting'),
-            ('License & Privacy', 'legal')
+            ('License', 'legal')
         ] %}
         <a href="#{{ anchor }}"
            class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
@@ -41,7 +45,7 @@ window.__oditPageContext = {
         {% endfor %}
     </div>
 
-    <!-- ── What is Odit? ───────────────────────────────────────── -->
+    <!-- ── What is Odit? ─────────────────────────────────────────── -->
     <section id="what" class="odit-card p-6 mb-6">
         <div class="flex items-start gap-3 mb-4">
             <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
@@ -53,177 +57,353 @@ window.__oditPageContext = {
                 <h2 class="text-lg font-semibold mb-1" style="color:var(--odit-text)">What is Odit?</h2>
                 <p class="text-sm leading-relaxed" style="color:var(--odit-text-2)">
                     Odit is a <strong style="color:var(--odit-text)">local-first website tracking auditor</strong>. It crawls any URL using a real browser,
-                    intercepts all network traffic through a proxy, and produces a structured evidence report of every
-                    analytics tag, advertising pixel, consent mechanism, and third-party vendor it finds.
+                    intercepts all network traffic, and produces a structured evidence report of every analytics tag, advertising pixel,
+                    consent mechanism, and third-party vendor it finds — including AI-powered analysis of exactly what data is flowing.
                 </p>
             </div>
         </div>
-
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
             {% for icon_path, title, desc in [
-                ('M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'Evidence-based', 'Every finding is backed by real network requests captured at crawl time.'),
-                ('M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', 'Local & private', 'Everything runs on your own machine. No data leaves unless you export it.'),
-                ('M13 10V3L4 14h7v7l9-11h-7z', 'AI-augmented', 'Optional Claude integration explains findings in plain English and answers questions about your data.')
+                ('M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'Evidence-based', 'Every finding is backed by real network requests captured live — not guesswork.'),
+                ('M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', 'Local & private', 'Everything runs on your machine. No data leaves unless you export it.'),
+                ('M13 10V3L4 14h7v7l9-11h-7z', 'AI-augmented', 'Claude reads actual request payloads — detects PII, identifies data flows, explains risks in plain English.')
             ] %}
             <div class="rounded-xl p-3" style="background:var(--odit-surface-2)">
                 <svg class="w-4 h-4 mb-2" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}"/>
                 </svg>
                 <p class="text-xs font-semibold mb-1" style="color:var(--odit-text)">{{ title }}</p>
-                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">{{ desc }}</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">{{ desc | safe }}</p>
             </div>
             {% endfor %}
         </div>
-
-        <div class="mt-4 pt-4" style="border-top:1px solid var(--odit-border)">
-            <p class="text-sm font-medium mb-2" style="color:var(--odit-text)">Odit is built for:</p>
-            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {% for item in [
-                    'Privacy & compliance teams auditing third-party data sharing',
-                    'Marketing analysts verifying tag implementation',
-                    'Security teams reviewing data leakage and supply chain risk',
-                    'Agencies auditing client sites before or after a migration',
-                    'Developers debugging analytics and consent flows',
-                    'Researchers studying web tracking at scale'
-                ] %}
-                <li class="flex items-start gap-2 text-xs" style="color:var(--odit-text-2)">
-                    <svg class="w-3 h-3 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                    </svg>
-                    {{ item }}
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
     </section>
 
-    <!-- ── Quick Start ─────────────────────────────────────────── -->
-    <section id="quickstart" class="odit-card p-6 mb-6">
+    <!-- ── Starting an Audit ─────────────────────────────────────── -->
+    <section id="start" class="odit-card p-6 mb-6">
         <div class="flex items-start gap-3 mb-5">
             <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
                 <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
             </div>
-            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Quick Start</h2>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Starting an Audit</h2>
         </div>
 
-        <ol class="space-y-5">
-            {% for step_num, step_title, step_body in [
-                ('1', 'Paste a URL', 'On the home screen, enter the full URL of the site you want to audit (e.g. <code style="font-size:11px;padding:1px 5px;border-radius:4px;background:var(--odit-surface-2)">https://example.com</code>). Odit automatically resolves the domain.'),
-                ('2', 'Choose a scan mode', '<strong>Quick Scan</strong> crawls up to 50 pages and completes in ~2 minutes. <strong>Full Crawl</strong> follows all internal links exhaustively — better for large sites but takes longer. Start with Quick Scan to get a feel for the results.'),
-                ('3', 'Optionally: audit as a logged-in user', 'Toggle <em>Audit as logged-in user</em> if you need to audit behind a login wall. Odit will open a browser window for you to authenticate manually before the crawl begins.'),
-                ('4', 'Start the audit', 'Click <strong>Start Audit</strong>. A progress bar shows which pages are being crawled in real time. Most audits finish within 2–5 minutes.'),
-                ('5', 'Review the results', 'Once complete, the audit detail page shows: a summary card, detected vendors, flagged issues (with severity), and per-page breakdowns. Use the sidebar AI to ask questions in plain English.'),
-                ('6', 'Export', 'Download the full report as Excel (9-sheet workbook), HTML, Markdown, or JSON from the Exports page or the download buttons at the top of the report.')
-            ] %}
-            <li class="flex gap-4">
-                <span class="flex-shrink-0 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center" style="background:var(--odit-brand);color:#fff">{{ step_num }}</span>
-                <div>
-                    <p class="text-sm font-semibold mb-1" style="color:var(--odit-text)">{{ step_title }}</p>
-                    <p class="text-sm leading-relaxed" style="color:var(--odit-text-2)">{{ step_body }}</p>
-                </div>
-            </li>
-            {% endfor %}
-        </ol>
-    </section>
+        <img src="/static/help/home.png" alt="Odit home screen" class="w-full rounded-xl mb-5 border" style="border-color:var(--odit-border)">
 
-    <!-- ── Example Use Case ───────────────────────────────────── -->
-    <section id="example" class="odit-card p-6 mb-6">
-        <div class="flex items-start gap-3 mb-4">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
-                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                </svg>
-            </div>
+        <div class="space-y-5">
             <div>
-                <h2 class="text-lg font-semibold mb-1" style="color:var(--odit-text)">Example Use Case — GDPR Pre-launch Audit</h2>
-                <p class="text-sm" style="color:var(--odit-text-2)">A privacy team at a media publisher needs to verify their site is compliant before a re-launch.</p>
-            </div>
-        </div>
-
-        <div class="space-y-3">
-            {% for step, detail in [
-                ('Run a Quick Scan on the staging URL', 'Odit crawls the site, intercepts all HTTP traffic, and detects 38 vendors including Google Analytics 4, Meta Pixel, Adobe Audience Manager, and 12 unknown domains.'),
-                ('Review the Issues tab', 'Odit flags: "Tracking fired before consent" (High severity, 14 pages), "No consent banner detected" (High, 1 page), and "Cross-border transfer to US vendor without SCCs in cookie policy" (Medium, 3 pages).'),
-                ('Ask the AI sidebar', 'The user types: "Which third parties receive user data before consent is given?" — the AI reads the audit report and returns a table of 6 vendors with their request timing relative to the consent event.'),
-                ('Export the report', 'The team downloads the Excel workbook and attaches it to their DPIA documentation. The Markdown summary goes into their internal Notion wiki.'),
-                ('Compare after fixing', 'After the dev team removes pre-consent firing, the team runs a second audit and uses the Comparison feature to verify the issues are resolved.')
-            ] %}
-            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
-                <svg class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-                <div>
-                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">{{ step }}</p>
-                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">{{ detail }}</p>
+                <p class="text-sm font-semibold mb-3" style="color:var(--odit-text)">The New Audit form — field by field</p>
+                <div class="space-y-3">
+                    {% for field, desc in [
+                        ('URL to audit', 'Enter the full URL including https:// — e.g. <code style="font-size:11px;padding:1px 5px;border-radius:4px;background:var(--odit-surface-2)">https://example.com</code>. Odit crawls from this starting page and follows all internal links.'),
+                        ('Max pages', 'How many pages to crawl. Default is 50. Raise this for large sites; lower it for a quick spot-check. Each page adds ~3–5 seconds of crawl time.'),
+                        ('Consent behaviour', '<strong>No interaction</strong> — crawl without touching any consent banner. Best for seeing what fires before consent. <strong>Accept consent</strong> — automatically click "Accept" on cookie banners. <strong>Reject consent</strong> — click "Reject/Decline". Compare results across modes to verify your consent gate works correctly.'),
+                        ('Audit as logged-in user', 'Enable this if the site has a login wall. Odit will open a real browser window — log in manually, then click Continue in Odit. The crawler will then inherit your authenticated session.'),
+                        ('Start Audit button', 'Submits the job. The page transitions to a live crawl view showing screenshots and progress in real time. Most audits complete in 2–5 minutes depending on page count.')
+                    ] %}
+                    <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                        <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">{{ field }}</p>
+                            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">{{ desc | safe }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
-            {% endfor %}
+
+            <div class="p-3 rounded-xl" style="background:var(--odit-brand-light);border:1px solid rgba(24,0,173,0.1)">
+                <p class="text-xs font-semibold mb-1" style="color:var(--odit-brand)">Audits list</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                    Previous audits appear in the left panel. Click any audit to reopen it. The coloured dot shows status:
+                    <span class="inline-block w-2 h-2 rounded-full bg-green-500 mx-1"></span>completed,
+                    <span class="inline-block w-2 h-2 rounded-full bg-yellow-400 mx-1"></span>running,
+                    <span class="inline-block w-2 h-2 rounded-full bg-red-400 mx-1"></span>failed.
+                </p>
+            </div>
         </div>
     </section>
 
-    <!-- ── Reading Results ────────────────────────────────────── -->
-    <section id="results" class="odit-card p-6 mb-6">
+    <!-- ── Audit Detail page ─────────────────────────────────────── -->
+    <section id="detail" class="odit-card p-6 mb-6">
         <div class="flex items-start gap-3 mb-5">
             <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
                 <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
             </div>
-            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Reading Your Results</h2>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Audit Detail Page — Layout Overview</h2>
         </div>
+
+        <img src="/static/help/audit_detail_top.png" alt="Audit detail page" class="w-full rounded-xl mb-5 border" style="border-color:var(--odit-border)">
+
+        <div class="space-y-3">
+            {% for area, desc in [
+                ('Header bar (top)', 'Shows the audited domain, timestamp, page count, and consent mode badge. The coloured status pill (Completed / Running / Failed) updates live during crawls.'),
+                ('Download buttons — Excel · HTML · MD · JSON', 'One-click export of the full report in your preferred format. These appear as soon as the crawl finishes. Excel is the most complete (9 worksheets).'),
+                ('Delete button', 'Permanently removes this audit and all its data. Cannot be undone.'),
+                ('Re-run AI button', 'Regenerates the AI Audit Brief using the latest Claude model. Useful if you updated your API key or want a fresh analysis.'),
+                ('Left panel — AI Assistant', 'A persistent chat panel available on every page. Ask questions about the audit in plain English. See the AI Assistant section below for example prompts.'),
+                ('Right panel — Scrollable report', 'Contains the Executive Summary, AI Audit Brief, Issues list, Cookie Register, Performance by Vendor, and the Pages/Issues/Vendors explorer tabs at the bottom.')
+            ] %}
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">{{ area }}</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">{{ desc | safe }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- ── Executive Summary ─────────────────────────────────────── -->
+    <section id="summary" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Executive Summary</h2>
+        </div>
+
+        <img src="/static/help/audit_summary.png" alt="Executive summary panel" class="w-full rounded-xl mb-5 border" style="border-color:var(--odit-border)">
 
         <div class="space-y-4">
             <div>
-                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Issue Severity Levels</p>
-                <div class="space-y-2">
+                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Metric tiles</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {% for tile, desc in [
+                        ('Pages', 'Total pages crawled successfully.'),
+                        ('Vendors', 'Unique third-party vendors detected across all pages.'),
+                        ('Issues', 'Total privacy/compliance issues flagged by the rule engine.'),
+                        ('Critical', 'Number of critical-severity issues requiring immediate action.')
+                    ] %}
+                    <div class="p-2.5 rounded-lg text-center" style="background:var(--odit-surface-2)">
+                        <p class="text-xs font-semibold" style="color:var(--odit-text)">{{ tile }}</p>
+                        <p class="text-xs mt-0.5" style="color:var(--odit-text-2)">{{ desc | safe }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Risk score badge</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {% for color_bg, color_text, label, desc in [
-                        ('#fef2f2', '#dc2626', 'Critical', 'Immediate action required. Likely a legal violation or serious data leak (e.g. PII sent to a third party without consent).'),
-                        ('#fff7ed', '#ea580c', 'High', 'Should be addressed before launch. Consent violations, pre-consent tracking, missing legal documentation.'),
-                        ('#fefce8', '#ca8a04', 'Medium', 'Worth investigating. Configuration gaps, unclear vendor purposes, policy mismatches.'),
-                        ('#f0fdf4', '#16a34a', 'Low', 'Informational. Best-practice recommendations, minor gaps with low privacy impact.')
+                        ('#fef2f2','#dc2626','Critical','Critical issues found — immediate action required.'),
+                        ('#fff7ed','#ea580c','High','Significant issues — review before going live.'),
+                        ('#fefce8','#ca8a04','Medium','Moderate risk — worth addressing.'),
+                        ('#f0fdf4','#16a34a','Low','Clean bill of health — minor gaps only.')
                     ] %}
-                    <div class="flex items-start gap-3 p-3 rounded-lg" style="background:{{ color_bg }}">
-                        <span class="text-xs font-bold px-2 py-0.5 rounded" style="background:{{ color_text }};color:#fff;flex-shrink:0">{{ label }}</span>
-                        <p class="text-xs leading-relaxed" style="color:#374151">{{ desc }}</p>
+                    <div class="p-2.5 rounded-lg" style="background:{{ color_bg }}">
+                        <p class="text-xs font-bold" style="color:{{ color_text }}">{{ label }}</p>
+                        <p class="text-xs mt-0.5" style="color:#374151">{{ desc | safe }}</p>
                     </div>
                     {% endfor %}
                 </div>
             </div>
 
             <div>
-                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Vendor Categories</p>
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {% for cat, desc in [
-                        ('Analytics', 'Session/pageview tracking (GA4, Mixpanel, Heap)'),
-                        ('Tag Manager', 'Container tags (GTM, Tealium, Adobe Launch)'),
-                        ('Advertising', 'Ad pixels & retargeting (Meta, LinkedIn, Trade Desk)'),
-                        ('A/B Testing', 'Experimentation tools (Optimizely, VWO, AB Tasty)'),
-                        ('Consent', 'CMPs & cookie banners (OneTrust, Cookiebot, Didomi)'),
-                        ('Other', 'CDNs, fonts, chat widgets, unknown domains')
-                    ] %}
-                    <div class="p-2.5 rounded-lg" style="background:var(--odit-surface-2)">
-                        <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">{{ cat }}</p>
-                        <p class="text-xs" style="color:var(--odit-text-2)">{{ desc }}</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div>
-                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Performance Metrics</p>
+                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">GDPR / CCPA badges</p>
                 <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
-                    Each page shows <strong style="color:var(--odit-text)">LCP</strong> (Largest Contentful Paint — how long until the main content loads),
-                    <strong style="color:var(--odit-text)">CLS</strong> (Cumulative Layout Shift — visual stability), and
-                    <strong style="color:var(--odit-text)">FID</strong> (First Input Delay — interactivity responsiveness).
-                    These are the Core Web Vitals used by Google for ranking. Green = good, amber = needs improvement, red = poor.
+                    Shows whether the audit was run with consent interaction. <strong style="color:var(--odit-text)">"Unverified — ran without consent interaction"</strong> means
+                    the audit used the default <em>No Interaction</em> mode — tracking fired was captured as-is, without simulating acceptance or rejection.
+                    To verify consent gating, run separate audits with <em>Accept Consent</em> and <em>Reject Consent</em> modes and compare.
+                </p>
+            </div>
+
+            <div>
+                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Vendor category pills</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                    Shows a count of vendors by category (e.g. <em>8 analytics · 8 pixel · 2 tag_manager</em>).
+                    Click any pill to filter the Issues or Vendors tabs to that category.
+                </p>
+            </div>
+
+            <div>
+                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">AI Audit Brief</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                    Appears below the metric tiles. Written by Claude after the crawl completes. Sections include:
+                    <strong style="color:var(--odit-text)">Tracking Inventory</strong> (a plain-English list of every vendor),
+                    <strong style="color:var(--odit-text)">Data Flows</strong> (which domains receive what data),
+                    <strong style="color:var(--odit-text)">Key Risks</strong>, and a <strong style="color:var(--odit-text)">Recommendations</strong> summary.
+                    Click <em>Re-run AI</em> to regenerate this at any time.
                 </p>
             </div>
         </div>
     </section>
 
-    <!-- ── AI Assistant ───────────────────────────────────────── -->
+    <!-- ── Issues Tab ────────────────────────────────────────────── -->
+    <section id="issues" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Issues Tab</h2>
+        </div>
+
+        <img src="/static/help/issues_tab.png" alt="Issues tab" class="w-full rounded-xl mb-5 border" style="border-color:var(--odit-border)">
+
+        <p class="text-sm mb-3" style="color:var(--odit-text-2)">
+            The Issues tab lists every privacy and compliance problem found during the crawl, sorted by severity.
+            Each issue card includes a title, description, likely cause, recommendation, and the affected URL.
+        </p>
+
+        <div class="mb-4">
+            <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Severity levels</p>
+            <div class="space-y-2">
+                {% for bg, text, label, desc in [
+                    ('#fef2f2','#dc2626','Critical','Likely a legal violation or serious data leak — e.g. PII sent to a third party without consent, or a consent bypass.'),
+                    ('#fff7ed','#ea580c','High','Should be fixed before launch — consent violations, pre-consent tracking, missing legal documentation.'),
+                    ('#fefce8','#ca8a04','Medium','Worth investigating — configuration gaps, unclear vendor purposes, policy mismatches.'),
+                    ('#f0fdf4','#16a34a','Low','Informational best-practice recommendations with low privacy impact.')
+                ] %}
+                <div class="flex items-start gap-3 p-3 rounded-lg" style="background:{{ bg }}">
+                    <span class="text-xs font-bold px-2 py-0.5 rounded flex-shrink-0" style="background:{{ text }};color:#fff">{{ label }}</span>
+                    <p class="text-xs leading-relaxed" style="color:#374151">{{ desc | safe }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div>
+            <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Issue categories</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {% for cat, desc in [
+                    ('pre_consent_tracking', 'Tracking fired before the consent banner was interacted with.'),
+                    ('no_consent_banner', 'No cookie consent mechanism was detected on the page.'),
+                    ('pii_in_requests', 'Personally identifiable information found in a network request payload.'),
+                    ('crawler_blocked', 'The site\'s bot protection blocked the crawler (e.g. Cloudflare, Akamai).'),
+                    ('missing_vendor_declaration', 'A vendor was detected but is not listed in the cookie policy.'),
+                    ('broken_tracking', 'A tracking request returned a 4xx/5xx error — tag may be misconfigured.'),
+                    ('cross_border_transfer', 'Data sent to a vendor outside the user\'s jurisdiction without a valid legal basis.'),
+                    ('missing_consent_record', 'Consent preferences are set but not being stored or transmitted correctly.')
+                ] %}
+                <div class="p-2.5 rounded-lg" style="background:var(--odit-surface-2)">
+                    <p class="text-xs font-semibold font-mono mb-0.5" style="color:var(--odit-brand)">{{ cat }}</p>
+                    <p class="text-xs" style="color:var(--odit-text-2)">{{ desc | safe }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Vendors Tab ───────────────────────────────────────────── -->
+    <section id="vendors" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Vendors Tab</h2>
+        </div>
+
+        <img src="/static/help/vendors_tab.png" alt="Vendors tab" class="w-full rounded-xl mb-4 border" style="border-color:var(--odit-border)">
+
+        <p class="text-sm mb-4" style="color:var(--odit-text-2)">
+            Every third-party vendor detected across all crawled pages. Each vendor gets its own card.
+            Vendors with AI payload analysis show a detailed breakdown of what data is actually flowing.
+        </p>
+
+        <img src="/static/help/vendor_detail.png" alt="Vendor detail card with AI payload analysis" class="w-full rounded-xl mb-4 border" style="border-color:var(--odit-border)">
+
+        <div class="space-y-3">
+            {% for field, desc in [
+                ('Vendor name + category badge', 'The vendor\'s display name and its functional category (Analytics, Pixel, Tag Manager, Consent, Session Replay, A/B Testing, Other).'),
+                ('AI inferred badge (purple)', 'Indicates the vendor was identified by Claude from an unknown domain — not from the built-in signature database.'),
+                ('PII risk badge (red)', 'Shown when AI payload analysis detected PII being transmitted to this vendor. High or Critical means action is required.'),
+                ('Page count + Detection method', 'How many crawled pages this vendor appeared on, and how it was detected (domain, cookie, window global, script src, or beacon).'),
+                ('PURPOSE', 'A plain-English explanation of what this vendor does, derived from reading its actual network requests.'),
+                ('DATA COLLECTED', 'Chips listing the specific data types being sent — page URL, screen resolution, user agent, session identifiers, etc.'),
+                ('IDENTIFIERS ASSIGNED', 'Persistent identifiers assigned to the user (client IDs, cookie values, hashed emails). These are extracted directly from the request parameters.'),
+                ('PII DETECTED IN REQUESTS', 'Red block shown when actual PII was found in a request payload — e.g. a SHA256-hashed email sent to Meta Pixel via the <code style="font-size:11px">hme</code> parameter.'),
+                ('NOTABLE', 'AI observations about anything unusual — e.g. "fires with npa=0 but still collects behavioural data tied to a persistent client ID".')
+            ] %}
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">{{ field }}</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">{{ desc | safe }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-4 p-3 rounded-xl" style="background:var(--odit-brand-light);border:1px solid rgba(24,0,173,0.1)">
+            <p class="text-xs font-semibold mb-1" style="color:var(--odit-brand)">How vendor detection works</p>
+            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                Odit matches network requests against a built-in signature database of 100+ vendors (domains, cookie names, window globals, script patterns).
+                Unknown domains are sent to Claude for inference. After detection, Claude reads up to 8 representative requests per vendor in a single API call
+                and generates the payload analysis — so the entire enrichment step costs roughly $0.02–$0.05 regardless of audit size.
+            </p>
+        </div>
+    </section>
+
+    <!-- ── Pages Tab ────────────────────────────────────────────── -->
+    <section id="pages" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Pages Tab</h2>
+        </div>
+
+        <img src="/static/help/pages_tab.png" alt="Pages tab" class="w-full rounded-xl mb-4 border" style="border-color:var(--odit-border)">
+
+        <p class="text-sm mb-4" style="color:var(--odit-text-2)">
+            Every page crawled during the audit, with per-page metrics. Click any row to open the full page detail view.
+        </p>
+
+        <div class="space-y-3">
+            {% for col, desc in [
+                ('URL', 'The full URL of the crawled page.'),
+                ('Status', 'HTTP response code — 200 is normal, 3xx is a redirect, 4xx/5xx indicates an error.'),
+                ('Requests', 'Total number of network requests captured on this page, including all third-party calls.'),
+                ('Vendors', 'Number of distinct vendors detected on this page specifically.'),
+                ('Issues', 'Number of issues flagged on this page.'),
+                ('LCP', 'Largest Contentful Paint — how long until the main content was visible. Under 2.5s = Good (green), 2.5–4s = Needs improvement (amber), over 4s = Poor (red).'),
+                ('CLS', 'Cumulative Layout Shift — visual stability score. Under 0.1 = Good, 0.1–0.25 = Needs improvement, over 0.25 = Poor.'),
+                ('Screenshot thumbnail', 'A live screenshot taken during the crawl. Click to enlarge. If the site blocked the crawler, the thumbnail will be absent.')
+            ] %}
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">{{ col }}</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">{{ desc | safe }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-4 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+            <p class="text-xs font-semibold mb-1" style="color:var(--odit-text)">Page detail view</p>
+            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                Clicking a page row opens a full breakdown showing: every network request with URL, method, status, size, and timing;
+                console events and JavaScript errors; vendors detected on that page; and page-level issues.
+                This is the deepest level of evidence — useful for debugging specific tracking calls.
+            </p>
+        </div>
+    </section>
+
+    <!-- ── AI Assistant ──────────────────────────────────────────── -->
     <section id="ai" class="odit-card p-6 mb-6">
         <div class="flex items-start gap-3 mb-4">
             <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
@@ -233,48 +413,117 @@ window.__oditPageContext = {
             </div>
             <div>
                 <h2 class="text-lg font-semibold mb-1" style="color:var(--odit-text)">AI Assistant</h2>
-                <p class="text-sm" style="color:var(--odit-text-2)">The sidebar AI is powered by Claude (Anthropic) and requires an API key set in Settings.</p>
+                <p class="text-sm" style="color:var(--odit-text-2)">The left panel on every page. Powered by Claude (Anthropic). Requires an API key set in Settings.</p>
             </div>
         </div>
 
         <div class="mb-4 p-3 rounded-xl" style="background:var(--odit-surface-2)">
-            <p class="text-xs font-semibold mb-2" style="color:var(--odit-text)">Things you can ask:</p>
+            <p class="text-xs font-semibold mb-2" style="color:var(--odit-text)">What the AI can do</p>
             <ul class="space-y-1.5">
                 {% for q in [
                     '"Which vendors are firing before consent is given?"',
-                    '"Summarise the critical issues in plain English"',
+                    '"Summarise the critical issues in plain English for a non-technical stakeholder"',
                     '"Is this site GDPR compliant based on what you can see?"',
                     '"Which pages have the most third-party requests?"',
-                    '"Explain what Google Tag Manager is doing here"',
-                    '"Download the full report and tell me the top 3 risks"'
+                    '"What data is Google Analytics collecting here and is any of it PII?"',
+                    '"Show me all vendors that set cookies without a consent banner"',
+                    '"Navigate to the Issues tab and explain the top 3 critical findings"',
+                    '"Download the Excel report and tell me the top risks"'
                 ] %}
                 <li class="text-xs italic" style="color:var(--odit-text-2)">{{ q }}</li>
                 {% endfor %}
             </ul>
         </div>
 
-        <div class="space-y-2">
+        <div class="space-y-2 mb-4">
             <div class="flex gap-2 p-3 rounded-xl" style="background:var(--odit-brand-light)">
                 <svg class="w-4 h-4 flex-shrink-0 mt-0.5" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                <p class="text-xs leading-relaxed" style="color:var(--odit-brand)">
-                    <strong>Setting up your API key:</strong> Go to <a href="/settings" style="text-decoration:underline">Settings</a>, paste your Anthropic API key, and click Save.
-                    The key is stored only in your local database and is never transmitted anywhere except directly to Anthropic's API on your behalf.
-                </p>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-brand)">Setting up your API key</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                        Go to <a href="/settings" style="color:var(--odit-brand);text-decoration:underline">Settings</a>, paste your Anthropic API key (starts with <code style="font-size:11px;padding:1px 4px;border-radius:3px;background:rgba(0,0,0,0.06)">sk-ant-</code>), and click Save.
+                        The key is stored only in your local database and never transmitted to anyone except Anthropic's API directly.
+                    </p>
+                </div>
             </div>
             <div class="flex gap-2 p-3 rounded-xl" style="background:var(--odit-surface-2)">
                 <svg class="w-4 h-4 flex-shrink-0 mt-0.5" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
-                    <strong style="color:var(--odit-text)">No API key?</strong> Odit runs fully without AI features. Audits, vendor detection, issue rules, and exports all work without a key. AI is only needed for natural-language Q&amp;A and narrative summaries.
+                    <strong style="color:var(--odit-text)">No API key?</strong> All core features work without it — crawling, vendor detection, issue rules, cookie register, performance metrics, and all exports. AI is only needed for natural-language Q&amp;A, AI Audit Briefs, and vendor payload analysis.
                 </p>
+            </div>
+        </div>
+
+        <div>
+            <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">AI sidebar controls</p>
+            <div class="space-y-2">
+                {% for ctrl, desc in [
+                    ('Chat input', 'Type any question about the current audit. The AI has access to the full report context — vendors, issues, pages, requests, and cookies.'),
+                    ('Attachment icon (paperclip)', 'Upload a file to ask questions about it — e.g. a cookie policy PDF or a screenshot to compare against.'),
+                    ('Suggested prompts', 'Quick-action buttons that appear before you start a conversation. Click any to instantly ask that question.'),
+                    ('History icon (top of panel)', 'Opens the full conversation history for this audit session.'),
+                    ('Edit icon (pencil)', 'Start a new conversation, clearing the current thread.')
+                ] %}
+                <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                    <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <div>
+                        <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">{{ ctrl }}</p>
+                        <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">{{ desc | safe }}</p>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </section>
 
-    <!-- ── Exports ────────────────────────────────────────────── -->
+    <!-- ── Settings ──────────────────────────────────────────────── -->
+    <section id="settings" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Settings</h2>
+        </div>
+
+        <img src="/static/help/settings.png" alt="Settings page" class="w-full rounded-xl mb-4 border" style="border-color:var(--odit-border)">
+
+        <p class="text-sm mb-4" style="color:var(--odit-text-2)">
+            Access Settings via the top navigation bar. There is currently one setting:
+        </p>
+
+        <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+            <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <div>
+                <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Anthropic API Key</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                    Paste your key from <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="color:var(--odit-brand);text-decoration:underline">console.anthropic.com</a> and click Save.
+                    Once set, all AI features activate automatically: AI Audit Brief, vendor payload analysis, PII narrative, and the chat sidebar.
+                    The key is stored in your local Postgres database only — it is never sent anywhere except Anthropic's API on your behalf.
+                    To remove AI features, delete the key and save.
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+            <p class="text-xs font-semibold mb-1" style="color:var(--odit-text)">Dark mode toggle</p>
+            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                The moon/sun icon in the top-right navigation bar toggles between light and dark mode. Your preference is saved in the browser.
+            </p>
+        </div>
+    </section>
+
+    <!-- ── Exports ───────────────────────────────────────────────── -->
     <section id="exports" class="odit-card p-6 mb-6">
         <div class="flex items-start gap-3 mb-4">
             <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
@@ -285,23 +534,27 @@ window.__oditPageContext = {
             <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Export Formats</h2>
         </div>
 
+        <p class="text-sm mb-4" style="color:var(--odit-text-2)">
+            Download buttons appear at the top of every completed audit. All exports are generated at the end of the crawl and stored locally.
+        </p>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {% for fmt, icon_color, sheets, best_for in [
-                ('Excel (.xlsx)', '#16a34a', '9-sheet workbook: Summary, Vendors, Issues, Pages, Requests, Events, Cookies, Performance, Comparison', 'Sharing with stakeholders, pivot tables, compliance documentation'),
-                ('HTML Report', '#2563eb', 'Self-contained single-file report with full styling', 'Sending to clients or embedding in intranets — no Odit installation needed'),
-                ('Markdown (.md)', '#7c3aed', 'Structured text with tables and headings', 'Pasting into Notion, Confluence, GitHub wikis, or internal docs'),
-                ('JSON', '#b45309', 'Full machine-readable audit data', 'Feeding into other tools, automations, or custom reporting pipelines')
+            {% for fmt, sheets, best_for in [
+                ('Excel (.xlsx)', '9-sheet workbook: Summary, Vendors, Issues, Pages, Requests, Events, Cookies, Performance, Comparison', 'Sharing with stakeholders, compliance documentation, pivot tables'),
+                ('HTML Report', 'Self-contained single-file report with full styling — no Odit installation needed to view', 'Sending to clients or embedding in intranets and portals'),
+                ('Markdown (.md)', 'Structured text with tables, headings, and code blocks', 'Pasting into Notion, Confluence, GitHub wikis, or internal docs'),
+                ('JSON', 'Full machine-readable audit data including all vendors, issues, pages, and request details', 'Feeding into automation pipelines, SIEM tools, or custom dashboards')
             ] %}
             <div class="p-4 rounded-xl" style="background:var(--odit-surface-2)">
                 <p class="text-sm font-semibold mb-1" style="color:var(--odit-text)">{{ fmt }}</p>
-                <p class="text-xs mb-2" style="color:var(--odit-text-2)">{{ sheets }}</p>
-                <p class="text-xs" style="color:var(--odit-text-3)"><strong style="color:var(--odit-text-2)">Best for:</strong> {{ best_for }}</p>
+                <p class="text-xs mb-2" style="color:var(--odit-text-2)">{{ sheets | safe }}</p>
+                <p class="text-xs" style="color:var(--odit-text-3)"><strong style="color:var(--odit-text-2)">Best for:</strong> {{ best_for | safe }}</p>
             </div>
             {% endfor %}
         </div>
     </section>
 
-    <!-- ── Troubleshooting ────────────────────────────────────── -->
+    <!-- ── Troubleshooting ───────────────────────────────────────── -->
     <section id="troubleshooting" class="odit-card p-6 mb-6">
         <div class="flex items-start gap-3 mb-5">
             <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
@@ -313,40 +566,31 @@ window.__oditPageContext = {
             <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Troubleshooting</h2>
         </div>
 
-        <div class="space-y-4" x-data="{open: null}">
-            {% for i, q, a in [
-                (0, 'The audit is stuck on "Running" and not completing', 'Check that all Docker containers are running: <code>docker compose ps</code>. The worker container handles crawling — if it has exited, restart with <code>docker compose up -d worker</code>. Check logs with <code>docker compose logs -f worker</code>.'),
-                (1, 'The audit completes but shows 0 vendors / 0 issues', 'This can happen if the proxy container is not running. The proxy intercepts traffic to detect vendors. Run <code>docker compose ps</code> and ensure the <code>proxy</code> service is healthy. Restart with <code>docker compose up -d proxy</code>.'),
-                (2, 'AI features are not working', 'Ensure you have set a valid Anthropic API key in <a href="/settings" style="text-decoration:underline;color:var(--odit-brand)">Settings</a>. Check that the key starts with <code>sk-ant-</code>. Note that AI features call Anthropic\'s API over the internet — the crawling itself is fully local.'),
-                (3, 'Export buttons are greyed out or missing', 'Exports are generated at the end of the crawl. If the audit only just completed, wait a few seconds and refresh the page. If exports are still missing after a full crawl, check worker logs for export errors.'),
-                (4, 'The site being audited blocks the crawler', 'Some sites detect and block headless browsers or proxy traffic. Try auditing with the "logged-in user" option, which may bypass bot detection. Some sites (e.g. those behind Cloudflare Turnstile) cannot be audited automatically.'),
-                (5, 'Comparison feature not working', 'Comparisons require at least two completed audits of the same domain. Navigate to either audit and click the Comparison tab. If no comparison is available, run a second audit of the same URL first.'),
-                (6, 'How do I reset / clear all audit data?', 'Stop the containers and run <code>docker compose down -v</code>. This removes the database volume and all stored audits. The <code>./data</code> folder is separate — delete it manually if needed. <strong>This is irreversible.</strong>')
+        <div class="space-y-3">
+            {% for q, a in [
+                ('Audit stuck on "Running" and not completing', 'Check that all Docker containers are running: <code>docker compose ps</code>. The worker container handles crawling — if it has exited, restart with <code>docker compose up -d worker</code>. Check logs with <code>docker compose logs -f worker</code>.'),
+                ('Audit completes but shows 0 vendors / 0 issues', 'This usually means the proxy container is not running. The proxy intercepts traffic to detect vendors. Run <code>docker compose ps</code> and ensure the <code>proxy</code> service is healthy. Restart with <code>docker compose up -d proxy</code>.'),
+                ('AI features not working / no AI Audit Brief', 'Ensure you have set a valid Anthropic API key in <a href="/settings" style="text-decoration:underline;color:var(--odit-brand)">Settings</a>. Check that the key starts with <code>sk-ant-</code>. AI calls go directly from your machine to Anthropic\'s API over the internet.'),
+                ('Export buttons greyed out or missing', 'Exports are generated at the end of the crawl. If the audit only just completed, wait a few seconds and refresh. If missing after a full crawl, check worker logs: <code>docker compose logs worker</code>.'),
+                ('Site blocking the crawler (bot protection)', 'Some sites (BBC, certain Cloudflare-protected pages) detect and block headless browsers at the CDN layer. Odit will flag this as a Critical "crawler_blocked" issue and explain it. Try auditing with <em>Audit as logged-in user</em> mode. Some sites cannot be audited automatically.'),
+                ('Crawling fewer pages than expected', 'This can happen if the site redirects from www to non-www (or vice versa). Odit handles this automatically, but if you see fewer pages than your max setting, check the Pages tab for any errors. Also confirm the domain you entered matches how the site actually loads.'),
+                ('How do I compare two audits?', 'Run at least two audits of the same domain. Navigate to either audit, scroll to the bottom of the report, and use the Comparison card to select a second audit to compare against. Changes in vendor count, issue count, and individual issues will be highlighted.'),
+                ('How do I reset / wipe all data?', 'Stop containers and run <code>docker compose down -v</code>. This removes the database volume. The <code>./data</code> folder (screenshots, exports) must be deleted manually. <strong>This is irreversible.</strong>')
             ] %}
             <details class="rounded-xl overflow-hidden" style="border:1px solid var(--odit-border)">
                 <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer text-sm font-medium select-none" style="color:var(--odit-text);list-style:none">
                     {{ q }}
-                    <svg class="w-4 h-4 flex-shrink-0 transition-transform details-chevron" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 flex-shrink-0" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
                 </summary>
-                <div class="px-4 pb-4 text-sm leading-relaxed" style="color:var(--odit-text-2);border-top:1px solid var(--odit-border);padding-top:12px">{{ a }}</div>
+                <div class="px-4 pb-4 text-sm leading-relaxed" style="color:var(--odit-text-2);border-top:1px solid var(--odit-border);padding-top:12px">{{ a | safe }}</div>
             </details>
             {% endfor %}
         </div>
-
-        <div class="mt-4 p-3 rounded-xl flex gap-3" style="background:var(--odit-surface-2)">
-            <svg class="w-4 h-4 flex-shrink-0 mt-0.5" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-            </svg>
-            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
-                Still stuck? The AI sidebar on every page can help diagnose issues.
-                You can also open an issue on <a href="https://github.com/venk-hub/Odit" target="_blank" rel="noopener" style="color:var(--odit-brand);text-decoration:underline">GitHub</a>.
-            </p>
-        </div>
     </section>
 
-    <!-- ── License & Privacy ──────────────────────────────────── -->
+    <!-- ── License & Privacy ──────────────────────────────────────── -->
     <section id="legal" class="odit-card p-6 mb-6">
         <div class="flex items-start gap-3 mb-4">
             <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
@@ -357,86 +601,38 @@ window.__oditPageContext = {
             <h2 class="text-lg font-semibold" style="color:var(--odit-text)">License &amp; Data Privacy Notice</h2>
         </div>
 
-        <!-- License -->
         <div class="mb-5">
             <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">License — GNU AGPL v3.0</p>
             <p class="text-sm leading-relaxed mb-3" style="color:var(--odit-text-2)">
                 Odit is free, open-source software released under the
-                <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener" style="color:var(--odit-brand);text-decoration:underline">GNU Affero General Public License v3.0 (AGPL-3.0)</a>.
-                You are free to use, modify, and distribute this software, subject to the terms of that licence.
-                If you deploy a modified version as a network service, you must make the modified source code available to users under the same licence.
-                Source code is available on <a href="https://github.com/venk-hub/Odit" target="_blank" rel="noopener" style="color:var(--odit-brand);text-decoration:underline">GitHub</a>.
+                <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener" style="color:var(--odit-brand);text-decoration:underline">GNU Affero General Public License v3.0</a>.
+                You are free to use, modify, and distribute this software subject to that licence.
+                If you deploy a modified version as a network service, you must make the modified source code available under the same licence.
             </p>
         </div>
 
-        <!-- Notices -->
         <div class="space-y-3">
-
             <div class="p-4 rounded-xl" style="border:1px solid rgba(234,179,8,0.3);background:rgba(254,252,232,0.5)">
                 <p class="text-xs font-bold mb-1.5" style="color:#854d0e">No Warranty</p>
                 <p class="text-xs leading-relaxed" style="color:#713f12">
-                    This software is provided <strong>"as is"</strong>, without warranty of any kind, express or implied.
-                    The authors are not liable for any damages, data loss, regulatory penalties, or legal consequences
-                    arising from your use of this software. Use at your own risk and always verify findings independently
-                    before relying on them for compliance decisions.
+                    This software is provided <strong>"as is"</strong>, without warranty of any kind.
+                    The authors are not liable for any damages, data loss, regulatory penalties, or legal consequences arising from use.
+                    Always verify findings independently before relying on them for compliance decisions.
                 </p>
             </div>
-
             <div class="p-4 rounded-xl" style="border:1px solid rgba(59,130,246,0.3);background:rgba(239,246,255,0.5)">
                 <p class="text-xs font-bold mb-1.5" style="color:#1e40af">Your API Key — Your Responsibility</p>
                 <p class="text-xs leading-relaxed" style="color:#1e3a8a">
-                    If you use the AI assistant features, you supply your own Anthropic API key.
-                    Your key is stored locally in your database and is used only to make requests to Anthropic's API directly
-                    from your machine. <strong>Odit does not store, proxy, or transmit your API key to any third party.</strong>
-                    You are responsible for your API usage costs, quota limits, and compliance with
+                    Your Anthropic API key is stored locally in your database and used only to make requests directly to Anthropic's API from your machine.
+                    <strong>Odit does not store, proxy, or transmit your API key to any third party.</strong>
+                    You are responsible for your API usage costs and compliance with
                     <a href="https://www.anthropic.com/legal/usage-policy" target="_blank" rel="noopener" style="text-decoration:underline">Anthropic's usage policy</a>.
-                    Keep your API key secure — treat it like a password. If compromised, rotate it immediately in your
+                    Treat your key like a password — if compromised, rotate it immediately in your
                     <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="text-decoration:underline">Anthropic console</a>.
                 </p>
             </div>
-
-            <div class="p-4 rounded-xl" style="border:1px solid rgba(168,85,247,0.3);background:rgba(250,245,255,0.5)">
-                <p class="text-xs font-bold mb-1.5" style="color:#6b21a8">What Data Leaves Your Machine</p>
-                <p class="text-xs leading-relaxed" style="color:#581c87">
-                    Odit is local-first. The crawler, proxy, database, and web UI all run on your own hardware inside Docker.
-                    The <strong>only</strong> outbound connections are:
-                </p>
-                <ul class="mt-2 space-y-1 text-xs" style="color:#581c87">
-                    <li class="flex gap-2"><span style="color:#7c3aed">•</span> <span>Browser traffic to the <strong>site you are auditing</strong> — as if you visited it normally.</span></li>
-                    <li class="flex gap-2"><span style="color:#7c3aed">•</span> <span>AI chat messages sent to <strong>Anthropic's API</strong> (only if you have configured a key and use the AI sidebar).</span></li>
-                    <li class="flex gap-2"><span style="color:#7c3aed">•</span> <span>CDN requests for Tailwind CSS, HTMX, and marked.js loaded in your browser from public CDNs.</span></li>
-                </ul>
-                <p class="text-xs mt-2 leading-relaxed" style="color:#581c87">
-                    Audit data, vendor detections, issues, exports, and your API key never leave your machine via Odit.
-                </p>
-            </div>
-
-            <div class="p-4 rounded-xl" style="border:1px solid rgba(239,68,68,0.3);background:rgba(254,242,242,0.5)">
-                <p class="text-xs font-bold mb-1.5" style="color:#991b1b">Responsible Use</p>
-                <p class="text-xs leading-relaxed" style="color:#7f1d1d">
-                    Only audit websites you own, are authorised to test, or have explicit permission to crawl.
-                    Auditing third-party websites without authorisation may violate their terms of service, computer access laws
-                    (e.g. the UK Computer Misuse Act, US CFAA), or other regulations in your jurisdiction.
-                    Odit generates real browser traffic to the target site — repeated audits may be noticed by site owners or
-                    rate-limiting systems. The authors accept no responsibility for misuse of this tool.
-                </p>
-            </div>
-
         </div>
     </section>
 
-    <!-- Bottom link back -->
-    <div class="text-center pb-8">
-        <a href="/" class="text-sm" style="color:var(--odit-text-3)"
-           onmouseover="this.style.color='var(--odit-brand)'" onmouseout="this.style.color='var(--odit-text-3)'">
-            &larr; Back to audits
-        </a>
-    </div>
-
 </div>
-
-<style>
-details[open] .details-chevron { transform: rotate(180deg); }
-details summary::-webkit-details-marker { display: none; }
-</style>
 {% endblock %}

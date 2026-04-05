@@ -9,11 +9,11 @@
         <img id="ss-front" style="width:100%; display:none; object-fit:contain; max-height:480px; transition:opacity 0.4s ease; position:relative; z-index:1;" alt="" />
         <img id="ss-back"  style="width:100%; display:none; object-fit:contain; max-height:480px; position:absolute; top:0; left:0; z-index:0; opacity:0;" alt="" />
         <div id="live-screenshot-placeholder"
-             style="display:flex; align-items:center; justify-content:center; height:220px; gap:8px; color:var(--odit-text-3); font-size:13px; position:relative; z-index:2;">
+             style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:220px; gap:8px; color:var(--odit-text-3); font-size:13px; position:relative; z-index:2;">
             <svg style="width:16px;height:16px;animation:ss-spin 1s linear infinite" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
-            Waiting for first screenshot…
+            <span id="live-screenshot-label">Crawling — waiting for first screenshot…</span>
         </div>
     </div>
 </div>
@@ -28,11 +28,25 @@
     if (!card || !front || !back) return;
 
     var hasFirst = false;
+    var failCount = 0;
 
     function loadNext() {
         if (!card.isConnected) return;
         var url = '/api/audits/' + auditId + '/live-screenshot?t=' + Date.now();
         back.onload = function() {
+            // Playwright viewport is ≥1000px wide for real pages.
+            // A blocked/error page screenshot is often very narrow or very short.
+            // Skip it and keep the placeholder / last good frame.
+            if (back.naturalWidth < 600 || back.naturalHeight < 200) {
+                back.removeAttribute('src');
+                failCount++;
+                if (failCount >= 2) {
+                    var lbl = document.getElementById('live-screenshot-label');
+                    if (lbl) lbl.textContent = 'Crawling\u2026 (live preview unavailable for this site)';
+                }
+                return;
+            }
+            failCount = 0;
             if (!hasFirst) {
                 // First image — just show it
                 hasFirst = true;
@@ -53,7 +67,14 @@
                 }, 420); // just after transition completes
             }
         };
-        back.onerror = function() {}; // silently ignore if no screenshot yet
+        back.onerror = function() {
+            back.removeAttribute('src'); // prevent broken image / "Access denied" state
+            failCount++;
+            if (failCount >= 2) {
+                var lbl = document.getElementById('live-screenshot-label');
+                if (lbl) lbl.textContent = 'Crawling\u2026 (live preview unavailable for this site)';
+            }
+        };
         back.src = url;
     }
 

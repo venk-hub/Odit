@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Help & Documentation — Odit</title>
+    <meta name="description" content="Complete documentation for Odit — the local-first website tracking auditor. Learn how to audit sites, read results, and use AI payload analysis." />
+    <meta property="og:title" content="Odit — Help & Documentation" />
+    <meta property="og:description" content="Every screen, tab, and button in Odit explained with screenshots." />
+    <script>
+    (function(){
+        var s = localStorage.getItem('oditDarkMode');
+        if (s === 'dark' || (s === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' };</script>
+    <style>
+
+    :root {
+        --odit-bg:            #f8fafc;
+        --odit-surface:       #ffffff;
+        --odit-surface-2:     #f1f5f9;
+        --odit-surface-hover: #f4f4f8;
+        --odit-border:        rgba(15,23,42,0.07);
+        --odit-border-md:     rgba(15,23,42,0.11);
+        --odit-border-strong: rgba(15,23,42,0.18);
+        --odit-shadow-sm:     0 1px 3px rgba(15,23,42,0.06), 0 0 0 1px rgba(15,23,42,0.04);
+        --odit-shadow:        0 4px 16px rgba(15,23,42,0.08), 0 0 0 1px rgba(15,23,42,0.04);
+        --odit-brand:         #1800ad;
+        --odit-brand-hover:   #13008a;
+        --odit-brand-2:       #3820c4;
+        --odit-brand-light:   #eff0ff;
+        --odit-text:          #0f172a;
+        --odit-text-2:        #64748b;
+        --odit-text-3:        #94a3b8;
+    }
+    html.dark {
+        --odit-bg:            #000000;
+        --odit-surface:       #0d0d0d;
+        --odit-surface-2:     #0c0c18;
+        --odit-surface-hover: #141420;
+        --odit-border:        rgba(255,255,255,0.05);
+        --odit-border-md:     rgba(255,255,255,0.08);
+        --odit-border-strong: rgba(255,255,255,0.12);
+        --odit-shadow-sm:     0 1px 3px rgba(0,0,0,0.8);
+        --odit-shadow:        0 4px 16px rgba(0,0,0,0.9);
+        --odit-brand:         #7c6af0;
+        --odit-brand-hover:   #9585f8;
+        --odit-brand-2:       #a898ff;
+        --odit-brand-light:   #111118;
+        --odit-text:          #e2e8f0;
+        --odit-text-2:        #9090b8;
+        --odit-text-3:        #606080;
+    }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: var(--odit-bg);
+        color: var(--odit-text);
+        margin: 0;
+    }
+    * { transition-property: color, background-color, border-color; transition-duration: 150ms; }
+    .odit-card {
+        background: var(--odit-surface);
+        border-radius: 16px;
+        border: 1px solid var(--odit-border);
+        box-shadow: var(--odit-shadow-sm);
+    }
+    .odit-card:hover { box-shadow: var(--odit-shadow); border-color: var(--odit-border-md); }
+
+    /* Nav */
+    #docs-nav {
+        position: sticky; top: 0; z-index: 50;
+        height: 56px;
+        background: rgba(255,255,255,0.92);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--odit-border);
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 24px;
+    }
+    html.dark #docs-nav { background: rgba(0,0,0,0.92); }
+    .nav-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.1rem; color: var(--odit-brand); text-decoration: none; }
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .nav-link { color: var(--odit-text-2); border-radius: 8px; padding: 6px 12px; font-size: 0.875rem; font-weight: 500; text-decoration: none; }
+    .nav-link:hover { color: var(--odit-text); background: var(--odit-surface-hover); }
+    .nav-btn {
+        background: var(--odit-brand); color: #fff; border: none; border-radius: 8px;
+        padding: 6px 14px; font-size: 0.875rem; font-weight: 600;
+        text-decoration: none; display: inline-flex; align-items: center; gap-6px;
+        box-shadow: 0 1px 4px rgba(24,0,173,0.25);
+    }
+    .nav-btn:hover { background: var(--odit-brand-hover); }
+    html.dark .nav-btn { color: #fff; }
+
+    /* Dark toggle */
+    #dark-toggle { cursor: pointer; padding: 6px; border-radius: 8px; border: none; background: transparent; color: var(--odit-text-2); }
+    #dark-toggle:hover { background: var(--odit-surface-hover); color: var(--odit-text); }
+
+    /* Content */
+    .docs-content { max-width: 768px; margin: 0 auto; padding: 40px 24px 80px; }
+    details summary { list-style: none; }
+    details summary::-webkit-details-marker { display: none; }
+    img { max-width: 100%; height: auto; }
+
+    /* Screenshot frame */
+    .screenshot { border: 1px solid var(--odit-border); border-radius: 12px; overflow: hidden; display: block; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+        .sm\:grid-cols-2 { grid-template-columns: 1fr !important; }
+        .sm\:grid-cols-3 { grid-template-columns: 1fr !important; }
+        .sm\:grid-cols-4 { grid-template-columns: repeat(2,1fr) !important; }
+        .sm\:col-span-2 { grid-column: span 1 !important; }
+    }
+
+    </style>
+</head>
+<body>
+
+
+<nav id="docs-nav">
+    <a class="nav-logo" href="https://github.com/venk-hub/Odit">
+        <svg width="22" height="22" viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="20" fill="#1800ad"/>
+            <text x="20" y="27" text-anchor="middle" font-size="18" font-weight="800" fill="white" font-family="-apple-system,sans-serif">O</text>
+        </svg>
+        Odit
+    </a>
+    <div class="nav-links">
+        <a class="nav-link" href="https://github.com/venk-hub/Odit">GitHub</a>
+        <button id="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">☾</button>
+        <a class="nav-btn" href="https://github.com/venk-hub/Odit#quick-start">Get Started →</a>
+    </div>
+</nav>
+
+
+<div class="docs-content">
+
+
+
+
+
+
+<div class="max-w-3xl mx-auto">
+
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold mb-2" style="color:var(--odit-text)">Help &amp; Documentation</h1>
+        <p class="text-base" style="color:var(--odit-text-2)">A complete walkthrough of every screen, tab, and button in Odit.</p>
+    </div>
+
+    <!-- Quick-nav -->
+    <div class="flex flex-wrap gap-2 mb-10">
+        
+        <a href="#what"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            What is Odit?
+        </a>
+        
+        <a href="#start"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            Starting an Audit
+        </a>
+        
+        <a href="#detail"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            Audit Detail
+        </a>
+        
+        <a href="#summary"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            Executive Summary
+        </a>
+        
+        <a href="#issues"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            Issues Tab
+        </a>
+        
+        <a href="#vendors"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            Vendors Tab
+        </a>
+        
+        <a href="#pages"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            Pages Tab
+        </a>
+        
+        <a href="#ai"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            AI Assistant
+        </a>
+        
+        <a href="#settings"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            Settings
+        </a>
+        
+        <a href="#exports"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            Exports
+        </a>
+        
+        <a href="#troubleshooting"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            Troubleshooting
+        </a>
+        
+        <a href="#legal"
+           class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+           style="color:var(--odit-text-2);border-color:var(--odit-border-md);background:var(--odit-surface)"
+           onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+           onmouseout="this.style.color='var(--odit-text-2)';this.style.borderColor='var(--odit-border-md)'">
+            License
+        </a>
+        
+    </div>
+
+    <!-- ── What is Odit? ─────────────────────────────────────────── -->
+    <section id="what" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-lg font-semibold mb-1" style="color:var(--odit-text)">What is Odit?</h2>
+                <p class="text-sm leading-relaxed" style="color:var(--odit-text-2)">
+                    Odit is a <strong style="color:var(--odit-text)">local-first website tracking auditor</strong>. It crawls any URL using a real browser,
+                    intercepts all network traffic, and produces a structured evidence report of every analytics tag, advertising pixel,
+                    consent mechanism, and third-party vendor it finds — including AI-powered analysis of exactly what data is flowing.
+                </p>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            
+            <div class="rounded-xl p-3" style="background:var(--odit-surface-2)">
+                <svg class="w-4 h-4 mb-2" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                <p class="text-xs font-semibold mb-1" style="color:var(--odit-text)">Evidence-based</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Every finding is backed by real network requests captured live — not guesswork.</p>
+            </div>
+            
+            <div class="rounded-xl p-3" style="background:var(--odit-surface-2)">
+                <svg class="w-4 h-4 mb-2" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                <p class="text-xs font-semibold mb-1" style="color:var(--odit-text)">Local &amp; private</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Everything runs on your machine. No data leaves unless you export it.</p>
+            </div>
+            
+            <div class="rounded-xl p-3" style="background:var(--odit-surface-2)">
+                <svg class="w-4 h-4 mb-2" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                <p class="text-xs font-semibold mb-1" style="color:var(--odit-text)">AI-augmented</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Claude reads actual request payloads — detects PII, identifies data flows, explains risks in plain English.</p>
+            </div>
+            
+        </div>
+    </section>
+
+    <!-- ── Starting an Audit ─────────────────────────────────────── -->
+    <section id="start" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Starting an Audit</h2>
+        </div>
+
+        <img src="screenshots/home.png" alt="Odit home screen" class="w-full rounded-xl mb-5 border" style="border-color:var(--odit-border)">
+
+        <div class="space-y-5">
+            <div>
+                <p class="text-sm font-semibold mb-3" style="color:var(--odit-text)">The New Audit form — field by field</p>
+                <div class="space-y-3">
+                    
+                    <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                        <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">URL to audit</p>
+                            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Enter the full URL including https:// — e.g. <code style="font-size:11px;padding:1px 5px;border-radius:4px;background:var(--odit-surface-2)">https://example.com</code>. Odit crawls from this starting page and follows all internal links.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                        <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Max pages</p>
+                            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">How many pages to crawl. Default is 50. Raise this for large sites; lower it for a quick spot-check. Each page adds ~3–5 seconds of crawl time.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                        <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Consent behaviour</p>
+                            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)"><strong>No interaction</strong> — crawl without touching any consent banner. Best for seeing what fires before consent. <strong>Accept consent</strong> — automatically click "Accept" on cookie banners. <strong>Reject consent</strong> — click "Reject/Decline". Compare results across modes to verify your consent gate works correctly.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                        <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Audit as logged-in user</p>
+                            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Enable this if the site has a login wall. Odit will open a real browser window — log in manually, then click Continue in Odit. The crawler will then inherit your authenticated session.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                        <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Start Audit button</p>
+                            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Submits the job. The page transitions to a live crawl view showing screenshots and progress in real time. Most audits complete in 2–5 minutes depending on page count.</p>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div class="p-3 rounded-xl" style="background:var(--odit-brand-light);border:1px solid rgba(24,0,173,0.1)">
+                <p class="text-xs font-semibold mb-1" style="color:var(--odit-brand)">Audits list</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                    Previous audits appear in the left panel. Click any audit to reopen it. The coloured dot shows status:
+                    <span class="inline-block w-2 h-2 rounded-full bg-green-500 mx-1"></span>completed,
+                    <span class="inline-block w-2 h-2 rounded-full bg-yellow-400 mx-1"></span>running,
+                    <span class="inline-block w-2 h-2 rounded-full bg-red-400 mx-1"></span>failed.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Audit Detail page ─────────────────────────────────────── -->
+    <section id="detail" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Audit Detail Page — Layout Overview</h2>
+        </div>
+
+        <img src="screenshots/audit_detail_top.png" alt="Audit detail page" class="w-full rounded-xl mb-5 border" style="border-color:var(--odit-border)">
+
+        <div class="space-y-3">
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Header bar (top)</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Shows the audited domain, timestamp, page count, and consent mode badge. The coloured status pill (Completed / Running / Failed) updates live during crawls.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Download buttons — Excel · HTML · MD · JSON</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">One-click export of the full report in your preferred format. These appear as soon as the crawl finishes. Excel is the most complete (9 worksheets).</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Delete button</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Permanently removes this audit and all its data. Cannot be undone.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Re-run AI button</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Regenerates the AI Audit Brief using the latest Claude model. Useful if you updated your API key or want a fresh analysis.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Left panel — AI Assistant</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">A persistent chat panel available on every page. Ask questions about the audit in plain English. See the AI Assistant section below for example prompts.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Right panel — Scrollable report</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Contains the Executive Summary, AI Audit Brief, Issues list, Cookie Register, Performance by Vendor, and the Pages/Issues/Vendors explorer tabs at the bottom.</p>
+                </div>
+            </div>
+            
+        </div>
+    </section>
+
+    <!-- ── Executive Summary ─────────────────────────────────────── -->
+    <section id="summary" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Executive Summary</h2>
+        </div>
+
+        <img src="screenshots/audit_summary.png" alt="Executive summary panel" class="w-full rounded-xl mb-5 border" style="border-color:var(--odit-border)">
+
+        <div class="space-y-4">
+            <div>
+                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Metric tiles</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    
+                    <div class="p-2.5 rounded-lg text-center" style="background:var(--odit-surface-2)">
+                        <p class="text-xs font-semibold" style="color:var(--odit-text)">Pages</p>
+                        <p class="text-xs mt-0.5" style="color:var(--odit-text-2)">Total pages crawled successfully.</p>
+                    </div>
+                    
+                    <div class="p-2.5 rounded-lg text-center" style="background:var(--odit-surface-2)">
+                        <p class="text-xs font-semibold" style="color:var(--odit-text)">Vendors</p>
+                        <p class="text-xs mt-0.5" style="color:var(--odit-text-2)">Unique third-party vendors detected across all pages.</p>
+                    </div>
+                    
+                    <div class="p-2.5 rounded-lg text-center" style="background:var(--odit-surface-2)">
+                        <p class="text-xs font-semibold" style="color:var(--odit-text)">Issues</p>
+                        <p class="text-xs mt-0.5" style="color:var(--odit-text-2)">Total privacy/compliance issues flagged by the rule engine.</p>
+                    </div>
+                    
+                    <div class="p-2.5 rounded-lg text-center" style="background:var(--odit-surface-2)">
+                        <p class="text-xs font-semibold" style="color:var(--odit-text)">Critical</p>
+                        <p class="text-xs mt-0.5" style="color:var(--odit-text-2)">Number of critical-severity issues requiring immediate action.</p>
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div>
+                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Risk score badge</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    
+                    <div class="p-2.5 rounded-lg" style="background:#fef2f2">
+                        <p class="text-xs font-bold" style="color:#dc2626">Critical</p>
+                        <p class="text-xs mt-0.5" style="color:#374151">Critical issues found — immediate action required.</p>
+                    </div>
+                    
+                    <div class="p-2.5 rounded-lg" style="background:#fff7ed">
+                        <p class="text-xs font-bold" style="color:#ea580c">High</p>
+                        <p class="text-xs mt-0.5" style="color:#374151">Significant issues — review before going live.</p>
+                    </div>
+                    
+                    <div class="p-2.5 rounded-lg" style="background:#fefce8">
+                        <p class="text-xs font-bold" style="color:#ca8a04">Medium</p>
+                        <p class="text-xs mt-0.5" style="color:#374151">Moderate risk — worth addressing.</p>
+                    </div>
+                    
+                    <div class="p-2.5 rounded-lg" style="background:#f0fdf4">
+                        <p class="text-xs font-bold" style="color:#16a34a">Low</p>
+                        <p class="text-xs mt-0.5" style="color:#374151">Clean bill of health — minor gaps only.</p>
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div>
+                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">GDPR / CCPA badges</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                    Shows whether the audit was run with consent interaction. <strong style="color:var(--odit-text)">"Unverified — ran without consent interaction"</strong> means
+                    the audit used the default <em>No Interaction</em> mode — tracking fired was captured as-is, without simulating acceptance or rejection.
+                    To verify consent gating, run separate audits with <em>Accept Consent</em> and <em>Reject Consent</em> modes and compare.
+                </p>
+            </div>
+
+            <div>
+                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Vendor category pills</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                    Shows a count of vendors by category (e.g. <em>8 analytics · 8 pixel · 2 tag_manager</em>).
+                    Click any pill to filter the Issues or Vendors tabs to that category.
+                </p>
+            </div>
+
+            <div>
+                <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">AI Audit Brief</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                    Appears below the metric tiles. Written by Claude after the crawl completes. Sections include:
+                    <strong style="color:var(--odit-text)">Tracking Inventory</strong> (a plain-English list of every vendor),
+                    <strong style="color:var(--odit-text)">Data Flows</strong> (which domains receive what data),
+                    <strong style="color:var(--odit-text)">Key Risks</strong>, and a <strong style="color:var(--odit-text)">Recommendations</strong> summary.
+                    Click <em>Re-run AI</em> to regenerate this at any time.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Issues Tab ────────────────────────────────────────────── -->
+    <section id="issues" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Issues Tab</h2>
+        </div>
+
+        <img src="screenshots/issues_tab.png" alt="Issues tab" class="w-full rounded-xl mb-5 border" style="border-color:var(--odit-border)">
+
+        <p class="text-sm mb-3" style="color:var(--odit-text-2)">
+            The Issues tab lists every privacy and compliance problem found during the crawl, sorted by severity.
+            Each issue card includes a title, description, likely cause, recommendation, and the affected URL.
+        </p>
+
+        <div class="mb-4">
+            <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Severity levels</p>
+            <div class="space-y-2">
+                
+                <div class="flex items-start gap-3 p-3 rounded-lg" style="background:#fef2f2">
+                    <span class="text-xs font-bold px-2 py-0.5 rounded flex-shrink-0" style="background:#dc2626;color:#fff">Critical</span>
+                    <p class="text-xs leading-relaxed" style="color:#374151">Likely a legal violation or serious data leak — e.g. PII sent to a third party without consent, or a consent bypass.</p>
+                </div>
+                
+                <div class="flex items-start gap-3 p-3 rounded-lg" style="background:#fff7ed">
+                    <span class="text-xs font-bold px-2 py-0.5 rounded flex-shrink-0" style="background:#ea580c;color:#fff">High</span>
+                    <p class="text-xs leading-relaxed" style="color:#374151">Should be fixed before launch — consent violations, pre-consent tracking, missing legal documentation.</p>
+                </div>
+                
+                <div class="flex items-start gap-3 p-3 rounded-lg" style="background:#fefce8">
+                    <span class="text-xs font-bold px-2 py-0.5 rounded flex-shrink-0" style="background:#ca8a04;color:#fff">Medium</span>
+                    <p class="text-xs leading-relaxed" style="color:#374151">Worth investigating — configuration gaps, unclear vendor purposes, policy mismatches.</p>
+                </div>
+                
+                <div class="flex items-start gap-3 p-3 rounded-lg" style="background:#f0fdf4">
+                    <span class="text-xs font-bold px-2 py-0.5 rounded flex-shrink-0" style="background:#16a34a;color:#fff">Low</span>
+                    <p class="text-xs leading-relaxed" style="color:#374151">Informational best-practice recommendations with low privacy impact.</p>
+                </div>
+                
+            </div>
+        </div>
+
+        <div>
+            <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">Issue categories</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                
+                <div class="p-2.5 rounded-lg" style="background:var(--odit-surface-2)">
+                    <p class="text-xs font-semibold font-mono mb-0.5" style="color:var(--odit-brand)">pre_consent_tracking</p>
+                    <p class="text-xs" style="color:var(--odit-text-2)">Tracking fired before the consent banner was interacted with.</p>
+                </div>
+                
+                <div class="p-2.5 rounded-lg" style="background:var(--odit-surface-2)">
+                    <p class="text-xs font-semibold font-mono mb-0.5" style="color:var(--odit-brand)">no_consent_banner</p>
+                    <p class="text-xs" style="color:var(--odit-text-2)">No cookie consent mechanism was detected on the page.</p>
+                </div>
+                
+                <div class="p-2.5 rounded-lg" style="background:var(--odit-surface-2)">
+                    <p class="text-xs font-semibold font-mono mb-0.5" style="color:var(--odit-brand)">pii_in_requests</p>
+                    <p class="text-xs" style="color:var(--odit-text-2)">Personally identifiable information found in a network request payload.</p>
+                </div>
+                
+                <div class="p-2.5 rounded-lg" style="background:var(--odit-surface-2)">
+                    <p class="text-xs font-semibold font-mono mb-0.5" style="color:var(--odit-brand)">crawler_blocked</p>
+                    <p class="text-xs" style="color:var(--odit-text-2)">The site's bot protection blocked the crawler (e.g. Cloudflare, Akamai).</p>
+                </div>
+                
+                <div class="p-2.5 rounded-lg" style="background:var(--odit-surface-2)">
+                    <p class="text-xs font-semibold font-mono mb-0.5" style="color:var(--odit-brand)">missing_vendor_declaration</p>
+                    <p class="text-xs" style="color:var(--odit-text-2)">A vendor was detected but is not listed in the cookie policy.</p>
+                </div>
+                
+                <div class="p-2.5 rounded-lg" style="background:var(--odit-surface-2)">
+                    <p class="text-xs font-semibold font-mono mb-0.5" style="color:var(--odit-brand)">broken_tracking</p>
+                    <p class="text-xs" style="color:var(--odit-text-2)">A tracking request returned a 4xx/5xx error — tag may be misconfigured.</p>
+                </div>
+                
+                <div class="p-2.5 rounded-lg" style="background:var(--odit-surface-2)">
+                    <p class="text-xs font-semibold font-mono mb-0.5" style="color:var(--odit-brand)">cross_border_transfer</p>
+                    <p class="text-xs" style="color:var(--odit-text-2)">Data sent to a vendor outside the user's jurisdiction without a valid legal basis.</p>
+                </div>
+                
+                <div class="p-2.5 rounded-lg" style="background:var(--odit-surface-2)">
+                    <p class="text-xs font-semibold font-mono mb-0.5" style="color:var(--odit-brand)">missing_consent_record</p>
+                    <p class="text-xs" style="color:var(--odit-text-2)">Consent preferences are set but not being stored or transmitted correctly.</p>
+                </div>
+                
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Vendors Tab ───────────────────────────────────────────── -->
+    <section id="vendors" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Vendors Tab</h2>
+        </div>
+
+        <img src="screenshots/vendors_tab.png" alt="Vendors tab" class="w-full rounded-xl mb-4 border" style="border-color:var(--odit-border)">
+
+        <p class="text-sm mb-4" style="color:var(--odit-text-2)">
+            Every third-party vendor detected across all crawled pages. Each vendor gets its own card.
+            Vendors with AI payload analysis show a detailed breakdown of what data is actually flowing.
+        </p>
+
+        <img src="screenshots/vendor_detail.png" alt="Vendor detail card with AI payload analysis" class="w-full rounded-xl mb-4 border" style="border-color:var(--odit-border)">
+
+        <div class="space-y-3">
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Vendor name + category badge</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">The vendor's display name and its functional category (Analytics, Pixel, Tag Manager, Consent, Session Replay, A/B Testing, Other).</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">AI inferred badge (purple)</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Indicates the vendor was identified by Claude from an unknown domain — not from the built-in signature database.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">PII risk badge (red)</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Shown when AI payload analysis detected PII being transmitted to this vendor. High or Critical means action is required.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Page count + Detection method</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">How many crawled pages this vendor appeared on, and how it was detected (domain, cookie, window global, script src, or beacon).</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">PURPOSE</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">A plain-English explanation of what this vendor does, derived from reading its actual network requests.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">DATA COLLECTED</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Chips listing the specific data types being sent — page URL, screen resolution, user agent, session identifiers, etc.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">IDENTIFIERS ASSIGNED</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Persistent identifiers assigned to the user (client IDs, cookie values, hashed emails). These are extracted directly from the request parameters.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">PII DETECTED IN REQUESTS</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Red block shown when actual PII was found in a request payload — e.g. a SHA256-hashed email sent to Meta Pixel via the <code style="font-size:11px">hme</code> parameter.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">NOTABLE</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">AI observations about anything unusual — e.g. "fires with npa=0 but still collects behavioural data tied to a persistent client ID".</p>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="mt-4 p-3 rounded-xl" style="background:var(--odit-brand-light);border:1px solid rgba(24,0,173,0.1)">
+            <p class="text-xs font-semibold mb-1" style="color:var(--odit-brand)">How vendor detection works</p>
+            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                Odit matches network requests against a built-in signature database of 100+ vendors (domains, cookie names, window globals, script patterns).
+                Unknown domains are sent to Claude for inference. After detection, Claude reads up to 8 representative requests per vendor in a single API call
+                and generates the payload analysis — so the entire enrichment step costs roughly $0.02–$0.05 regardless of audit size.
+            </p>
+        </div>
+    </section>
+
+    <!-- ── Pages Tab ────────────────────────────────────────────── -->
+    <section id="pages" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Pages Tab</h2>
+        </div>
+
+        <img src="screenshots/pages_tab.png" alt="Pages tab" class="w-full rounded-xl mb-4 border" style="border-color:var(--odit-border)">
+
+        <p class="text-sm mb-4" style="color:var(--odit-text-2)">
+            Every page crawled during the audit, with per-page metrics. Click any row to open the full page detail view.
+        </p>
+
+        <div class="space-y-3">
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">URL</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">The full URL of the crawled page.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Status</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">HTTP response code — 200 is normal, 3xx is a redirect, 4xx/5xx indicates an error.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Requests</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Total number of network requests captured on this page, including all third-party calls.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Vendors</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Number of distinct vendors detected on this page specifically.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Issues</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Number of issues flagged on this page.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">LCP</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Largest Contentful Paint — how long until the main content was visible. Under 2.5s = Good (green), 2.5–4s = Needs improvement (amber), over 4s = Poor (red).</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">CLS</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Cumulative Layout Shift — visual stability score. Under 0.1 = Good, 0.1–0.25 = Needs improvement, over 0.25 = Poor.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Screenshot thumbnail</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">A live screenshot taken during the crawl. Click to enlarge. If the site blocked the crawler, the thumbnail will be absent.</p>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="mt-4 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+            <p class="text-xs font-semibold mb-1" style="color:var(--odit-text)">Page detail view</p>
+            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                Clicking a page row opens a full breakdown showing: every network request with URL, method, status, size, and timing;
+                console events and JavaScript errors; vendors detected on that page; and page-level issues.
+                This is the deepest level of evidence — useful for debugging specific tracking calls.
+            </p>
+        </div>
+    </section>
+
+    <!-- ── AI Assistant ──────────────────────────────────────────── -->
+    <section id="ai" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-lg font-semibold mb-1" style="color:var(--odit-text)">AI Assistant</h2>
+                <p class="text-sm" style="color:var(--odit-text-2)">The left panel on every page. Powered by Claude (Anthropic). Requires an API key set in Settings.</p>
+            </div>
+        </div>
+
+        <div class="mb-4 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+            <p class="text-xs font-semibold mb-2" style="color:var(--odit-text)">What the AI can do</p>
+            <ul class="space-y-1.5">
+                
+                <li class="text-xs italic" style="color:var(--odit-text-2)">&#34;Which vendors are firing before consent is given?&#34;</li>
+                
+                <li class="text-xs italic" style="color:var(--odit-text-2)">&#34;Summarise the critical issues in plain English for a non-technical stakeholder&#34;</li>
+                
+                <li class="text-xs italic" style="color:var(--odit-text-2)">&#34;Is this site GDPR compliant based on what you can see?&#34;</li>
+                
+                <li class="text-xs italic" style="color:var(--odit-text-2)">&#34;Which pages have the most third-party requests?&#34;</li>
+                
+                <li class="text-xs italic" style="color:var(--odit-text-2)">&#34;What data is Google Analytics collecting here and is any of it PII?&#34;</li>
+                
+                <li class="text-xs italic" style="color:var(--odit-text-2)">&#34;Show me all vendors that set cookies without a consent banner&#34;</li>
+                
+                <li class="text-xs italic" style="color:var(--odit-text-2)">&#34;Navigate to the Issues tab and explain the top 3 critical findings&#34;</li>
+                
+                <li class="text-xs italic" style="color:var(--odit-text-2)">&#34;Download the Excel report and tell me the top risks&#34;</li>
+                
+            </ul>
+        </div>
+
+        <div class="space-y-2 mb-4">
+            <div class="flex gap-2 p-3 rounded-xl" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4 flex-shrink-0 mt-0.5" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div>
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-brand)">Setting up your API key</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                        Go to <a href="/settings" style="color:var(--odit-brand);text-decoration:underline">Settings</a>, paste your Anthropic API key (starts with <code style="font-size:11px;padding:1px 4px;border-radius:3px;background:rgba(0,0,0,0.06)">sk-ant-</code>), and click Save.
+                        The key is stored only in your local database and never transmitted to anyone except Anthropic's API directly.
+                    </p>
+                </div>
+            </div>
+            <div class="flex gap-2 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                <svg class="w-4 h-4 flex-shrink-0 mt-0.5" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                    <strong style="color:var(--odit-text)">No API key?</strong> All core features work without it — crawling, vendor detection, issue rules, cookie register, performance metrics, and all exports. AI is only needed for natural-language Q&amp;A, AI Audit Briefs, and vendor payload analysis.
+                </p>
+            </div>
+        </div>
+
+        <div>
+            <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">AI sidebar controls</p>
+            <div class="space-y-2">
+                
+                <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                    <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <div>
+                        <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Chat input</p>
+                        <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Type any question about the current audit. The AI has access to the full report context — vendors, issues, pages, requests, and cookies.</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                    <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <div>
+                        <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Attachment icon (paperclip)</p>
+                        <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Upload a file to ask questions about it — e.g. a cookie policy PDF or a screenshot to compare against.</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                    <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <div>
+                        <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Suggested prompts</p>
+                        <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Quick-action buttons that appear before you start a conversation. Click any to instantly ask that question.</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                    <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <div>
+                        <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">History icon (top of panel)</p>
+                        <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Opens the full conversation history for this audit session.</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+                    <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <div>
+                        <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Edit icon (pencil)</p>
+                        <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">Start a new conversation, clearing the current thread.</p>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Settings ──────────────────────────────────────────────── -->
+    <section id="settings" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Settings</h2>
+        </div>
+
+        <img src="screenshots/settings.png" alt="Settings page" class="w-full rounded-xl mb-4 border" style="border-color:var(--odit-border)">
+
+        <p class="text-sm mb-4" style="color:var(--odit-text-2)">
+            Access Settings via the top navigation bar. There is currently one setting:
+        </p>
+
+        <div class="flex gap-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+            <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <div>
+                <p class="text-xs font-semibold mb-0.5" style="color:var(--odit-text)">Anthropic API Key</p>
+                <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                    Paste your key from <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="color:var(--odit-brand);text-decoration:underline">console.anthropic.com</a> and click Save.
+                    Once set, all AI features activate automatically: AI Audit Brief, vendor payload analysis, PII narrative, and the chat sidebar.
+                    The key is stored in your local Postgres database only — it is never sent anywhere except Anthropic's API on your behalf.
+                    To remove AI features, delete the key and save.
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-3 p-3 rounded-xl" style="background:var(--odit-surface-2)">
+            <p class="text-xs font-semibold mb-1" style="color:var(--odit-text)">Dark mode toggle</p>
+            <p class="text-xs leading-relaxed" style="color:var(--odit-text-2)">
+                The moon/sun icon in the top-right navigation bar toggles between light and dark mode. Your preference is saved in the browser.
+            </p>
+        </div>
+    </section>
+
+    <!-- ── Exports ───────────────────────────────────────────────── -->
+    <section id="exports" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Export Formats</h2>
+        </div>
+
+        <p class="text-sm mb-4" style="color:var(--odit-text-2)">
+            Download buttons appear at the top of every completed audit. All exports are generated at the end of the crawl and stored locally.
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            
+            <div class="p-4 rounded-xl" style="background:var(--odit-surface-2)">
+                <p class="text-sm font-semibold mb-1" style="color:var(--odit-text)">Excel (.xlsx)</p>
+                <p class="text-xs mb-2" style="color:var(--odit-text-2)">9-sheet workbook: Summary, Vendors, Issues, Pages, Requests, Events, Cookies, Performance, Comparison</p>
+                <p class="text-xs" style="color:var(--odit-text-3)"><strong style="color:var(--odit-text-2)">Best for:</strong> Sharing with stakeholders, compliance documentation, pivot tables</p>
+            </div>
+            
+            <div class="p-4 rounded-xl" style="background:var(--odit-surface-2)">
+                <p class="text-sm font-semibold mb-1" style="color:var(--odit-text)">HTML Report</p>
+                <p class="text-xs mb-2" style="color:var(--odit-text-2)">Self-contained single-file report with full styling — no Odit installation needed to view</p>
+                <p class="text-xs" style="color:var(--odit-text-3)"><strong style="color:var(--odit-text-2)">Best for:</strong> Sending to clients or embedding in intranets and portals</p>
+            </div>
+            
+            <div class="p-4 rounded-xl" style="background:var(--odit-surface-2)">
+                <p class="text-sm font-semibold mb-1" style="color:var(--odit-text)">Markdown (.md)</p>
+                <p class="text-xs mb-2" style="color:var(--odit-text-2)">Structured text with tables, headings, and code blocks</p>
+                <p class="text-xs" style="color:var(--odit-text-3)"><strong style="color:var(--odit-text-2)">Best for:</strong> Pasting into Notion, Confluence, GitHub wikis, or internal docs</p>
+            </div>
+            
+            <div class="p-4 rounded-xl" style="background:var(--odit-surface-2)">
+                <p class="text-sm font-semibold mb-1" style="color:var(--odit-text)">JSON</p>
+                <p class="text-xs mb-2" style="color:var(--odit-text-2)">Full machine-readable audit data including all vendors, issues, pages, and request details</p>
+                <p class="text-xs" style="color:var(--odit-text-3)"><strong style="color:var(--odit-text-2)">Best for:</strong> Feeding into automation pipelines, SIEM tools, or custom dashboards</p>
+            </div>
+            
+        </div>
+    </section>
+
+    <!-- ── Troubleshooting ───────────────────────────────────────── -->
+    <section id="troubleshooting" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">Troubleshooting</h2>
+        </div>
+
+        <div class="space-y-3">
+            
+            <details class="rounded-xl overflow-hidden" style="border:1px solid var(--odit-border)">
+                <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer text-sm font-medium select-none" style="color:var(--odit-text);list-style:none">
+                    Audit stuck on &#34;Running&#34; and not completing
+                    <svg class="w-4 h-4 flex-shrink-0" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </summary>
+                <div class="px-4 pb-4 text-sm leading-relaxed" style="color:var(--odit-text-2);border-top:1px solid var(--odit-border);padding-top:12px">Check that all Docker containers are running: <code>docker compose ps</code>. The worker container handles crawling — if it has exited, restart with <code>docker compose up -d worker</code>. Check logs with <code>docker compose logs -f worker</code>.</div>
+            </details>
+            
+            <details class="rounded-xl overflow-hidden" style="border:1px solid var(--odit-border)">
+                <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer text-sm font-medium select-none" style="color:var(--odit-text);list-style:none">
+                    Audit completes but shows 0 vendors / 0 issues
+                    <svg class="w-4 h-4 flex-shrink-0" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </summary>
+                <div class="px-4 pb-4 text-sm leading-relaxed" style="color:var(--odit-text-2);border-top:1px solid var(--odit-border);padding-top:12px">This usually means the proxy container is not running. The proxy intercepts traffic to detect vendors. Run <code>docker compose ps</code> and ensure the <code>proxy</code> service is healthy. Restart with <code>docker compose up -d proxy</code>.</div>
+            </details>
+            
+            <details class="rounded-xl overflow-hidden" style="border:1px solid var(--odit-border)">
+                <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer text-sm font-medium select-none" style="color:var(--odit-text);list-style:none">
+                    AI features not working / no AI Audit Brief
+                    <svg class="w-4 h-4 flex-shrink-0" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </summary>
+                <div class="px-4 pb-4 text-sm leading-relaxed" style="color:var(--odit-text-2);border-top:1px solid var(--odit-border);padding-top:12px">Ensure you have set a valid Anthropic API key in <a href="/settings" style="text-decoration:underline;color:var(--odit-brand)">Settings</a>. Check that the key starts with <code>sk-ant-</code>. AI calls go directly from your machine to Anthropic's API over the internet.</div>
+            </details>
+            
+            <details class="rounded-xl overflow-hidden" style="border:1px solid var(--odit-border)">
+                <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer text-sm font-medium select-none" style="color:var(--odit-text);list-style:none">
+                    Export buttons greyed out or missing
+                    <svg class="w-4 h-4 flex-shrink-0" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </summary>
+                <div class="px-4 pb-4 text-sm leading-relaxed" style="color:var(--odit-text-2);border-top:1px solid var(--odit-border);padding-top:12px">Exports are generated at the end of the crawl. If the audit only just completed, wait a few seconds and refresh. If missing after a full crawl, check worker logs: <code>docker compose logs worker</code>.</div>
+            </details>
+            
+            <details class="rounded-xl overflow-hidden" style="border:1px solid var(--odit-border)">
+                <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer text-sm font-medium select-none" style="color:var(--odit-text);list-style:none">
+                    Site blocking the crawler (bot protection)
+                    <svg class="w-4 h-4 flex-shrink-0" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </summary>
+                <div class="px-4 pb-4 text-sm leading-relaxed" style="color:var(--odit-text-2);border-top:1px solid var(--odit-border);padding-top:12px">Some sites (BBC, certain Cloudflare-protected pages) detect and block headless browsers at the CDN layer. Odit will flag this as a Critical "crawler_blocked" issue and explain it. Try auditing with <em>Audit as logged-in user</em> mode. Some sites cannot be audited automatically.</div>
+            </details>
+            
+            <details class="rounded-xl overflow-hidden" style="border:1px solid var(--odit-border)">
+                <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer text-sm font-medium select-none" style="color:var(--odit-text);list-style:none">
+                    Crawling fewer pages than expected
+                    <svg class="w-4 h-4 flex-shrink-0" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </summary>
+                <div class="px-4 pb-4 text-sm leading-relaxed" style="color:var(--odit-text-2);border-top:1px solid var(--odit-border);padding-top:12px">This can happen if the site redirects from www to non-www (or vice versa). Odit handles this automatically, but if you see fewer pages than your max setting, check the Pages tab for any errors. Also confirm the domain you entered matches how the site actually loads.</div>
+            </details>
+            
+            <details class="rounded-xl overflow-hidden" style="border:1px solid var(--odit-border)">
+                <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer text-sm font-medium select-none" style="color:var(--odit-text);list-style:none">
+                    How do I compare two audits?
+                    <svg class="w-4 h-4 flex-shrink-0" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </summary>
+                <div class="px-4 pb-4 text-sm leading-relaxed" style="color:var(--odit-text-2);border-top:1px solid var(--odit-border);padding-top:12px">Run at least two audits of the same domain. Navigate to either audit, scroll to the bottom of the report, and use the Comparison card to select a second audit to compare against. Changes in vendor count, issue count, and individual issues will be highlighted.</div>
+            </details>
+            
+            <details class="rounded-xl overflow-hidden" style="border:1px solid var(--odit-border)">
+                <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer text-sm font-medium select-none" style="color:var(--odit-text);list-style:none">
+                    How do I reset / wipe all data?
+                    <svg class="w-4 h-4 flex-shrink-0" style="color:var(--odit-text-3)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </summary>
+                <div class="px-4 pb-4 text-sm leading-relaxed" style="color:var(--odit-text-2);border-top:1px solid var(--odit-border);padding-top:12px">Stop containers and run <code>docker compose down -v</code>. This removes the database volume. The <code>./data</code> folder (screenshots, exports) must be deleted manually. <strong>This is irreversible.</strong></div>
+            </details>
+            
+        </div>
+    </section>
+
+    <!-- ── License & Privacy ──────────────────────────────────────── -->
+    <section id="legal" class="odit-card p-6 mb-6">
+        <div class="flex items-start gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
+                <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold" style="color:var(--odit-text)">License &amp; Data Privacy Notice</h2>
+        </div>
+
+        <div class="mb-5">
+            <p class="text-sm font-semibold mb-2" style="color:var(--odit-text)">License — GNU AGPL v3.0</p>
+            <p class="text-sm leading-relaxed mb-3" style="color:var(--odit-text-2)">
+                Odit is free, open-source software released under the
+                <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener" style="color:var(--odit-brand);text-decoration:underline">GNU Affero General Public License v3.0</a>.
+                You are free to use, modify, and distribute this software subject to that licence.
+                If you deploy a modified version as a network service, you must make the modified source code available under the same licence.
+            </p>
+        </div>
+
+        <div class="space-y-3">
+            <div class="p-4 rounded-xl" style="border:1px solid rgba(234,179,8,0.3);background:rgba(254,252,232,0.5)">
+                <p class="text-xs font-bold mb-1.5" style="color:#854d0e">No Warranty</p>
+                <p class="text-xs leading-relaxed" style="color:#713f12">
+                    This software is provided <strong>"as is"</strong>, without warranty of any kind.
+                    The authors are not liable for any damages, data loss, regulatory penalties, or legal consequences arising from use.
+                    Always verify findings independently before relying on them for compliance decisions.
+                </p>
+            </div>
+            <div class="p-4 rounded-xl" style="border:1px solid rgba(59,130,246,0.3);background:rgba(239,246,255,0.5)">
+                <p class="text-xs font-bold mb-1.5" style="color:#1e40af">Your API Key — Your Responsibility</p>
+                <p class="text-xs leading-relaxed" style="color:#1e3a8a">
+                    Your Anthropic API key is stored locally in your database and used only to make requests directly to Anthropic's API from your machine.
+                    <strong>Odit does not store, proxy, or transmit your API key to any third party.</strong>
+                    You are responsible for your API usage costs and compliance with
+                    <a href="https://www.anthropic.com/legal/usage-policy" target="_blank" rel="noopener" style="text-decoration:underline">Anthropic's usage policy</a>.
+                    Treat your key like a password — if compromised, rotate it immediately in your
+                    <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="text-decoration:underline">Anthropic console</a>.
+                </p>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</div>
+
+<script>
+function toggleDark() {
+    var isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('oditDarkMode', isDark ? 'dark' : 'light');
+    document.getElementById('dark-toggle').textContent = isDark ? '☀' : '☾';
+}
+window.addEventListener('DOMContentLoaded', function() {
+    var isDark = document.documentElement.classList.contains('dark');
+    document.getElementById('dark-toggle').textContent = isDark ? '☀' : '☾';
+});
+</script>
+
+</body>
+</html>

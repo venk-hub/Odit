@@ -42,6 +42,7 @@ def run_all_rules(db: Session, audit_run) -> None:
 
     issues: List[Issue] = []
 
+    issues.extend(_rule_crawler_blocked(audit_run, pages, requests))
     issues.extend(_rule_no_tracking_detected(audit_run, pages, vendors))
     issues.extend(_rule_broken_tracking_request(audit_run, pages, requests, vendors))
     issues.extend(_rule_failed_script_load(audit_run, pages, requests, vendors))
@@ -70,6 +71,90 @@ def _make_issue(audit_run, **kwargs) -> "Issue":
         created_at=datetime.utcnow(),
         **kwargs,
     )
+
+
+_BLOCK_TITLE_PATTERNS = [
+    "access denied", "403 forbidden", "just a moment", "attention required",
+    "checking your browser", "please wait", "enable javascript and cookies",
+    "ddos protection", "cloudflare", "robot or human", "sorry, you have been blocked",
+    "pardon our interruption", "error 403", "error 503", "service unavailable",
+    "ip blocked", "security check",
+]
+_BLOCK_STATUS_CODES = {403, 429, 503, 451}
+
+
+def _rule_crawler_blocked(audit_run, pages, requests) -> list:
+    """Detect when the site is actively blocking the crawler (bot protection / CDN block)."""
+    if not pages:
+        return []
+
+    blocked_pages = []
+    for p in pages:
+        is_blocked = False
+        reason = None
+
+        # Status code indicates block
+        if p.status_code in _BLOCK_STATUS_CODES:
+            is_blocked = True
+            reason = f"HTTP {p.status_code} response"
+
+        # Page title matches known block page patterns
+        title = (p.page_title or "").lower()
+        if not is_blocked and any(pat in title for pat in _BLOCK_TITLE_PATTERNS):
+            is_blocked = True
+            reason = f'Page title "{p.page_title}" matches a bot-block pattern'
+
+        if is_blocked:
+            blocked_pages.append((p, reason))
+
+    if not blocked_pages:
+        return []
+
+    # Only flag if ALL or most pages are blocked (not just one bad page)
+    block_ratio = len(blocked_pages) / len(pages)
+    if block_ratio < 0.5 and len(blocked_pages) < 3:
+        return []
+
+    sample_page, sample_reason = blocked_pages[0]
+    blocked_urls = [p.url for p, _ in blocked_pages[:5]]
+
+    return [_make_issue(
+        audit_run,
+        severity="critical",
+        category="crawler_blocked",
+        title="Crawler is being blocked by the site's bot protection",
+        description=(
+            f"The crawler was blocked on {len(blocked_pages)} of {len(pages)} page(s). "
+            f"The site is actively rejecting automated browser traffic — audit results will be "
+            f"incomplete or empty. Detection reason: {sample_reason}."
+        ),
+        evidence_refs=[{
+            "blocked_pages": len(blocked_pages),
+            "total_pages": len(pages),
+            "sample_reason": sample_reason,
+            "blocked_urls": blocked_urls,
+            "note": (
+                "Bot protection systems (Akamai, Cloudflare, PerimeterX, Datadome) detect "
+                "headless browsers via TLS fingerprint, IP reputation, missing browser APIs, "
+                "or behavioural signals. The mitmproxy component used for network capture has "
+                "a distinctive TLS fingerprint that Akamai-protected sites detect at the CDN layer "
+                "before JavaScript even runs."
+            ),
+        }],
+        likely_cause=(
+            "The site uses an enterprise bot protection service (most likely Akamai Bot Manager "
+            "or Cloudflare Bot Management) that identifies headless Chromium via its TLS fingerprint "
+            "or HTTP/2 header ordering. The mitmproxy proxy used for traffic capture amplifies this "
+            "signal. IP reputation may also be a factor if running from a datacenter/cloud IP."
+        ),
+        recommendation=(
+            "To audit this site: (1) Try the 'logged-in user' mode — inject a real browser session "
+            "cookie exported from your own Chrome session, which proves human prior activity; "
+            "(2) Run the audit from a residential IP rather than a cloud/home router if using a VPS; "
+            "(3) For sites with Cloudflare, a Cloudflare-aware proxy or the site owner's API access "
+            "may be needed; (4) Contact the site owner and request audit access with IP allowlisting."
+        ),
+    )]
 
 
 def _rule_no_tracking_detected(audit_run, pages, vendors) -> list:

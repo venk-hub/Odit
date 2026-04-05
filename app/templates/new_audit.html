@@ -155,8 +155,8 @@ window.__oditLiveContext = function() {
 {% if audits %}
 <div class="max-w-5xl mx-auto px-4">
     <p class="text-xs font-semibold mb-3 uppercase tracking-widest" style="color:var(--odit-text-2)">Previous Audits</p>
-    <div class="odit-card overflow-hidden">
-        <table class="min-w-full odit-table">
+    <div class="odit-card overflow-x-auto">
+        <table class="odit-table" style="min-width:720px;width:100%">
             <thead>
                 <tr>
                     <th class="text-left" style="padding-left:20px">URL</th>
@@ -230,7 +230,7 @@ window.__oditLiveContext = function() {
                         <time class="odit-reltime" datetime="{{ run.created_at.isoformat() }}Z" title="{{ run.created_at.strftime('%d %b %Y %H:%M') }}">{{ run.created_at.strftime('%d %b %Y') }}</time>
                     </td>
                     <td class="text-right">
-                        <div class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div class="flex items-center justify-end gap-3">
                             <a href="/audits/{{ run.id }}"
                                 class="text-xs font-semibold"
                                 style="color:var(--odit-brand)">

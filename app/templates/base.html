@@ -735,6 +735,10 @@
                 if (sidebar) sidebar.style.cssText = 'display:none!important';
                 var nav = document.getElementById('main-nav');
                 if (nav) nav.style.cssText = 'display:none!important';
+                var arrow = document.getElementById('sidebar-arrow');
+                if (arrow) arrow.style.cssText = 'display:none!important';
+                var badge = document.getElementById('help-badge');
+                if (badge) badge.style.cssText = 'display:none!important';
                 var mainArea = document.querySelector('.main-area');
                 if (mainArea) { mainArea.style.marginLeft = '0'; mainArea.style.marginTop = '0'; }
             });
@@ -984,6 +988,8 @@
             : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>';
     }
     function applySidebarState(open) {
+        // Never apply sidebar layout when running inside the agent iframe
+        if (window.self !== window.top) return;
         const sidebar = document.getElementById('help-sidebar');
         const mainArea = document.querySelector('.main-area');
         const w = getSidebarWidth();

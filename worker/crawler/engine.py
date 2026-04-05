@@ -88,6 +88,14 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
     allowed_domains = list(audit_config.allowed_domains or [base_domain])
     if base_domain not in allowed_domains:
         allowed_domains.append(base_domain)
+    # Always allow both www and non-www variants — many sites redirect between them
+    # and all internal links use the post-redirect domain.
+    if base_domain.startswith("www."):
+        alt = base_domain[4:]
+    else:
+        alt = "www." + base_domain
+    if alt not in allowed_domains:
+        allowed_domains.append(alt)
 
     max_pages = audit_config.max_pages
     max_depth = audit_config.max_depth
@@ -151,7 +159,11 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                 "is_mobile": True,
             })
         else:
-            context_kwargs["viewport"] = {"width": 1440, "height": 900}
+            # Real Chrome UA — avoids the default Playwright UA which is flagged by bot detectors
+            context_kwargs.update({
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "viewport": {"width": 1440, "height": 900},
+            })
         if audit_config.auth_storage_state:
             context_kwargs["storage_state"] = audit_config.auth_storage_state
 
@@ -179,6 +191,16 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                 db.commit()
 
                 page = context.new_page()
+
+                # Apply stealth patches — removes navigator.webdriver, fixes
+                # headless fingerprints, spoofs plugins/permissions so bot
+                # detectors (Akamai, Cloudflare, PerimeterX, etc.) see a
+                # normal Chrome browser.
+                try:
+                    from playwright_stealth import stealth_sync
+                    stealth_sync(page)
+                except Exception as _se:
+                    logger.debug(f"playwright-stealth not applied: {_se}")
 
                 # Intercept dataLayer pushes before any page scripts run
                 page.add_init_script("""
@@ -281,6 +303,27 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                         status_code = response.status if response else None
                         final_url = page.url
 
+                        # Warn early if the site is blocking the crawler
+                        _BLOCK_STATUS_CODES = {403, 429, 503, 451}
+                        _BLOCK_TITLE_PATTERNS = [
+                            "access denied", "403 forbidden", "just a moment",
+                            "attention required", "checking your browser",
+                            "ddos protection", "cloudflare", "sorry, you have been blocked",
+                        ]
+                        if depth == 0 and (
+                            status_code in _BLOCK_STATUS_CODES or
+                            any(pat in (page.title() or "").lower() for pat in _BLOCK_TITLE_PATTERNS)
+                        ):
+                            block_msg = (
+                                f"⚠️ Site appears to be blocking the crawler "
+                                f"(status {status_code}, title: \"{page.title()}\"). "
+                                f"Results will be limited. Try 'Logged-in user' mode with real cookies."
+                            )
+                            logger.warning(block_msg)
+                            emit(db, audit_run.id, "crawler_blocked", block_msg,
+                                 {"url": url, "status_code": status_code, "title": page.title()})
+                            db.commit()
+
                         # Handle consent banner if configured
                         if consent_behavior == "accept_consent":
                             _try_accept_consent(page)
@@ -382,7 +425,7 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
                     # Discover links for BFS (only if not at max depth and not journey mode)
                     if depth < max_depth and mode != "journey_audit":
                         try:
-                            discovered_links = extract_links(page, base_domain)
+                            discovered_links = extract_links(page, base_domain, allowed_domains)
                         except Exception as e:
                             logger.warning(f"Link extraction failed: {e}")
 

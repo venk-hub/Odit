@@ -396,9 +396,21 @@ def extract_iframe_signals(page) -> Dict[str, List]:
     }
 
 
-def extract_links(page, base_domain: str) -> List[str]:
+def extract_links(page, base_domain: str, allowed_domains: list = None) -> List[str]:
     """Extract all internal links from the page."""
     from urllib.parse import urlparse, urljoin
+    # Build the full set of accepted domains: explicit list + www/non-www variants
+    if allowed_domains:
+        accepted = set(allowed_domains)
+    else:
+        accepted = {base_domain}
+    # Always include the www/non-www counterpart so redirects don't break BFS
+    for d in list(accepted):
+        if d.startswith("www."):
+            accepted.add(d[4:])
+        else:
+            accepted.add("www." + d)
+
     try:
         hrefs = page.evaluate("""
             () => {
@@ -412,7 +424,7 @@ def extract_links(page, base_domain: str) -> List[str]:
                 parsed = urlparse(href)
                 # Remove fragment
                 clean = parsed._replace(fragment="").geturl()
-                if parsed.netloc == base_domain or not parsed.netloc:
+                if parsed.netloc in accepted or not parsed.netloc:
                     links.append(clean)
             except Exception:
                 continue

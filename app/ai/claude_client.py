@@ -15,6 +15,7 @@ logger = logging.getLogger("odit.worker.ai")
 MODEL = "claude-haiku-4-5"
 MAX_TOKENS = 1024
 MAX_TOKENS_SUMMARY = 3000  # structured 5-section brief needs more room
+MAX_TOKENS_PAYLOAD = 6000  # payload analysis covers many vendors at once
 
 # Haiku pricing (per 1M tokens)
 _PRICE_INPUT_PER_M = 1.00
@@ -257,6 +258,139 @@ Respond only with the JSON object, no extra text."""
         return json.loads(cleaned)
     except (json.JSONDecodeError, ValueError) as e:
         logger.warning(f"Failed to parse AI vendor inference response: {e}")
+        return {}
+
+
+# ─────────────────────────────────────────────────────────────────
+# Feature: Network payload analysis
+# ─────────────────────────────────────────────────────────────────
+
+PAYLOAD_SYSTEM = (
+    "You are a privacy engineer and tracking analyst. You analyse raw network requests captured "
+    "from a real browser session to identify exactly what user data each vendor collects, "
+    "what identifiers are assigned, and whether any PII is transmitted. "
+    "Be specific: name actual cookie names, parameter keys, and values you see. "
+    "Never be vague. If you see a hashed email, say so. If you see a bid user ID, say so."
+)
+
+import re as _re
+
+# PII patterns — applied before AI to find definite hits cheaply
+_PII_PATTERNS = [
+    # Email — must have @ and a recognisable TLD
+    ("email",       _re.compile(r'(?<![%\w])[a-zA-Z0-9._%+\-]{2,}@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,6}(?![%\w])', _re.I)),
+    # Phone — require parentheses or dashes (avoids matching long numeric IDs)
+    ("phone_us",    _re.compile(r'\(?\d{3}\)[\s.\-]\d{3}[\s.\-]\d{4}|\b\d{3}-\d{3}-\d{4}\b')),
+    # SSN — specific hyphenated format only
+    ("ssn",         _re.compile(r'\b(?!000|666|9\d{2})\d{3}-(?!00)\d{2}-(?!0000)\d{4}\b')),
+    # Facebook advanced_matching with non-empty PII fields
+    ("fb_advanced_matching", _re.compile(r'"(em|ph|fn|ln|db|ge|ct|st|zp|country)"\s*:\s*"[^"]{3,}"')),
+]
+
+
+def scan_requests_for_pii(requests: list[dict]) -> list[dict]:
+    """
+    Regex-scan all request URLs and POST bodies for PII.
+    Returns list of {url, param, type, snippet} findings.
+    """
+    findings = []
+    seen = set()
+    for req in requests:
+        haystack_parts = [req.get("url", ""), req.get("post_data", "") or ""]
+        for haystack in haystack_parts:
+            if not haystack:
+                continue
+            for pii_type, pattern in _PII_PATTERNS:
+                for match in pattern.finditer(haystack):
+                    snippet = match.group(0)[:60]
+                    key = (pii_type, snippet[:20])
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    findings.append({
+                        "url": req.get("url", "")[:200],
+                        "pii_type": pii_type,
+                        "snippet": snippet,
+                        "in_body": bool(req.get("post_data")),
+                    })
+    return findings
+
+
+def analyze_tracking_payloads(site_domain: str, vendor_requests: dict) -> dict:
+    """
+    Analyse actual network request payloads grouped by vendor.
+
+    vendor_requests: {
+        vendor_label: {
+            "name": str,
+            "category": str,
+            "requests": [{"url": str, "method": str, "body": str|None}, ...]
+        }
+    }
+
+    Returns: {
+        vendor_label: {
+            "data_collected": [str, ...],
+            "identifiers": [str, ...],
+            "pii_detected": [str, ...],
+            "pii_risk": "none|low|medium|high|critical",
+            "purpose": str,
+            "fires_before_consent": bool|None,
+            "notable": str
+        }
+    }
+    """
+    client = _get_client()
+    if not client or not vendor_requests:
+        return {}
+
+    # Format each vendor's requests compactly for the prompt
+    sections = []
+    for label, vdata in list(vendor_requests.items())[:15]:  # cap at 15 vendors
+        lines = [f"VENDOR: {vdata['name']} ({vdata['category']}) [key={label}]"]
+        for r in vdata["requests"][:12]:  # up to 12 requests per vendor
+            method = r.get("method", "GET")
+            url = r.get("url", "")[:300]
+            body = (r.get("body") or "")[:400]
+            if body:
+                lines.append(f"  {method} {url}")
+                lines.append(f"  BODY: {body}")
+            else:
+                lines.append(f"  {method} {url}")
+        sections.append("\n".join(lines))
+
+    vendors_block = "\n---\n".join(sections)
+
+    prompt = f"""Website being audited: {site_domain}
+
+Below are network requests captured from a real browser session, grouped by vendor.
+Analyse each vendor and identify what user data is being collected and transmitted.
+
+{vendors_block}
+
+---
+For each vendor key, return a JSON object with:
+- "data_collected": array of strings — specific data points collected (e.g. "page URL", "article title", "scroll depth", "screen resolution", "user ID from cookie _uid")
+- "identifiers": array — user/device/session identifiers found (name the actual cookie or parameter, e.g. "_fbp cookie", "demdex UID in path", "Amazon kion ID")
+- "pii_detected": array — any PII found verbatim (emails, phone numbers, names, hashed PII like fb.advanced_matching). Empty array if none.
+- "pii_risk": one of: none | low | medium | high | critical
+- "purpose": one sentence — what this vendor does with the data
+- "notable": one sentence — the most privacy-relevant thing about this vendor's requests (data volume, sensitive params, fires before consent, syncs with other vendors, etc.)
+
+Respond ONLY with a JSON object mapping vendor key → analysis object. No extra text."""
+
+    result = _call(client, prompt, system=PAYLOAD_SYSTEM,
+                   label="analyze_tracking_payloads", max_tokens=MAX_TOKENS_PAYLOAD)
+    if not result:
+        return {}
+
+    try:
+        cleaned = result.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        return json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.warning(f"Failed to parse payload analysis response: {e}")
         return {}
 
 
