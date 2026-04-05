@@ -189,6 +189,7 @@
       .two-col { grid-template-columns: 1fr !important; }
       .two-col-rev > *:first-child { order: 2; }
       .two-col-rev > *:last-child { order: 1; }
+      .three-col { grid-template-columns: 1fr !important; }
     }
   </style>
 </head>
@@ -202,11 +203,12 @@
   </a>
   <div class="nav-links">
     <a class="nav-link hide-sm" href="#what">What</a>
-    <a class="nav-link hide-sm" href="#how">How</a>
+    <a class="nav-link hide-sm" href="#why">Why</a>
     <a class="nav-link hide-sm" href="#who">Who</a>
+    <a class="nav-link hide-sm" href="#how">How</a>
     <a class="nav-link" href="help.html">Docs</a>
-    <button id="dark-btn" onclick="toggleDark()" title="Toggle dark mode">☾</button>
-    <a class="nav-cta" href="https://github.com/venk-hub/Odit#quick-start">Get Started →</a>
+    <button id="dark-btn" onclick="toggleDark()" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button>
+    <a class="nav-cta" href="https://github.com/venk-hub/Odit#quick-start">Get started →</a>
   </div>
 </nav>
 
@@ -224,10 +226,10 @@
     <div class="hero-btns">
       <a class="btn-primary" href="https://github.com/venk-hub/Odit#quick-start">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-        Get Started Free
+        Get started free
       </a>
       <a class="btn-secondary" href="https://github.com/venk-hub/Odit">
-        <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <svg aria-hidden="true" height="16" width="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         View on GitHub
       </a>
     </div>
@@ -242,7 +244,7 @@
   <div class="container">
     <div class="two-col two-col-rev" style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;">
       <div>
-        <div class="section-tag">⬡ What</div>
+        <div class="section-tag">What</div>
         <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 20px;line-height:1.2;">A complete tracking audit in minutes</h2>
         <p style="color:var(--text-2);line-height:1.75;margin:0 0 20px;font-size:0.975rem;">
           Odit is a self-hosted auditing tool that runs as a four-container Docker application. It launches a real Chromium browser, routes all traffic through an intercepting proxy, and gives you a full picture of what a website sends — and to whom.
@@ -283,7 +285,7 @@
 <section id="why" class="alt-bg">
   <div class="container">
     <div style="text-align:center;max-width:600px;margin:0 auto 56px;">
-      <div class="section-tag">◈ Why</div>
+      <div class="section-tag">Why</div>
       <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 16px;line-height:1.2;">Because you can't protect what you can't see</h2>
       <p style="color:var(--text-2);line-height:1.7;font-size:0.975rem;margin:0;">
         Most websites fire dozens of tracking requests users never consented to. Regulators are catching up fast. Odit makes the invisible visible — before your DPO, your clients, or the ICO does.
@@ -291,24 +293,24 @@
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;">
       <div class="card">
-        <div style="font-size:1.75rem;margin-bottom:14px;">🔍</div>
+        <div aria-hidden="true" style="font-size:1.75rem;margin-bottom:14px;">🔍</div>
         <p class="card-title">Hidden tracking exposed</p>
-        <p class="card-body">Third-party scripts load other scripts. Odit captures the full chain — not just what's in your tag manager, but everything that fires as a result.</p>
+        <p class="card-body">Third-party scripts often load other scripts. Odit captures the full chain — not just what's in your tag manager, but everything that fires as a result.</p>
       </div>
       <div class="card">
-        <div style="font-size:1.75rem;margin-bottom:14px;">⚖️</div>
+        <div aria-hidden="true" style="font-size:1.75rem;margin-bottom:14px;">⚖️</div>
         <p class="card-title">Regulatory pressure is real</p>
-        <p class="card-body">GDPR, CCPA, ePrivacy — fines for consent violations are increasing. Odit generates evidence-grade audit reports you can hand directly to your DPO or legal team.</p>
+        <p class="card-body">GDPR, CCPA, and ePrivacy fines are increasing. Odit generates evidence-grade reports you can hand directly to your DPO or legal team.</p>
       </div>
       <div class="card">
-        <div style="font-size:1.75rem;margin-bottom:14px;">🏗️</div>
-        <p class="card-title">Builds don't always match briefs</p>
-        <p class="card-body">Tag managers, A/B tools, and CRMs get added mid-project. Odit catches what slipped in — PII in query strings, pixels firing without consent, rogue cookies.</p>
+        <div aria-hidden="true" style="font-size:1.75rem;margin-bottom:14px;">🏗️</div>
+        <p class="card-title">Builds don't match briefs</p>
+        <p class="card-body">Tags get added mid-project without telling engineering. Odit catches what slipped in — PII in URLs, pixels without consent, rogue cookies.</p>
       </div>
       <div class="card">
-        <div style="font-size:1.75rem;margin-bottom:14px;">🔒</div>
+        <div aria-hidden="true" style="font-size:1.75rem;margin-bottom:14px;">🔒</div>
         <p class="card-title">Your data stays yours</p>
-        <p class="card-body">Every other audit tool sends your client's site data to someone else's cloud. Odit runs entirely on your machine. Nothing leaves unless you export it.</p>
+        <p class="card-body">Every other audit tool sends your client's data to the cloud. Odit runs entirely on your machine. Nothing leaves unless you export it.</p>
       </div>
     </div>
     <div style="margin-top:48px;" class="screen-frame">
@@ -323,42 +325,42 @@
 <section id="who">
   <div class="container">
     <div style="text-align:center;max-width:600px;margin:0 auto 56px;">
-      <div class="section-tag">◎ Who</div>
+      <div class="section-tag">Who</div>
       <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 16px;line-height:1.2;">Built for the people responsible for privacy</h2>
       <p style="color:var(--text-2);line-height:1.7;font-size:0.975rem;margin:0;">
         Whether you're writing the code, advising the client, or signing the DPA — Odit gives you the evidence you need.
       </p>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">
+    <div class="three-col" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
       <div class="card">
-        <div style="font-size:2rem;margin-bottom:14px;">👩‍💻</div>
-        <p class="card-title">Frontend & web developers</p>
-        <p class="card-body">Verify your tag manager setup before go-live. Catch PII leaking into analytics requests. Confirm nothing fires before consent. Get diff reports between deployments.</p>
+        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">💻</div>
+        <p class="card-title">Developers</p>
+        <p class="card-body">Verify your tag manager before go-live. Catch PII in analytics requests. Confirm nothing fires before consent. Diff two deployments side by side.</p>
       </div>
       <div class="card">
-        <div style="font-size:2rem;margin-bottom:14px;">🏢</div>
+        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">🏢</div>
         <p class="card-title">Digital agencies</p>
-        <p class="card-body">Deliver a privacy audit report alongside every website build. Demonstrate due diligence to clients. Charge for compliance-as-a-service without buying enterprise tooling.</p>
+        <p class="card-body">Deliver a privacy audit alongside every build. Demonstrate due diligence to clients. Offer compliance-as-a-service without buying enterprise tooling.</p>
       </div>
       <div class="card">
-        <div style="font-size:2rem;margin-bottom:14px;">📋</div>
-        <p class="card-title">Privacy & compliance teams</p>
-        <p class="card-body">Generate evidence-grade reports for GDPR Article 30 records. Identify vendors not listed in your privacy notice. Validate consent implementation end-to-end.</p>
+        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">📋</div>
+        <p class="card-title">Privacy and compliance teams</p>
+        <p class="card-body">Generate evidence-grade reports for GDPR Article 30 records. Find vendors missing from your privacy notice. Validate consent implementation end to end.</p>
       </div>
       <div class="card">
-        <div style="font-size:2rem;margin-bottom:14px;">🔎</div>
+        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">🔎</div>
         <p class="card-title">Security researchers</p>
-        <p class="card-body">Map the full third-party attack surface of any site. Identify data flows, shared identifiers across vendors, and capture HAR files for deeper analysis.</p>
+        <p class="card-body">Map the full third-party surface of any site. Identify data flows and shared identifiers across vendors. Export HAR files for deeper analysis.</p>
       </div>
       <div class="card">
-        <div style="font-size:2rem;margin-bottom:14px;">📣</div>
-        <p class="card-title">Marketing & analytics teams</p>
-        <p class="card-body">Understand what your analytics stack is actually sending. Debug tracking gaps, verify attribution setup, and confirm consent mode is working correctly.</p>
+        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">📊</div>
+        <p class="card-title">Marketing and analytics teams</p>
+        <p class="card-body">See exactly what your stack sends. Debug tracking gaps, verify attribution, and confirm consent mode is working before a campaign goes live.</p>
       </div>
       <div class="card">
-        <div style="font-size:2rem;margin-bottom:14px;">🧑‍⚖️</div>
-        <p class="card-title">DPOs & legal counsel</p>
-        <p class="card-body">Get technical evidence without needing to write code. Ask the AI assistant in plain English — "what data does this vendor collect?" — and get structured answers backed by real network captures.</p>
+        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">⚖️</div>
+        <p class="card-title">DPOs and legal counsel</p>
+        <p class="card-body">Get technical evidence without writing code. Ask the AI assistant in plain English and receive structured answers backed by real network captures.</p>
       </div>
     </div>
   </div>
@@ -374,7 +376,7 @@
         <img src="screenshots/audit_detail_top.png" alt="Audit detail page showing export buttons and live crawl progress" />
       </div>
       <div>
-        <div class="section-tag">◷ When</div>
+        <div class="section-tag">When</div>
         <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 20px;line-height:1.2;">Use it at every stage of the web lifecycle</h2>
         <div style="display:flex;flex-direction:column;gap:20px;">
           <div style="display:flex;gap:14px;align-items:flex-start;">
@@ -417,7 +419,7 @@
 <section id="how">
   <div class="container">
     <div style="text-align:center;max-width:600px;margin:0 auto 56px;">
-      <div class="section-tag">⟳ How</div>
+      <div class="section-tag">How</div>
       <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 16px;line-height:1.2;">From URL to full audit report in minutes</h2>
       <p style="color:var(--text-2);line-height:1.7;font-size:0.975rem;margin:0;">
         Paste a URL. Odit does the rest. No configuration required to get started.
@@ -425,25 +427,25 @@
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:56px;">
       <div class="card" style="text-align:center;padding:32px 24px;">
-        <div style="width:52px;height:52px;border-radius:16px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.5rem;">🌐</div>
+        <div aria-hidden="true" style="width:52px;height:52px;border-radius:16px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.5rem;">🌐</div>
         <p style="font-weight:800;font-size:1.5rem;color:var(--brand);margin:0 0 6px;">1</p>
         <p class="card-title">Paste a URL</p>
         <p class="card-body">Enter any website URL, choose Quick Scan or Full Crawl, set your consent mode, and hit Start Audit.</p>
       </div>
       <div class="card" style="text-align:center;padding:32px 24px;">
-        <div style="width:52px;height:52px;border-radius:16px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.5rem;">🕷️</div>
+        <div aria-hidden="true" style="width:52px;height:52px;border-radius:16px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.5rem;">🕷️</div>
         <p style="font-weight:800;font-size:1.5rem;color:var(--brand);margin:0 0 6px;">2</p>
         <p class="card-title">Real browser crawls</p>
         <p class="card-body">A headless Chromium browser crawls the site, executing JavaScript and triggering all the tracking that a real user would.</p>
       </div>
       <div class="card" style="text-align:center;padding:32px 24px;">
-        <div style="width:52px;height:52px;border-radius:16px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.5rem;">📡</div>
+        <div aria-hidden="true" style="width:52px;height:52px;border-radius:16px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.5rem;">📡</div>
         <p style="font-weight:800;font-size:1.5rem;color:var(--brand);margin:0 0 6px;">3</p>
         <p class="card-title">Every request captured</p>
         <p class="card-body">mitmproxy intercepts all network traffic — including HTTPS — capturing full request and response details for every tracking call.</p>
       </div>
       <div class="card" style="text-align:center;padding:32px 24px;">
-        <div style="width:52px;height:52px;border-radius:16px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.5rem;">📊</div>
+        <div aria-hidden="true" style="width:52px;height:52px;border-radius:16px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.5rem;">📊</div>
         <p style="font-weight:800;font-size:1.5rem;color:var(--brand);margin:0 0 6px;">4</p>
         <p class="card-title">Results &amp; reports</p>
         <p class="card-body">Vendors detected, issues flagged, AI payloads analysed. Export to Excel, HTML, Markdown, or JSON with one click.</p>
@@ -469,26 +471,26 @@
   <div class="container">
     <div class="two-col two-col-rev" style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;">
       <div>
-        <div class="section-tag">◉ Where</div>
+        <div class="section-tag">Where</div>
         <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 20px;line-height:1.2;">On your machine.<br/>Nowhere else.</h2>
         <p style="color:var(--text-2);line-height:1.75;margin:0 0 24px;font-size:0.975rem;">
           Odit is local-first. It runs as four Docker containers on your laptop or server. Audit data is stored in a local folder. Nothing is uploaded to any cloud service.
         </p>
         <div style="display:flex;flex-direction:column;gap:12px;">
           <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;font-size:0.875rem;">
-            <span style="font-size:1.2rem;">🐳</span>
+            <span aria-hidden="true" style="font-size:1.2rem;">🐳</span>
             <span><strong style="color:var(--text);">Docker Compose</strong> <span style="color:var(--text-2);">— one command to start everything</span></span>
           </div>
           <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;font-size:0.875rem;">
-            <span style="font-size:1.2rem;">💾</span>
+            <span aria-hidden="true" style="font-size:1.2rem;">💾</span>
             <span><strong style="color:var(--text);">Local storage</strong> <span style="color:var(--text-2);">— audit data in <code style="font-size:0.8rem;background:var(--surface-2);padding:1px 5px;border-radius:4px;">./data/</code> on your filesystem</span></span>
           </div>
           <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;font-size:0.875rem;">
-            <span style="font-size:1.2rem;">🔑</span>
+            <span aria-hidden="true" style="font-size:1.2rem;">🔑</span>
             <span><strong style="color:var(--text);">API key stays local</strong> <span style="color:var(--text-2);">— stored in your local database only</span></span>
           </div>
           <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;font-size:0.875rem;">
-            <span style="font-size:1.2rem;">🖥️</span>
+            <span aria-hidden="true" style="font-size:1.2rem;">🖥️</span>
             <span><strong style="color:var(--text);">macOS · Linux · Windows</strong> <span style="color:var(--text-2);">— anywhere Docker Desktop runs</span></span>
           </div>
         </div>
@@ -522,7 +524,7 @@ open http://localhost:8000</pre>
 <section id="screenshots">
   <div class="container">
     <div style="text-align:center;max-width:500px;margin:0 auto 48px;">
-      <div class="section-tag">📸 Screenshots</div>
+      <div class="section-tag">Screenshots</div>
       <h2 style="font-size:clamp(1.6rem,3vw,2.2rem);font-weight:800;letter-spacing:-0.02em;margin:0;line-height:1.2;">Every screen, built for clarity</h2>
     </div>
     <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
@@ -556,10 +558,10 @@ open http://localhost:8000</pre>
     </p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
       <a href="https://github.com/venk-hub/Odit#quick-start" style="background:#fff;color:var(--brand);border-radius:10px;padding:13px 26px;font-size:0.95rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
-        Get Started Free →
+        Get started free →
       </a>
       <a href="help.html" style="background:rgba(255,255,255,0.12);color:#fff;border-radius:10px;padding:13px 26px;font-size:0.95rem;font-weight:600;text-decoration:none;border:1px solid rgba(255,255,255,0.2);display:inline-flex;align-items:center;gap:8px;">
-        Read the Docs
+        Read the docs →
       </a>
     </div>
     <p style="margin:48px 0 0;font-size:0.8rem;color:rgba(255,255,255,0.4);">
