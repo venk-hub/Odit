@@ -16,6 +16,8 @@ window.__oditLiveContext = function() {
     if (url) parts.push('User has typed URL: ' + url);
     const mode = typeof _auditMode !== 'undefined' ? _auditMode : null;
     if (mode) parts.push('Selected mode: ' + mode.replace('_', ' '));
+    const consent = typeof _consentMode !== 'undefined' ? _consentMode : 'no_interaction';
+    parts.push('Consent mode: ' + consent.replace('_', ' '));
     const authOpen = typeof _authOpen !== 'undefined' && _authOpen;
     if (authOpen) parts.push('Auth/cookie section is expanded — user is setting up a logged-in audit.');
     return parts.length ? parts.join('. ') + '.' : '';
@@ -82,25 +84,47 @@ window.__oditLiveContext = function() {
             </div>
 
             {# Auth section #}
-            <div class="mt-4 text-center flex items-center justify-center gap-2">
-                <button type="button" onclick="toggleAuth()"
-                    class="text-xs font-medium inline-flex items-center gap-1 transition-colors"
-                    style="color:var(--odit-text-3)"
-                    id="auth-toggle-btn">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-                    </svg>
-                    <span id="auth-toggle-label">Audit as logged-in user</span>
-                </button>
-                <button type="button"
-                    onclick="triggerHelpChat('How do I audit as a logged-in user? Walk me through exporting my session cookies and using them in Odit.')"
-                    title="How does this work?"
-                    class="transition-colors rounded-full flex items-center justify-center"
-                    style="color:var(--odit-text-3); width:16px; height:16px; border:1.5px solid var(--odit-border-strong); font-size:9px; font-weight:700; flex-shrink:0"
-                    onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
-                    onmouseout="this.style.color='var(--odit-text-3)';this.style.borderColor='var(--odit-border-strong)'">
-                    i
-                </button>
+            <div class="mt-4 text-center flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="toggleConsent()"
+                        class="text-xs font-medium inline-flex items-center gap-1 transition-colors"
+                        style="color:var(--odit-text-3)"
+                        id="consent-toggle-btn">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        <span id="consent-toggle-label">Accept consent banners</span>
+                    </button>
+                    <button type="button"
+                        onclick="triggerHelpChat('What does the Accept consent banners option do in Odit? How does it affect GDPR and CCPA compliance results?')"
+                        title="What does this do?"
+                        class="transition-colors rounded-full flex items-center justify-center"
+                        style="color:var(--odit-text-3); width:16px; height:16px; border:1.5px solid var(--odit-border-strong); font-size:9px; font-weight:700; flex-shrink:0"
+                        onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+                        onmouseout="this.style.color='var(--odit-text-3)';this.style.borderColor='var(--odit-border-strong)'">
+                        i
+                    </button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="toggleAuth()"
+                        class="text-xs font-medium inline-flex items-center gap-1 transition-colors"
+                        style="color:var(--odit-text-3)"
+                        id="auth-toggle-btn">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                        </svg>
+                        <span id="auth-toggle-label">Audit as logged-in user</span>
+                    </button>
+                    <button type="button"
+                        onclick="triggerHelpChat('How do I audit as a logged-in user? Walk me through exporting my session cookies and using them in Odit.')"
+                        title="How does this work?"
+                        class="transition-colors rounded-full flex items-center justify-center"
+                        style="color:var(--odit-text-3); width:16px; height:16px; border:1.5px solid var(--odit-border-strong); font-size:9px; font-weight:700; flex-shrink:0"
+                        onmouseover="this.style.color='var(--odit-brand)';this.style.borderColor='var(--odit-brand)'"
+                        onmouseout="this.style.color='var(--odit-text-3)';this.style.borderColor='var(--odit-border-strong)'">
+                        i
+                    </button>
+                </div>
             </div>
 
             <div id="auth-section" class="hidden mt-4 text-left rounded-xl p-4" style="background:var(--odit-surface-2);border:1px solid var(--odit-border)">
@@ -251,6 +275,16 @@ window.__oditLiveContext = function() {
 
 let _auditMode = 'quick_scan';
 let _authOpen = false;
+let _consentMode = 'no_interaction';
+
+function toggleConsent() {
+    _consentMode = _consentMode === 'no_interaction' ? 'accept_consent' : 'no_interaction';
+    const active = _consentMode === 'accept_consent';
+    const btn = document.getElementById('consent-toggle-btn');
+    const label = document.getElementById('consent-toggle-label');
+    btn.style.color = active ? 'var(--odit-brand)' : 'var(--odit-text-3)';
+    label.textContent = active ? 'Consent: Accept All ✓' : 'Accept consent banners';
+}
 
 function toggleAuth() {
     _authOpen = !_authOpen;
@@ -333,7 +367,7 @@ async function submitAudit(e) {
         const resp = await fetch('/api/audits', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ base_url: url, mode, max_pages: maxPages, ...(authCookies ? { auth_cookies: authCookies } : {}) })
+            body: JSON.stringify({ base_url: url, mode, max_pages: maxPages, consent_behavior: _consentMode, ...(authCookies ? { auth_cookies: authCookies } : {}) })
         });
         if (!resp.ok) {
             const data = await resp.json().catch(() => ({}));

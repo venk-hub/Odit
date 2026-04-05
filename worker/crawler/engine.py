@@ -572,27 +572,83 @@ def run_crawl(db: Session, audit_run, audit_config) -> None:
 
 
 def _try_accept_consent(page) -> None:
-    """Try to find and click common consent accept buttons."""
+    """Try to find and click common consent accept buttons across major CMPs."""
     selectors = [
-        "button#onetrust-accept-btn-handler",
-        "button.acceptAll",
-        "button[id*='accept']",
-        "button[class*='accept']",
-        "button[id*='Accept']",
-        "a[id*='accept']",
+        # OneTrust
+        "#onetrust-accept-btn-handler",
+        # Cookiebot
         "#CybotCookiebotDialogBodyButtonAccept",
-        ".cb-enable",
+        ".CybotCookiebotDialogBodyButton[id*='Accept']",
+        # Didomi
+        "#didomi-notice-agree-button",
+        "button.didomi-components-button--filled",
+        # TrustArc
+        "#truste-consent-button",
+        ".truste_overlay .pdynamicbutton a",
+        # Quantcast
+        ".qc-cmp2-summary-buttons button[mode='primary']",
+        # CookieYes / CookieLaw
+        ".cky-btn-accept",
+        ".cookielawinfo-button-accept",
+        # Osano
+        "button.osano-cm-accept-all",
+        # Borlabs Cookie
+        "#BorlabsCookieBtn",
+        ".borlabs-cookie .cookie-box button",
+        # Civic Cookie Control
+        "#ccc-notify-accept",
+        "#ccc-accept-settings",
+        # Termly
+        "[id*='termly'] button[class*='accept']",
+        # Klaro
+        ".klaro button.cm-btn-success",
+        # Moove GDPR plugin (WordPress)
+        "#moove_gdpr_cookie_modal_save_settings_button",
+        # Generic id/class patterns
+        "button[id*='accept-all']",
+        "button[id*='acceptAll']",
+        "button[class*='accept-all']",
+        "button[class*='acceptAll']",
+        "button[id*='cookie-accept']",
+        "button[class*='cookie-accept']",
         "[data-testid='cookie-accept']",
+        "[data-testid='accept-all']",
+        "a[id*='accept']",
+        ".cb-enable",
     ]
     for sel in selectors:
         try:
             btn = page.query_selector(sel)
             if btn and btn.is_visible():
                 btn.click(timeout=2000)
-                page.wait_for_timeout(500)
+                page.wait_for_timeout(800)
                 return
         except Exception:
             continue
+
+    # Text-content fallback: find a visible button/link whose text is a common accept phrase
+    try:
+        found = page.evaluate("""() => {
+            const phrases = ['accept all', 'accept all cookies', 'i accept', 'i agree', 'agree to all',
+                             'allow all', 'allow all cookies', 'allow cookies', 'got it', 'ok, i agree',
+                             'agree & proceed', 'consent to all'];
+            const els = Array.from(document.querySelectorAll('button, a[role="button"], [role="button"]'));
+            for (const el of els) {
+                const text = (el.innerText || el.textContent || '').trim().toLowerCase();
+                if (phrases.some(p => text === p || text.startsWith(p))) {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        el.click();
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }""")
+        if found:
+            page.wait_for_timeout(800)
+    except Exception:
+        pass
 
 
 def _execute_journey_steps(page, instructions: list, page_url: str) -> None:

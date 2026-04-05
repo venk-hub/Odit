@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
+from sqlalchemy.orm import selectinload
 import uuid
 import os
 import logging
@@ -51,7 +52,9 @@ async def audit_detail(request: Request, audit_id: str, db: AsyncSession = Depen
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid audit ID")
 
-    result = await db.execute(select(AuditRun).where(AuditRun.id == uid))
+    result = await db.execute(
+        select(AuditRun).options(selectinload(AuditRun.config)).where(AuditRun.id == uid)
+    )
     run = result.scalar_one_or_none()
     if not run:
         raise HTTPException(status_code=404, detail="Audit not found")
@@ -67,9 +70,11 @@ async def audit_detail(request: Request, audit_id: str, db: AsyncSession = Depen
         )
         key_artifacts = art_result.scalars().all()
 
+    consent_behavior = run.config.consent_behavior.value if run.config else "no_interaction"
+
     return templates.TemplateResponse(
         "audit_detail.html",
-        {"request": request, "run": run, "audit_id": audit_id, "key_artifacts": key_artifacts}
+        {"request": request, "run": run, "audit_id": audit_id, "key_artifacts": key_artifacts, "consent_behavior": consent_behavior}
     )
 
 
@@ -350,6 +355,11 @@ async def issue_detail(
             "audit_id": audit_id,
         }
     )
+
+
+@router.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request):
+    return templates.TemplateResponse("help.html", {"request": request})
 
 
 @router.get("/settings", response_class=HTMLResponse)
