@@ -37,17 +37,20 @@ Odit is a four-container Docker Compose appliance that turns any website into a 
 - **Cookie register** — every cookie set during the crawl with full metadata
 - **9-sheet Excel export** — summary, vendors, issues, pages, network requests, cookies, data layer, consent analysis, recommendations
 - **HTML, Markdown, JSON reports** — shareable and CI-ready
+- **Live crawl view** — crossfading screenshot stream while the audit is running
 
-### AI Features *(requires `ANTHROPIC_API_KEY`)*
+### AI Features *(requires Anthropic API key — set in Settings)*
+- **Agentic AI assistant** — sidebar chat that can take direct action: start audits, check progress, navigate the UI, schedule recurring audits, compare two audits
 - **AI Audit Brief** — auto-generated structured brief covering tracking inventory, data flows, issues, and priority actions
 - **Issue enrichment** — each issue gets an AI-written description, likely cause, and recommendation
 - **Fix It** — per-issue step-by-step remediation guide with code examples
-- **Contextual help chat** — agentic sidebar assistant that knows your audit data, current page, and app state; answers questions, explains findings, guides you through features
+- **Live panel navigation** — the AI drives the right panel as it works, showing you exactly what it's doing
 
 ### UI
 - **Live progress** — HTMX-powered real-time crawl updates (no refresh needed)
 - **Dark mode** — full dark/light toggle, persisted across sessions
-- **Resizable chat panel** — collapsible AI assistant sidebar, width saved per session
+- **Resizable AI chat panel** — collapsible sidebar, width saved per session
+- **Multi-conversation history** — persistent chat sessions with full history
 - **Contextual `i` triggers** — clickable info buttons that pre-fire relevant chat questions
 
 ---
@@ -60,7 +63,7 @@ Odit is a four-container Docker Compose appliance that turns any website into a 
 git clone https://github.com/venk-hub/Odit.git
 cd Odit
 
-# Copy and configure environment
+# Copy environment file
 cp .env.example .env
 
 # Start all containers
@@ -71,11 +74,20 @@ start-auditor.bat         # Windows
 open http://localhost:8000
 ```
 
-To enable AI features, add your Anthropic API key to `.env`:
+---
 
-```env
-ANTHROPIC_API_KEY=sk-ant-...
-```
+## Enabling AI Features
+
+AI features use the Anthropic API (Claude). To enable them:
+
+1. Open the app at `http://localhost:8000`
+2. Go to **Settings** (top-right nav)
+3. Enter your Anthropic API key under **AI Configuration**
+4. Click **Save** — the key is stored in the local database and never leaves your machine
+
+> Get a key at [console.anthropic.com](https://console.anthropic.com).
+
+Alternatively, you can set `ANTHROPIC_API_KEY` in your `.env` file before starting — this takes priority over the Settings value and makes the field read-only in the UI.
 
 ---
 
@@ -85,6 +97,22 @@ ANTHROPIC_API_KEY=sk-ant-...
 |------|-------|---------|
 | **Quick Scan** | Up to 50 | Fast overview, first-look audits |
 | **Full Crawl** | Configurable (default 200) | Comprehensive site-wide audit |
+
+---
+
+## AI Agent Capabilities
+
+The sidebar assistant is fully agentic — it takes action, not just answers questions.
+
+| What you say | What it does |
+|---|---|
+| "Audit cnn.com" | Starts the audit immediately, navigates you to the live progress page |
+| "Audit it as a logged-in user — here are my cookies: [...]" | Injects your session cookies before crawling |
+| "What vendors were found?" | Queries the database and gives you specific results |
+| "Any critical issues?" | Fetches and explains the issues directly |
+| "Compare my last two audits" | Diffs vendors and issues, summarises what changed |
+| "Schedule a weekly audit of example.com" | Creates a recurring schedule |
+| "Show me the issues page" | Navigates the right panel for you |
 
 ---
 
@@ -107,7 +135,7 @@ proxy      ← mitmproxy (port 8080) — intercepts all browser traffic
 4. Vendor detection + rule engine run after crawl
 5. AI enrichment runs (if API key configured)
 6. Exports generated — Excel, HTML, Markdown, JSON
-7. UI polls progress every 3s via HTMX
+7. UI polls progress every 3s via HTMX; reloads to results view on completion
 
 ---
 
@@ -177,7 +205,7 @@ DATA_DIR=/data
 PROXY_HOST=proxy
 PROXY_PORT=8080
 APP_PORT=8000
-ANTHROPIC_API_KEY=        # optional — enables AI features
+ANTHROPIC_API_KEY=        # optional — can also be set in the app Settings UI
 ```
 
 ---
