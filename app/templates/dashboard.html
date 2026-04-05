@@ -122,7 +122,7 @@ window.__oditPageContext = {
                 </td>
                 <td class="text-sm font-medium" style="color:var(--odit-text)">{{ run.pages_crawled }}</td>
                 <td class="text-xs" style="color:var(--odit-text-2)">
-                    <time class="odit-reltime" datetime="{{ run.created_at.isoformat() }}" title="{{ run.created_at.strftime('%d %b %Y %H:%M') }}">{{ run.created_at.strftime('%d %b %Y') }}</time>
+                    <time class="odit-reltime" datetime="{{ run.created_at.isoformat() }}Z" title="{{ run.created_at.strftime('%d %b %Y %H:%M') }}">{{ run.created_at.strftime('%d %b %Y') }}</time>
                 </td>
                 <td class="text-right">
                     <div class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">

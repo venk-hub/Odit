@@ -4,14 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Odit - Tracking Auditor{% endblock %}</title>
-    <!-- Dark mode: apply class before paint to avoid flash -->
     <script>
     (function(){
         var s = localStorage.getItem('oditDarkMode');
         var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (s === 'dark' || (s === null && prefersDark)) {
-            document.documentElement.classList.add('dark');
-        }
+        if (s === 'dark' || (s === null && prefersDark)) document.documentElement.classList.add('dark');
     })();
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,12 +16,12 @@
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
     <style>
-        /* ── Design tokens (light mode) ──────────────────────────── */
+        /* ── Design tokens ───────────────────────────────────────── */
         :root {
             --odit-bg:            #f8fafc;
             --odit-surface:       #ffffff;
             --odit-surface-2:     #f1f5f9;
-            --odit-surface-hover: #f8fafc;
+            --odit-surface-hover: #f4f4f8;
             --odit-border:        rgba(15,23,42,0.07);
             --odit-border-md:     rgba(15,23,42,0.11);
             --odit-border-strong: rgba(15,23,42,0.18);
@@ -37,14 +34,15 @@
             --odit-text:          #0f172a;
             --odit-text-2:        #64748b;
             --odit-text-3:        #94a3b8;
+            --chat-bg:            #fafafa;
+            --chat-surface:       #ffffff;
+            --chat-user-bubble:   #1800ad;
         }
-
-        /* ── Design tokens (dark mode) ───────────────────────────── */
         html.dark {
             --odit-bg:            #000000;
             --odit-surface:       #0d0d0d;
             --odit-surface-2:     #0c0c18;
-            --odit-surface-hover: #141414;
+            --odit-surface-hover: #141420;
             --odit-border:        rgba(255,255,255,0.05);
             --odit-border-md:     rgba(255,255,255,0.08);
             --odit-border-strong: rgba(255,255,255,0.12);
@@ -57,6 +55,9 @@
             --odit-text:          #e2e8f0;
             --odit-text-2:        #9090b8;
             --odit-text-3:        #606080;
+            --chat-bg:            #0a0a12;
+            --chat-surface:       #0e0e1a;
+            --chat-user-bubble:   #2a1fa8;
         }
 
         /* ── Base ────────────────────────────────────────────────── */
@@ -68,254 +69,349 @@
             background: var(--odit-bg);
             color: var(--odit-text);
         }
+        * { transition-property: color, background-color, border-color, box-shadow, opacity; transition-duration: 150ms; transition-timing-function: ease; }
+        a, button { transition: color 0.15s, background 0.15s, box-shadow 0.15s, border-color 0.15s, transform 0.15s; }
+
+        /* ── Nav ─────────────────────────────────────────────────── */
         #main-nav {
             background: rgba(255,255,255,0.82);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border-bottom: none;
             box-shadow: 0 1px 0 var(--odit-border-md), 0 2px 8px rgba(15,23,42,0.06);
-            transition: background 0.2s, box-shadow 0.2s;
         }
-        html.dark #main-nav {
-            background: rgba(0,0,0,0.92) !important;
-            box-shadow: none !important;
-        }
-        html.dark #help-sidebar {
-            border-left: 1px solid rgba(124, 106, 240, 0.3);
-            background: #0a0a12;
-        }
-        .nav-link {
-            color: var(--odit-text-2);
-            border-radius: 8px;
-            padding: 6px 12px;
-            transition: color 0.2s, background 0.2s;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-        .nav-link:hover {
-            color: var(--odit-text);
-            background: var(--odit-surface-hover);
-        }
-        .nav-link.active {
-            color: var(--odit-brand);
-        }
+        html.dark #main-nav { background: rgba(0,0,0,0.92) !important; box-shadow: none !important; }
+        .nav-link { color: var(--odit-text-2); border-radius: 8px; padding: 6px 12px; font-size: 0.875rem; font-weight: 500; }
+        .nav-link:hover { color: var(--odit-text); background: var(--odit-surface-hover); }
+        .nav-link.active { color: var(--odit-brand); }
         .nav-new-btn {
-            background: var(--odit-brand);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 6px 14px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+            background: var(--odit-brand); color: #fff; border: none; border-radius: 8px;
+            padding: 6px 14px; font-size: 0.875rem; font-weight: 600;
             box-shadow: 0 1px 4px rgba(24,0,173,0.25);
         }
-        .nav-new-btn:hover {
-            background: var(--odit-brand-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(24,0,173,0.3);
-        }
-        html.dark .nav-new-btn {
-            box-shadow: 0 1px 4px rgba(124,106,240,0.3) !important;
-        }
-        html.dark .nav-new-btn:hover {
-            box-shadow: 0 4px 12px rgba(124,106,240,0.4) !important;
-        }
+        .nav-new-btn:hover { background: var(--odit-brand-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(24,0,173,0.3); }
+        html.dark .nav-new-btn { box-shadow: 0 1px 4px rgba(124,106,240,0.3) !important; }
+        html.dark .nav-new-btn:hover { box-shadow: 0 4px 12px rgba(124,106,240,0.4) !important; }
 
-        /* ── Global utility classes ──────────────────────────────── */
-        .odit-card {
-            background: var(--odit-surface);
-            border-radius: 16px;
-            border: 1px solid var(--odit-border);
-            box-shadow: var(--odit-shadow-sm);
-            transition: box-shadow 0.2s, border-color 0.2s;
-        }
-        .odit-card:hover {
-            box-shadow: var(--odit-shadow);
-            border-color: var(--odit-border-md);
-        }
-
-        .odit-input {
-            background: var(--odit-surface);
-            border: 1px solid var(--odit-border-md);
-            border-radius: 8px;
-            color: var(--odit-text);
-            transition: border-color 0.15s, box-shadow 0.15s;
-            padding: 8px 12px;
-        }
-        .odit-input:focus {
-            outline: none;
-            border-color: var(--odit-brand);
-            box-shadow: 0 0 0 3px rgba(24,0,173,0.08);
-        }
-        html.dark .odit-input:focus {
-            box-shadow: 0 0 0 3px rgba(124,106,240,0.15);
-        }
-
+        /* ── Utility ─────────────────────────────────────────────── */
+        .odit-card { background: var(--odit-surface); border-radius: 16px; border: 1px solid var(--odit-border); box-shadow: var(--odit-shadow-sm); }
+        .odit-card:hover { box-shadow: var(--odit-shadow); border-color: var(--odit-border-md); }
+        .odit-input { background: var(--odit-surface); border: 1px solid var(--odit-border-md); border-radius: 8px; color: var(--odit-text); padding: 8px 12px; }
+        .odit-input:focus { outline: none; border-color: var(--odit-brand); box-shadow: 0 0 0 3px rgba(24,0,173,0.08); }
+        html.dark .odit-input:focus { box-shadow: 0 0 0 3px rgba(124,106,240,0.15); }
         .odit-table { border-radius: 16px; overflow: hidden; }
-        .odit-table th {
-            background: var(--odit-surface-2);
-            color: var(--odit-text-3);
-            font-size: 0.7rem;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            padding: 10px 16px;
-            border-bottom: 1px solid var(--odit-border-md);
-        }
-        .odit-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--odit-border);
-            color: var(--odit-text);
-            font-size: 0.875rem;
-        }
+        .odit-table th { background: var(--odit-surface-2); color: var(--odit-text-3); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 10px 16px; border-bottom: 1px solid var(--odit-border-md); }
+        .odit-table td { padding: 12px 16px; border-bottom: 1px solid var(--odit-border); color: var(--odit-text); font-size: 0.875rem; }
         .odit-table tr:last-child td { border-bottom: none; }
         .odit-table tbody tr { transition: background 0.12s; }
         .odit-table tbody tr:hover { background: var(--odit-surface-hover); }
-
-        /* Smooth transitions */
-        * { transition-property: color, background-color, border-color, box-shadow, opacity; transition-duration: 150ms; transition-timing-function: ease; }
-        a, button { transition: color 0.15s, background 0.15s, box-shadow 0.15s, border-color 0.15s, transform 0.15s; }
-
         .main-area { flex: 1; min-width: 0; }
 
-        /* ── Sidebar ─────────────────────────────────────────────── */
-        :root { --odit-surface-rgb: 255,255,255; }
-        html.dark { --odit-surface-rgb: 13,13,13; }
+        /* ── Chat panel shell ────────────────────────────────────── */
+        :root { --chat-surface-rgb: 255,255,255; }
+        html.dark { --chat-surface-rgb: 10,10,18; }
 
         #help-sidebar {
-            width: 288px;
-            min-width: 220px;
-            max-width: 540px;
+            width: 360px;
+            min-width: 260px;
+            max-width: 560px;
             flex-shrink: 0;
             position: sticky;
             top: 0;
             height: 100vh;
             display: flex;
             flex-direction: column;
-            background: var(--odit-surface);
-            border-left: 1px solid var(--odit-border-strong);
-            transition: width 0.2s cubic-bezier(.4,0,.2,1);
+            background: var(--chat-surface);
+            border-right: 1px solid var(--odit-border-strong);
+            transition: width 0.22s cubic-bezier(.4,0,.2,1);
             overflow: hidden;
         }
+        html.dark #help-sidebar { border-right-color: rgba(124,106,240,0.2); background: var(--chat-bg); }
         #help-sidebar.resizing { transition: none; user-select: none; }
         #help-sidebar.collapsed { width: 46px; }
         #help-sidebar.collapsed .sidebar-body { opacity: 0; pointer-events: none; }
         #help-sidebar.collapsed .sidebar-tab { opacity: 1; pointer-events: auto; }
         #help-sidebar.collapsed #sidebar-resize { display: none; }
 
-        #sidebar-resize {
-            position: absolute;
-            left: 0; top: 0; bottom: 0;
-            width: 5px;
-            cursor: col-resize;
-            z-index: 20;
-            transition: background 0.15s;
-        }
-        #sidebar-resize:hover { background: var(--odit-brand-light); }
-        #sidebar-resize.active { background: rgba(var(--odit-surface-rgb),0.1); }
+        /* Resize handle on right edge */
+        #sidebar-resize { position: absolute; right: 0; top: 0; bottom: 0; width: 5px; cursor: col-resize; z-index: 30; }
+        #sidebar-resize:hover, #sidebar-resize.active { background: rgba(124,106,240,0.2); }
 
-        .sidebar-body {
+        /* ── Chat header ─────────────────────────────────────────── */
+        .chat-header {
             display: flex;
-            flex-direction: column;
-            height: 100%;
-            opacity: 1;
-            transition: opacity 0.12s ease;
-            position: relative;
-        }
-
-        .sidebar-input-float {
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            padding: 6px 12px 14px;
-            background: linear-gradient(to bottom, rgba(var(--odit-surface-rgb),0) 0%, rgba(var(--odit-surface-rgb),1) 18px);
-        }
-        .sidebar-tab {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            display: flex;
-            flex-direction: column;
             align-items: center;
-            padding-top: 13px;
-            gap: 10px;
-            cursor: pointer;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.12s ease;
-            background: var(--odit-surface);
+            justify-content: space-between;
+            padding: 12px 14px 11px;
+            border-bottom: 1px solid var(--odit-border);
+            flex-shrink: 0;
+            gap: 8px;
         }
-        .sidebar-tab:hover { background: var(--odit-surface-hover); }
-        .sidebar-collapsed-label {
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--odit-text-3);
-            transform: rotate(180deg);
+        html.dark .chat-header { border-bottom-color: rgba(124,106,240,0.12); }
+        .chat-header-left { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; }
+        .agent-avatar {
+            width: 32px; height: 32px; border-radius: 9px;
+            background: var(--odit-brand-light);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
+        html.dark .agent-avatar { background: rgba(124,106,240,0.18); }
+        .agent-name { font-size: 0.875rem; font-weight: 700; color: var(--odit-text); line-height: 1.2; }
+        .conv-title-display {
+            font-size: 0.6875rem; color: var(--odit-text-3); font-weight: 400;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;
+        }
+        .agent-status-row { display: flex; align-items: center; gap: 4px; }
+        .agent-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+        .chat-header-btn {
+            width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center;
+            justify-content: center; color: var(--odit-text-3); flex-shrink: 0;
+        }
+        .chat-header-btn:hover { background: var(--odit-surface-hover); color: var(--odit-text); }
 
-        /* Messages scrollbar */
+        /* ── Sidebar body ────────────────────────────────────────── */
+        .sidebar-body { display: flex; flex-direction: column; height: 100%; opacity: 1; transition: opacity 0.12s ease; position: relative; overflow: hidden; }
+
+        /* ── History overlay panel ───────────────────────────────── */
+        .chat-history-panel {
+            position: absolute; inset: 0; z-index: 20;
+            background: var(--chat-surface);
+            display: flex; flex-direction: column;
+            transform: translateX(-100%);
+            transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+        }
+        html.dark .chat-history-panel { background: var(--chat-bg); }
+        #help-sidebar.show-history .chat-history-panel { transform: translateX(0); }
+
+        .history-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 14px; border-bottom: 1px solid var(--odit-border); flex-shrink: 0;
+        }
+        html.dark .history-header { border-bottom-color: rgba(124,106,240,0.12); }
+        .history-title { font-size: 0.875rem; font-weight: 600; color: var(--odit-text); }
+        .history-list { flex: 1; overflow-y: auto; padding: 8px 8px; }
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-thumb { background: var(--odit-border-md); border-radius: 4px; }
+        .conv-group-label {
+            font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--odit-text-3); padding: 10px 8px 4px;
+        }
+        .conv-item {
+            display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+            border-radius: 8px; cursor: pointer; position: relative;
+        }
+        .conv-item:hover { background: var(--odit-surface-hover); }
+        .conv-item.active { background: var(--odit-brand-light); }
+        html.dark .conv-item.active { background: rgba(124,106,240,0.12); }
+        .conv-item-icon { width: 18px; height: 18px; flex-shrink: 0; color: var(--odit-text-3); }
+        .conv-item-title { font-size: 0.8125rem; color: var(--odit-text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .conv-item.active .conv-item-title { color: var(--odit-brand); font-weight: 500; }
+        .conv-item-delete {
+            opacity: 0; flex-shrink: 0; width: 22px; height: 22px; border-radius: 5px;
+            display: flex; align-items: center; justify-content: center; color: var(--odit-text-3);
+        }
+        .conv-item:hover .conv-item-delete { opacity: 1; }
+        .conv-item-delete:hover { background: rgba(239,68,68,0.1); color: #ef4444; }
+        .history-new-btn {
+            display: flex; align-items: center; gap: 8px; padding: 9px 10px;
+            border-radius: 8px; cursor: pointer; color: var(--odit-brand);
+            font-size: 0.8125rem; font-weight: 600; width: 100%;
+        }
+        .history-new-btn:hover { background: var(--odit-brand-light); }
+        html.dark .history-new-btn:hover { background: rgba(124,106,240,0.12); }
+
+        /* ── Messages area ───────────────────────────────────────── */
+        #help-messages {
+            flex: 1; overflow-y: auto; padding: 16px 16px 0;
+            scroll-behavior: smooth; background: var(--chat-bg);
+            display: flex; flex-direction: column; gap: 0;
+        }
         #help-messages::-webkit-scrollbar { width: 4px; }
-        #help-messages::-webkit-scrollbar-track { background: transparent; }
         #help-messages::-webkit-scrollbar-thumb { background: var(--odit-border-md); border-radius: 4px; }
-        #help-messages::-webkit-scrollbar-thumb:hover { background: var(--odit-border-strong); }
 
-        /* Typing animation */
-        @keyframes typingBounce {
-            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-            30% { transform: translateY(-3px); opacity: 1; }
+        /* User message */
+        .msg-user-wrap { display: flex; justify-content: flex-end; padding: 6px 0; }
+        .msg-user-bubble {
+            background: var(--chat-user-bubble); color: #fff;
+            padding: 9px 14px; border-radius: 18px; border-bottom-right-radius: 5px;
+            max-width: 82%; font-size: 0.9rem; line-height: 1.55;
+            word-break: break-word; overflow-wrap: anywhere;
         }
-        .typing-dot {
-            width: 5px; height: 5px; border-radius: 50%;
-            background: var(--odit-brand); display: inline-block;
-            animation: typingBounce 1.2s infinite;
+
+        /* Assistant message */
+        .msg-ai-wrap { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0 4px; }
+        .msg-ai-avatar {
+            width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0; margin-top: 1px;
+            background: var(--odit-brand-light);
+            display: flex; align-items: center; justify-content: center;
         }
+        html.dark .msg-ai-avatar { background: rgba(124,106,240,0.18); }
+        .msg-ai-content {
+            flex: 1; min-width: 0; font-size: 0.9rem; line-height: 1.65;
+            color: var(--odit-text); padding-top: 2px;
+        }
+        .msg-ai-content code {
+            background: var(--odit-surface-2); color: var(--odit-brand);
+            padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.85em; font-family: monospace;
+        }
+        html.dark .msg-ai-content code { background: rgba(124,106,240,0.12); color: var(--odit-brand-2); }
+
+        /* Nav separator */
+        .msg-nav-wrap { display: flex; justify-content: center; padding: 10px 0 4px; }
+        .msg-nav-pill {
+            font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+            color: var(--odit-text-3); background: var(--chat-surface);
+            border: 1px solid var(--odit-border-md); border-radius: 999px; padding: 2px 10px;
+        }
+
+        /* Thinking bubble */
+        .msg-thinking-wrap { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0 4px; }
+        .msg-thinking-body {
+            background: var(--chat-surface); border: 1px solid var(--odit-border-md);
+            border-radius: 14px; border-top-left-radius: 4px;
+            padding: 10px 14px; min-width: 60px;
+        }
+        html.dark .msg-thinking-body { background: rgba(124,106,240,0.05); border-color: rgba(124,106,240,0.12); }
+
+        /* Tool step cards */
+        .tool-step {
+            display: flex; align-items: center; gap: 6px; padding: 4px 9px;
+            border-radius: 6px; background: var(--odit-surface-2); border: 1px solid var(--odit-border-md);
+            font-size: 11px; color: var(--odit-text-3); margin-top: 5px;
+        }
+        html.dark .tool-step { background: rgba(124,106,240,0.07); border-color: rgba(124,106,240,0.15); }
+        .tool-step-icon {
+            width: 14px; height: 14px; border-radius: 3px; background: var(--odit-brand-light);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        html.dark .tool-step-icon { background: rgba(124,106,240,0.18); }
+
+        /* Typing dots */
+        @keyframes typingBounce { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-3px);opacity:1} }
+        .typing-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--odit-brand); display: inline-block; animation: typingBounce 1.2s infinite; }
         .typing-dot:nth-child(2) { animation-delay: 0.18s; }
         .typing-dot:nth-child(3) { animation-delay: 0.36s; }
 
-        /* ── Global dark-mode overrides for Tailwind classes ─────── */
+        /* ── Suggestion chips ────────────────────────────────────── */
+        #suggestion-area {
+            padding: 12px 16px 8px; display: flex; flex-direction: column; gap: 8px;
+        }
+        .suggestion-greeting {
+            font-size: 0.9rem; font-weight: 600; color: var(--odit-text); margin-bottom: 4px;
+        }
+        .suggestion-subtitle { font-size: 0.8125rem; color: var(--odit-text-2); margin-bottom: 8px; }
+        .suggestion-chips { display: flex; flex-direction: column; gap: 6px; }
+        .suggestion-chip {
+            text-align: left; padding: 9px 12px; border-radius: 10px; font-size: 0.8125rem;
+            color: var(--odit-text-2); background: var(--odit-surface);
+            border: 1px solid var(--odit-border-md); cursor: pointer;
+            transition: background 0.12s, border-color 0.12s, color 0.12s;
+        }
+        .suggestion-chip:hover { background: var(--odit-brand-light); border-color: var(--odit-brand); color: var(--odit-brand); }
+        html.dark .suggestion-chip { background: rgba(255,255,255,0.03); }
+        html.dark .suggestion-chip:hover { background: rgba(124,106,240,0.1); }
+
+        /* ── Attachment preview ──────────────────────────────────── */
+        #attach-preview {
+            display: none; padding: 6px 14px 0;
+        }
+        .attach-pill {
+            display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+            background: var(--odit-surface-2); border: 1px solid var(--odit-border-md);
+            border-radius: 8px; font-size: 11px; color: var(--odit-text-2);
+        }
+        .attach-pill-remove { cursor: pointer; color: var(--odit-text-3); }
+        .attach-pill-remove:hover { color: #ef4444; }
+
+        /* ── Chat input bar ──────────────────────────────────────── */
+        .chat-input-area {
+            padding: 8px 12px 14px; flex-shrink: 0;
+            background: linear-gradient(to bottom, rgba(var(--chat-surface-rgb),0) 0%, rgba(var(--chat-surface-rgb),1) 18px);
+        }
+        html.dark .chat-input-area { background: linear-gradient(to bottom, rgba(10,10,18,0) 0%, rgba(10,10,18,1) 18px); }
+        .chat-input-box {
+            background: var(--odit-surface);
+            border: 1.5px solid var(--odit-border-strong);
+            border-radius: 16px;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        }
+        html.dark .chat-input-box { background: #0d0d1c; border-color: rgba(124,106,240,0.22); }
+        .chat-input-box:focus-within {
+            border-color: var(--odit-brand);
+            box-shadow: 0 0 0 3px rgba(24,0,173,0.07), 0 2px 10px rgba(0,0,0,0.06);
+        }
+        html.dark .chat-input-box:focus-within { box-shadow: 0 0 0 3px rgba(124,106,240,0.14), 0 2px 10px rgba(0,0,0,0.2); }
+        #help-input {
+            background: transparent !important; border: none !important;
+            box-shadow: none !important; outline: none; resize: none;
+            width: 100%; padding: 11px 12px 6px;
+            font-size: 0.875rem; line-height: 1.55; color: var(--odit-text) !important;
+            max-height: 140px; display: block; border-radius: 16px;
+        }
+        html.dark #help-input { background-color: transparent !important; border-color: transparent !important; }
+        #help-input::placeholder { color: var(--odit-text-3) !important; }
+        .chat-input-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 8px 8px;
+        }
+        .input-action-btn {
+            width: 28px; height: 28px; border-radius: 8px; display: flex;
+            align-items: center; justify-content: center; color: var(--odit-text-3); cursor: pointer;
+        }
+        .input-action-btn:hover { background: var(--odit-surface-hover); color: var(--odit-text-2); }
+        #help-send-btn {
+            width: 30px; height: 30px; border-radius: 9px; background: var(--odit-brand);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 6px rgba(24,0,173,0.28); flex-shrink: 0;
+        }
+        #help-send-btn:hover { background: var(--odit-brand-hover); transform: scale(1.05); }
+        #help-send-btn:disabled { opacity: 0.4; transform: none; cursor: not-allowed; }
+        html.dark #help-send-btn { box-shadow: 0 2px 6px rgba(124,106,240,0.3); }
+        .input-disclaimer { font-size: 10px; color: var(--odit-text-3); text-align: center; margin-top: 6px; line-height: 1.4; }
+
+        /* ── Collapsed rail ──────────────────────────────────────── */
+        .sidebar-tab {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; align-items: center;
+            padding-top: 13px; gap: 10px; cursor: pointer;
+            opacity: 0; pointer-events: none; transition: opacity 0.12s ease;
+            background: var(--chat-surface);
+        }
+        html.dark .sidebar-tab { background: var(--chat-bg); }
+        .sidebar-tab:hover { background: var(--odit-surface-hover); }
+        #help-sidebar.collapsed .sidebar-body { opacity: 0; pointer-events: none; }
+        #help-sidebar.collapsed .sidebar-tab { opacity: 1; pointer-events: auto; }
+        .sidebar-collapsed-label {
+            writing-mode: vertical-rl; text-orientation: mixed;
+            font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--odit-text-3); transform: rotate(180deg);
+        }
+
+        /* ── Global dark-mode Tailwind overrides ─────────────────── */
         html.dark .bg-white { background-color: var(--odit-surface) !important; }
         html.dark .bg-gray-50 { background-color: var(--odit-surface-2) !important; }
         html.dark .bg-gray-100 { background-color: var(--odit-surface-hover) !important; }
         html.dark .bg-gray-200 { background-color: rgba(99,85,224,0.12) !important; }
         html.dark .bg-slate-50 { background-color: var(--odit-surface-2) !important; }
-
         html.dark .text-gray-900, html.dark .text-gray-800 { color: var(--odit-text) !important; }
         html.dark .text-gray-700 { color: #b5b5d8 !important; }
         html.dark .text-gray-600 { color: #9090b8 !important; }
         html.dark .text-gray-500 { color: #72728a !important; }
         html.dark .text-gray-400 { color: #55556a !important; }
         html.dark .text-gray-300 { color: #424258 !important; }
-
         html.dark .border-gray-100 { border-color: var(--odit-border) !important; }
         html.dark .border-gray-200 { border-color: var(--odit-border-md) !important; }
         html.dark .border-gray-300 { border-color: var(--odit-border-strong) !important; }
-
         html.dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]),
-        html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) {
-            border-color: var(--odit-border) !important;
-        }
-
-        /* Logo — invert to white in dark mode */
+        html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--odit-border) !important; }
         html.dark .odit-logo { filter: brightness(0) invert(1); }
-
-        /* Nav — dark mode handled via CSS variables in #main-nav and .nav-new-btn above */
-
-        /* Form elements */
-        html.dark input:not([type="checkbox"]):not([type="radio"]),
-        html.dark textarea,
-        html.dark select {
+        html.dark input:not([type="checkbox"]):not([type="radio"]), html.dark textarea, html.dark select {
             background-color: var(--odit-surface-2) !important;
             border-color: var(--odit-border-strong) !important;
             color: var(--odit-text) !important;
         }
-        html.dark input::placeholder,
-        html.dark textarea::placeholder { color: var(--odit-text-3) !important; }
+        html.dark #help-input { background-color: transparent !important; border-color: transparent !important; }
+        html.dark input::placeholder, html.dark textarea::placeholder { color: var(--odit-text-3) !important; }
         html.dark select option { background: var(--odit-surface); color: var(--odit-text); }
-
-        /* Status pill backgrounds */
         html.dark .bg-green-50, html.dark .bg-emerald-50 { background-color: rgba(16,185,129,0.13) !important; }
         html.dark .bg-red-50 { background-color: rgba(239,68,68,0.13) !important; }
         html.dark .bg-orange-50 { background-color: rgba(234,88,12,0.13) !important; }
@@ -324,37 +420,19 @@
         html.dark .bg-indigo-50 { background-color: rgba(99,102,241,0.12) !important; }
         html.dark .bg-blue-50 { background-color: rgba(59,130,246,0.12) !important; }
         html.dark .bg-teal-50 { background-color: rgba(20,184,166,0.12) !important; }
-
         html.dark .border-red-100, html.dark .border-red-200 { border-color: rgba(239,68,68,0.22) !important; }
         html.dark .border-orange-100 { border-color: rgba(234,88,12,0.22) !important; }
         html.dark .border-yellow-100 { border-color: rgba(234,179,8,0.22) !important; }
         html.dark .border-green-100, html.dark .border-emerald-100 { border-color: rgba(16,185,129,0.22) !important; }
         html.dark .border-purple-100 { border-color: rgba(167,139,250,0.22) !important; }
         html.dark .border-indigo-100 { border-color: rgba(99,102,241,0.22) !important; }
-
-        /* Hover/interactive */
-        html.dark .hover\:bg-gray-50:hover,
-        html.dark .hover\:bg-gray-100:hover,
-        html.dark .hover\:bg-slate-50:hover { background-color: var(--odit-surface-hover) !important; }
+        html.dark .hover\:bg-gray-50:hover, html.dark .hover\:bg-gray-100:hover, html.dark .hover\:bg-slate-50:hover { background-color: var(--odit-surface-hover) !important; }
         html.dark .hover\:bg-red-50:hover { background-color: rgba(239,68,68,0.1) !important; }
-
-        /* Code / pre */
-        html.dark code:not([class]) {
-            background: var(--odit-surface-hover) !important;
-            color: var(--odit-brand-2) !important;
-        }
+        html.dark code:not([class]) { background: var(--odit-surface-hover) !important; color: var(--odit-brand-2) !important; }
         html.dark pre { background: var(--odit-surface-2) !important; border-color: var(--odit-border) !important; }
-
-        /* Rounded card override for inline border/shadow */
-        html.dark .rounded-xl,
-        html.dark .rounded-2xl,
-        html.dark .rounded-lg { color: inherit; }
-
-        /* Gradient backgrounds (AI analysis sections) */
+        html.dark .rounded-xl, html.dark .rounded-2xl, html.dark .rounded-lg { color: inherit; }
         html.dark .from-purple-50 { --tw-gradient-from: rgba(139,92,246,0.1) var(--tw-gradient-from-position) !important; }
         html.dark .to-indigo-50 { --tw-gradient-to: rgba(99,102,241,0.1) var(--tw-gradient-to-position) !important; }
-
-        /* Brand-colored Tailwind arbitrary-value classes */
         html.dark .bg-\[\#1800ad\] { background-color: var(--odit-brand) !important; }
         html.dark .bg-\[\#6355e0\] { background-color: var(--odit-brand) !important; }
         html.dark .bg-\[\#3820c4\] { background-color: var(--odit-brand-2) !important; }
@@ -366,16 +444,13 @@
         html.dark .text-\[\#13008a\] { color: var(--odit-brand) !important; }
         html.dark .text-\[\#3820c4\] { color: var(--odit-brand-2) !important; }
         html.dark .text-\[\#0e0068\] { color: var(--odit-brand) !important; }
-        html.dark .hover\:bg-\[\#13008a\]:hover,
-        html.dark .hover\:bg-\[\#1800ad\]:hover { background-color: var(--odit-brand-hover) !important; }
+        html.dark .hover\:bg-\[\#13008a\]:hover, html.dark .hover\:bg-\[\#1800ad\]:hover { background-color: var(--odit-brand-hover) !important; }
         html.dark .hover\:text-\[\#1800ad\]:hover { color: var(--odit-brand) !important; }
         html.dark .hover\:text-\[\#0e0068\]:hover { color: var(--odit-brand-hover) !important; }
         html.dark .has-\[\:checked\]\:bg-\[\#f0eeff\]:has(:checked) { background-color: var(--odit-brand-light) !important; }
         html.dark .has-\[\:checked\]\:border-\[\#3820c4\]:has(:checked) { border-color: var(--odit-brand) !important; }
         html.dark .hover\:border-\[\#6355e0\]:hover { border-color: var(--odit-brand) !important; }
         html.dark .focus\:ring-\[\#3820c4\]:focus { --tw-ring-color: var(--odit-brand); }
-
-        /* More semantic color backgrounds */
         html.dark .bg-green-100 { background-color: rgba(16,185,129,0.18) !important; }
         html.dark .bg-yellow-100 { background-color: rgba(234,179,8,0.15) !important; }
         html.dark .bg-orange-100 { background-color: rgba(249,115,22,0.15) !important; }
@@ -387,14 +462,133 @@
         html.dark .border-red-400 { border-color: rgba(239,68,68,0.5) !important; }
         html.dark .bg-emerald-600 { background-color: #059669 !important; }
         html.dark .hover\:bg-emerald-700:hover { background-color: #047857 !important; }
-
-        @media (max-width: 900px) {
-            #help-sidebar { display: none; }
-        }
+        @media (max-width: 900px) { #help-sidebar { display: none; } }
     </style>
 </head>
 <body class="text-gray-800 dark:text-gray-200" style="display:flex; min-height:100vh;">
-    <!-- Left column: nav + content -->
+
+    <!-- ═══ LEFT: AI Chat Panel ═══════════════════════════════════ -->
+    <aside id="help-sidebar">
+        <div id="sidebar-resize"></div>
+
+        <!-- Collapsed slim rail -->
+        <div class="sidebar-tab" onclick="toggleSidebar()" title="Open Odit AI" role="button" tabindex="0">
+            <div style="width:32px;height:32px;border-radius:9px;background:var(--odit-brand-light);display:flex;align-items:center;justify-content:center">
+                <svg style="width:16px;height:16px;color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m1.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+            </div>
+            <span class="sidebar-collapsed-label">AI</span>
+            <div id="help-badge" class="hidden" style="width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,0.25)"></div>
+        </div>
+
+        <!-- Main sidebar body -->
+        <div class="sidebar-body">
+
+            <!-- History overlay (slides in over chat) -->
+            <div class="chat-history-panel" id="chat-history-panel">
+                <div class="history-header">
+                    <button class="chat-header-btn" onclick="hideChatHistory()" title="Back to chat">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <span class="history-title">Conversations</span>
+                    <button class="chat-header-btn" onclick="newChat()" title="New conversation">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="history-list" id="chat-history-list"></div>
+            </div>
+
+            <!-- Chat header -->
+            <div class="chat-header">
+                <div class="chat-header-left">
+                    <div class="agent-avatar">
+                        <svg style="width:16px;height:16px;color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m1.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                    </div>
+                    <div style="min-width:0">
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <img src="/static/odit.svg" alt="Odit" class="odit-logo" style="height:18px;width:auto" />
+                            <div class="agent-status-dot" style="flex-shrink:0"></div>
+                        </div>
+                        <div class="conv-title-display" id="conv-subtitle">New conversation</div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:2px;align-items:center">
+                    <!-- History / conversations -->
+                    <button class="chat-header-btn" onclick="showChatHistory()" title="All conversations">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <!-- New chat -->
+                    <button class="chat-header-btn" onclick="newChat()" title="New conversation">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div id="help-messages"></div>
+
+            <!-- Suggestion area (shown when chat is empty) -->
+            <div id="suggestion-area" style="display:none">
+                <div class="px-4 pt-4 pb-2">
+                    <p class="suggestion-greeting">What would you like to know?</p>
+                    <p class="suggestion-subtitle">I can look up your audits, explain findings, and guide you through the app.</p>
+                    <div class="suggestion-chips">
+                        <button class="suggestion-chip" onclick="useSuggestion(this)">What vendors were detected in my latest audit?</button>
+                        <button class="suggestion-chip" onclick="useSuggestion(this)">Explain the critical issues found</button>
+                        <button class="suggestion-chip" onclick="useSuggestion(this)">How do I audit a site I'm logged into?</button>
+                        <button class="suggestion-chip" onclick="useSuggestion(this)">What does my GDPR risk score mean?</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File attachment preview -->
+            <div id="attach-preview"></div>
+
+            <!-- Input area -->
+            <div class="chat-input-area">
+                <div class="chat-input-box">
+                    <textarea id="help-input"
+                        placeholder="Ask anything about your audit…"
+                        rows="1"
+                        onkeydown="handleHelpKey(event)"
+                        oninput="autoResize(this)"
+                    ></textarea>
+                    <div class="chat-input-footer">
+                        <div style="display:flex;gap:2px">
+                            <!-- File attach -->
+                            <label class="input-action-btn" title="Attach file">
+                                <input type="file" id="file-attach-input" style="display:none"
+                                    accept=".txt,.csv,.json,.md,.har"
+                                    onchange="handleFileAttach(event)">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                                </svg>
+                            </label>
+                        </div>
+                        <button onclick="sendHelp()" id="help-send-btn" title="Send">
+                            <svg class="w-4 h-4" style="color:#fff" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <p class="input-disclaimer">Odit may make mistakes. Verify important findings.</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═══ RIGHT: Audit canvas ════════════════════════════════════ -->
     <div class="main-area" style="flex:1; min-width:0; display:flex; flex-direction:column;">
         <nav id="main-nav" class="sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -405,20 +599,16 @@
                     <div class="flex items-center gap-0.5">
                         <a href="/" class="nav-link text-sm font-medium px-3 py-1.5 rounded-md">Audits</a>
                         <a href="/settings" class="nav-link text-sm font-medium px-3 py-1.5 rounded-md">Settings</a>
-                        <!-- Dark mode toggle -->
                         <button onclick="toggleDarkMode()" id="dark-mode-btn"
-                            class="nav-link rounded-md p-1.5 transition-colors ml-1"
-                            title="Toggle dark mode"
-                            aria-label="Toggle dark mode">
-                            <svg id="dm-sun" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            class="nav-link rounded-md p-1.5 ml-1" title="Toggle dark mode">
+                            <svg id="dm-sun" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
                             </svg>
-                            <svg id="dm-moon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <svg id="dm-moon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                             </svg>
                         </button>
-                        <a href="/"
-                            class="nav-new-btn inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-lg ml-2">
+                        <a href="/" class="nav-new-btn inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-lg ml-2">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                             </svg>
@@ -428,73 +618,62 @@
                 </div>
             </div>
         </nav>
-
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-            {% block content %}{% endblock %}
-        </main>
-        <footer class="mt-auto py-5 text-center text-xs" style="color:var(--odit-text-3)">
-            Odit &mdash; Local-first tracking auditor
-        </footer>
-    </div>
-
-        <!-- Persistent help sidebar -->
-        <aside id="help-sidebar">
-            <!-- Resize handle -->
-            <div id="sidebar-resize"></div>
-
-            <!-- Collapsed tab (click to expand) -->
-            <div class="sidebar-tab" onclick="toggleSidebar()" title="Toggle help sidebar" aria-label="Toggle help sidebar" role="button" tabindex="0">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background:var(--odit-brand-light)">
-                    <svg class="w-4 h-4" style="color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-                <span class="sidebar-collapsed-label">Help</span>
-                <div id="help-badge" class="hidden w-2 h-2 rounded-full" style="background:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,0.2)"></div>
+        <!-- Server-rendered content (initial page load) -->
+        <div id="page-content" style="display:flex; flex-direction:column; flex:1; min-height:0;">
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+                {% block content %}{% endblock %}
+            </main>
+            <footer class="mt-auto py-5 text-center text-xs" style="color:var(--odit-text-3)">
+                Odit &mdash; Local-first tracking auditor
+            </footer>
+        </div>
+        <!-- Agent-driven iframe — shown when the AI navigates the panel -->
+        <div id="agent-frame-wrap" style="display:none; flex-direction:column; flex:1; min-height:0;">
+            <!-- Agent navigation banner -->
+            <div id="agent-nav-bar" style="
+                display:flex; align-items:center; gap:8px;
+                padding:6px 14px; font-size:12px; font-weight:500;
+                background:var(--odit-brand-light); border-bottom:1px solid var(--odit-border);
+                color:var(--odit-brand); flex-shrink:0;">
+                <svg style="width:13px;height:13px;flex-shrink:0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                <span id="agent-nav-label">Agent navigated here</span>
+                <button onclick="dismissAgentFrame()" title="Return to previous page" style="
+                    margin-left:auto; display:flex; align-items:center; gap:4px;
+                    padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600;
+                    background:var(--odit-brand); color:#fff; border:none; cursor:pointer;">
+                    ✕ Dismiss
+                </button>
             </div>
-
-            <!-- Expanded sidebar body -->
-            <div class="sidebar-body">
-                <!-- Messages -->
-                <div id="help-messages" class="flex-1 overflow-y-auto" style="background:var(--odit-bg); display:flex; flex-direction:column; gap:10px; padding:14px 12px 90px; scroll-behavior:smooth">
-                    <!-- Populated by JS -->
-                </div>
-
-                <!-- Floating input -->
-                <div class="sidebar-input-float">
-                    <div class="flex items-end gap-2">
-                        <textarea id="help-input"
-                            placeholder="Ask a question…"
-                            rows="1"
-                            onkeydown="handleHelpKey(event)"
-                            oninput="autoResize(this)"
-                            class="flex-1 resize-none outline-none leading-relaxed"
-                            style="font-size:0.8125rem; border:1.5px solid var(--odit-border-strong); border-radius:10px; padding:8px 12px; max-height:80px; background:var(--odit-surface); color:var(--odit-text); transition:border-color 0.15s; box-shadow:0 2px 8px rgba(0,0,0,0.08);"
-                            onfocus="this.style.borderColor='var(--odit-brand)';this.style.outline='none'"
-                            onblur="this.style.borderColor='var(--odit-border-strong)'"
-                        ></textarea>
-                        <button onclick="sendHelp()"
-                            id="help-send-btn"
-                            class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-                            style="background:var(--odit-brand); box-shadow:0 2px 8px rgba(24,0,173,0.3)"
-                            onmouseover="this.style.background='var(--odit-brand-hover)'"
-                            onmouseout="this.style.background='var(--odit-brand)'">
-                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </aside>
+            <iframe id="main-frame"
+                style="width:100%; flex:1; border:none; min-height:0;"
+                src="about:blank">
+            </iframe>
+        </div>
     </div>
 
     {% block page_context_script %}{% endblock %}
 
     <script>
+    // ── Embed mode: hide sidebar when loaded inside agent iframe ──
+    (function() {
+        if (window.self !== window.top) {
+            // Running inside the agent navigation iframe
+            document.documentElement.style.setProperty('--embed-mode', '1');
+            document.addEventListener('DOMContentLoaded', function() {
+                var sidebar = document.getElementById('help-sidebar');
+                if (sidebar) sidebar.style.cssText = 'display:none!important';
+                var nav = document.getElementById('main-nav');
+                if (nav) nav.style.cssText = 'display:none!important';
+                var mainArea = document.querySelector('.main-area');
+                if (mainArea) { mainArea.style.width = '100%'; mainArea.style.flex = '1'; }
+            });
+        }
+    })();
+
     // ── Dark mode ─────────────────────────────────────────────────
     const DARK_KEY = 'oditDarkMode';
-
     function applyDarkMode(dark) {
         if (dark) {
             document.documentElement.classList.add('dark');
@@ -506,39 +685,213 @@
             document.getElementById('dm-moon').classList.remove('hidden');
         }
     }
-
     function toggleDarkMode() {
         const isDark = document.documentElement.classList.contains('dark');
         localStorage.setItem(DARK_KEY, isDark ? 'light' : 'dark');
         applyDarkMode(!isDark);
     }
+    document.addEventListener('DOMContentLoaded', () => applyDarkMode(document.documentElement.classList.contains('dark')));
 
-    // Sync icon state on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        applyDarkMode(document.documentElement.classList.contains('dark'));
-    });
-
-    // ── Sidebar ───────────────────────────────────────────────────
+    // ── Multi-conversation management ─────────────────────────────
+    const CHATS_KEY   = 'oditChats';
+    const ACTIVE_KEY  = 'oditActiveChatId';
     const SIDEBAR_KEY = 'oditSidebarOpen';
-    const LOG_KEY = 'oditHelpLog';
-    const HIST_KEY = 'oditHelpHistory';
-    const PAGE_KEY = 'oditLastPage';
+    const PAGE_KEY    = 'oditLastPage';
 
-    let helpHistory = [];
-    let helpLog = [];
+    let chats = [];
+    let activeChatId = null;
+    let helpHistory  = [];   // current conv API history
+    let helpLog      = [];   // current conv render log
+    let pendingFile  = null; // { name, content }
 
-    function renderMd(text) {
-        return text
-            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-            .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-            .replace(/`([^`]+)`/g,'<code style="background:var(--odit-brand-light);color:var(--odit-brand);padding:0.15em 0.4em;border-radius:4px;font-size:0.9em;font-family:monospace">$1</code>')
-            .replace(/^### (.+)$/gm,'<p style="font-weight:700;color:var(--odit-brand);margin:0.6em 0 0.25em;font-size:0.875em">$1</p>')
-            .replace(/^## (.+)$/gm,'<p style="font-weight:700;color:var(--odit-text-2);margin:0.7em 0 0.25em;font-size:0.7em;text-transform:uppercase;letter-spacing:0.08em">$1</p>')
-            .replace(/^- (.+)$/gm,'<div style="display:flex;gap:6px;margin:3px 0;align-items:baseline"><span style="color:var(--odit-brand);font-size:6px;flex-shrink:0;margin-top:1px">●</span><span>$1</span></div>')
-            .replace(/\n{2,}/g,'<div style="height:6px"></div>')
-            .replace(/\n/g,' ');
+    function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+    function loadChats() {
+        try { chats = JSON.parse(localStorage.getItem(CHATS_KEY) || '[]'); } catch(e) { chats = []; }
+        activeChatId = localStorage.getItem(ACTIVE_KEY);
+    }
+    function saveChats() {
+        try { localStorage.setItem(CHATS_KEY, JSON.stringify(chats)); } catch(e) {}
+    }
+    function getActiveChat() { return chats.find(c => c.id === activeChatId) || null; }
+
+    function updateActiveChat() {
+        const chat = getActiveChat();
+        if (!chat) return;
+        chat.messages   = [...helpLog];
+        chat.history    = [...helpHistory];
+        chat.updatedAt  = new Date().toISOString();
+        saveChats();
     }
 
+    function autoTitleChat(firstMsg) {
+        const chat = getActiveChat();
+        if (!chat || chat.title !== 'New conversation') return;
+        chat.title = firstMsg.length > 46 ? firstMsg.slice(0, 46) + '…' : firstMsg;
+        const el = document.getElementById('conv-subtitle');
+        if (el) el.textContent = chat.title;
+        saveChats();
+    }
+
+    // Create and activate a new empty conversation
+    function newChat() {
+        const chat = {
+            id: genId(), title: 'New conversation',
+            messages: [], history: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        chats.unshift(chat);
+        activeChatId = chat.id;
+        localStorage.setItem(ACTIVE_KEY, activeChatId);
+        saveChats();
+
+        helpLog = []; helpHistory = [];
+        document.getElementById('help-messages').innerHTML = '';
+        const el = document.getElementById('conv-subtitle');
+        if (el) el.textContent = 'New conversation';
+        hideChatHistory();
+        showSuggestions(true);
+        pendingFile = null;
+        renderAttachPreview();
+    }
+
+    // Load an existing conversation by id
+    function loadChat(id) {
+        const chat = chats.find(c => c.id === id);
+        if (!chat) return;
+        activeChatId = id;
+        localStorage.setItem(ACTIVE_KEY, activeChatId);
+
+        helpLog = [...chat.messages];
+        helpHistory = [...chat.history];
+        const el = document.getElementById('conv-subtitle');
+        if (el) el.textContent = chat.title;
+
+        const container = document.getElementById('help-messages');
+        container.innerHTML = '';
+        for (const entry of helpLog) renderMsgDOM(entry);
+        container.scrollTop = container.scrollHeight;
+
+        hideChatHistory();
+        showSuggestions(helpLog.length === 0);
+        pendingFile = null;
+        renderAttachPreview();
+    }
+
+    function deleteChat(event, id) {
+        event.stopPropagation();
+        chats = chats.filter(c => c.id !== id);
+        saveChats();
+        if (activeChatId === id) {
+            if (chats.length > 0) loadChat(chats[0].id);
+            else newChat();
+        }
+        renderHistoryList();
+    }
+
+    // ── Conversation history panel ────────────────────────────────
+    function showChatHistory() {
+        renderHistoryList();
+        document.getElementById('help-sidebar').classList.add('show-history');
+    }
+    function hideChatHistory() {
+        document.getElementById('help-sidebar').classList.remove('show-history');
+    }
+    function renderHistoryList() {
+        const list = document.getElementById('chat-history-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        // New chat button at top
+        const nb = document.createElement('button');
+        nb.className = 'history-new-btn';
+        nb.onclick = newChat;
+        nb.innerHTML = `<svg style="width:15px;height:15px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> New conversation`;
+        list.appendChild(nb);
+
+        if (chats.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'padding:20px 16px;text-align:center;color:var(--odit-text-3);font-size:13px';
+            empty.textContent = 'No conversations yet';
+            list.appendChild(empty);
+            return;
+        }
+
+        const now = new Date();
+        const todayStr = now.toDateString();
+        const yesterdayStr = new Date(now - 86400000).toDateString();
+        const weekAgo = new Date(now - 7 * 86400000);
+
+        const groups = [
+            { label: 'Today',       items: [] },
+            { label: 'Yesterday',   items: [] },
+            { label: 'Last 7 days', items: [] },
+            { label: 'Older',       items: [] },
+        ];
+        for (const chat of chats) {
+            const d = new Date(chat.updatedAt);
+            const ds = d.toDateString();
+            if      (ds === todayStr)     groups[0].items.push(chat);
+            else if (ds === yesterdayStr) groups[1].items.push(chat);
+            else if (d >= weekAgo)        groups[2].items.push(chat);
+            else                          groups[3].items.push(chat);
+        }
+
+        for (const group of groups) {
+            if (group.items.length === 0) continue;
+            const label = document.createElement('div');
+            label.className = 'conv-group-label';
+            label.textContent = group.label;
+            list.appendChild(label);
+
+            for (const chat of group.items) {
+                const item = document.createElement('div');
+                item.className = 'conv-item' + (chat.id === activeChatId ? ' active' : '');
+                item.innerHTML = `
+                    <svg class="conv-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:15px;height:15px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                    </svg>
+                    <span class="conv-item-title">${chat.title.replace(/</g,'&lt;')}</span>
+                    <button class="conv-item-delete" title="Delete" onclick="deleteChat(event,'${chat.id}')">
+                        <svg style="width:12px;height:12px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>`;
+                item.addEventListener('click', () => loadChat(chat.id));
+                list.appendChild(item);
+            }
+        }
+    }
+
+    // ── Agent iframe navigation ───────────────────────────────────
+    function navigateAgentFrame(url) {
+        const wrap = document.getElementById('agent-frame-wrap');
+        const frame = document.getElementById('main-frame');
+        const pageContent = document.getElementById('page-content');
+        const label = document.getElementById('agent-nav-label');
+        if (!wrap || !frame) return;
+        frame.src = url;
+        wrap.style.display = 'flex';
+        if (pageContent) pageContent.style.display = 'none';
+        // Show a friendly label based on the path
+        if (label) {
+            const path = url.replace(/^https?:\/\/[^/]+/, '');
+            if (path === '/' || path === '') label.textContent = 'Agent navigated — Dashboard';
+            else if (path.startsWith('/audits/') && path.split('/').length === 3) label.textContent = 'Agent navigated — Audit detail';
+            else if (path === '/settings') label.textContent = 'Agent navigated — Settings';
+            else label.textContent = 'Agent navigated — ' + path;
+        }
+    }
+
+    function dismissAgentFrame() {
+        const wrap = document.getElementById('agent-frame-wrap');
+        const frame = document.getElementById('main-frame');
+        const pageContent = document.getElementById('page-content');
+        if (wrap) wrap.style.display = 'none';
+        if (frame) frame.src = 'about:blank';
+        if (pageContent) pageContent.style.display = 'flex';
+    }
+
+    // ── Sidebar collapse ──────────────────────────────────────────
     function toggleSidebar() {
         const sidebar = document.getElementById('help-sidebar');
         const collapsed = sidebar.classList.toggle('collapsed');
@@ -552,24 +905,76 @@
         }
     }
 
-    const MSG_STYLE = 'font-size:0.8125rem;line-height:1.55';
-    const AVATAR = `<div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style="background:var(--odit-brand-light);margin-top:1px"><svg style="width:13px;height:13px;color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>`;
+    // ── Suggestion chips ──────────────────────────────────────────
+    function showSuggestions(show) {
+        const el = document.getElementById('suggestion-area');
+        if (el) el.style.display = show ? '' : 'none';
+    }
+    function useSuggestion(btn) {
+        const text = btn.textContent.trim();
+        document.getElementById('help-input').value = text;
+        showSuggestions(false);
+        sendHelp();
+    }
+
+    // ── File attachment ───────────────────────────────────────────
+    function handleFileAttach(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            pendingFile = { name: file.name, content: e.target.result.slice(0, 8000) };
+            renderAttachPreview();
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+    function renderAttachPreview() {
+        const el = document.getElementById('attach-preview');
+        if (!el) return;
+        if (!pendingFile) { el.style.display = 'none'; el.innerHTML = ''; return; }
+        el.style.display = '';
+        el.innerHTML = `<div class="attach-pill">
+            <svg style="width:12px;height:12px;color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+            <span>${pendingFile.name.replace(/</g,'&lt;')}</span>
+            <span class="attach-pill-remove" onclick="removeAttach()">×</span>
+        </div>`;
+    }
+    function removeAttach() { pendingFile = null; renderAttachPreview(); }
+
+    // ── Markdown renderer ─────────────────────────────────────────
+    function renderMd(text) {
+        return text
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g,'<em>$1</em>')
+            .replace(/`([^`]+)`/g,'<code>$1</code>')
+            .replace(/^### (.+)$/gm,'<p style="font-weight:700;color:var(--odit-brand);margin:0.7em 0 0.2em;font-size:0.9em">$1</p>')
+            .replace(/^## (.+)$/gm,'<p style="font-weight:700;color:var(--odit-text-2);margin:0.8em 0 0.2em;font-size:0.7em;text-transform:uppercase;letter-spacing:0.08em">$1</p>')
+            .replace(/^- (.+)$/gm,'<div style="display:flex;gap:7px;margin:4px 0;align-items:baseline"><span style="color:var(--odit-brand);font-size:7px;flex-shrink:0;margin-top:2px">●</span><span>$1</span></div>')
+            .replace(/\[(.+?)\]\((.+?)\)/g,'<a href="$2" target="_blank" style="color:var(--odit-brand);text-decoration:underline">$1</a>')
+            .replace(/\n{2,}/g,'<div style="height:7px"></div>')
+            .replace(/\n/g,' ');
+    }
+
+    // ── Render a message entry into the DOM ───────────────────────
+    const AI_ICON_SVG = `<svg style="width:14px;height:14px;color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m1.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>`;
 
     function renderMsgDOM(entry) {
         const container = document.getElementById('help-messages');
         const wrap = document.createElement('div');
 
         if (entry.type === 'user') {
-            wrap.style.cssText = 'display:flex;justify-content:flex-end';
+            wrap.className = 'msg-user-wrap';
             const safe = entry.rawText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-            wrap.innerHTML = `<div style="${MSG_STYLE};background:var(--odit-brand);color:#fff;padding:8px 12px;border-radius:12px;max-width:88%;word-break:break-word;overflow-wrap:anywhere">${safe}</div>`;
+            wrap.innerHTML = `<div class="msg-user-bubble">${safe}</div>`;
         } else if (entry.type === 'assistant') {
-            wrap.style.cssText = 'display:flex;gap:8px;align-items:flex-start';
-            wrap.innerHTML = `${AVATAR}<div class="msg-bubble" style="${MSG_STYLE};background:var(--odit-surface);color:var(--odit-text);padding:9px 12px;border-radius:12px;max-width:calc(100% - 34px);border:1px solid var(--odit-border-md);word-break:break-word;overflow-wrap:anywhere">${renderMd(entry.rawText)}</div>`;
+            wrap.className = 'msg-ai-wrap';
+            wrap.innerHTML = `<div class="msg-ai-avatar">${AI_ICON_SVG}</div><div class="msg-ai-content msg-bubble">${renderMd(entry.rawText)}</div>`;
         } else if (entry.type === 'nav') {
             const safe = entry.rawText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-            wrap.style.cssText = 'display:flex;justify-content:center;margin:6px 0 2px';
-            wrap.innerHTML = `<span style="font-size:9px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--odit-text-3);background:var(--odit-surface);border:1px solid var(--odit-border-md);border-radius:999px;padding:2px 10px">${safe}</span>`;
+            wrap.className = 'msg-nav-wrap';
+            wrap.innerHTML = `<span class="msg-nav-pill">${safe}</span>`;
         }
 
         container.appendChild(wrap);
@@ -577,34 +982,26 @@
         return wrap.querySelector('.msg-bubble');
     }
 
-    function saveLog() {
-        try { sessionStorage.setItem(LOG_KEY, JSON.stringify(helpLog.slice(-60))); } catch(e) {}
-    }
-    function saveHistory() {
-        try { sessionStorage.setItem(HIST_KEY, JSON.stringify(helpHistory.slice(-20))); } catch(e) {}
-    }
-
+    // ── Input helpers ─────────────────────────────────────────────
     function autoResize(el) {
         el.style.height = 'auto';
-        el.style.height = Math.min(el.scrollHeight, 80) + 'px';
+        el.style.height = Math.min(el.scrollHeight, 140) + 'px';
     }
-
     function handleHelpKey(e) {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendHelp(); }
     }
 
-    // ── Triggered help — open sidebar and send a canned message ──
+    // ── Triggered chat (from info buttons etc.) ───────────────────
     function triggerHelpChat(message) {
         const sidebar = document.getElementById('help-sidebar');
         const wasCollapsed = sidebar.classList.contains('collapsed');
         if (wasCollapsed) toggleSidebar();
-        const input = document.getElementById('help-input');
-        input.value = message;
-        autoResize(input);
+        document.getElementById('help-input').value = message;
+        autoResize(document.getElementById('help-input'));
         setTimeout(sendHelp, wasCollapsed ? 260 : 30);
     }
 
-    // ── Live page context — snapshot of current UI state at send time ──
+    // ── Live page context ─────────────────────────────────────────
     function getPageContext() {
         const base = (window.__oditPageContext || {}).context || '';
         if (typeof window.__oditLiveContext === 'function') {
@@ -614,10 +1011,25 @@
         return base;
     }
 
+    // ── Send message ──────────────────────────────────────────────
     async function sendHelp() {
         const input = document.getElementById('help-input');
         const msg = input.value.trim();
         if (!msg) return;
+
+        // Hide suggestions
+        showSuggestions(false);
+
+        // Auto-title first message
+        autoTitleChat(msg);
+
+        // If file attached, prepend to message context
+        let fullMsg = msg;
+        if (pendingFile) {
+            fullMsg = `[Attached file: ${pendingFile.name}]\n\n${pendingFile.content}\n\n---\n${msg}`;
+            pendingFile = null;
+            renderAttachPreview();
+        }
 
         input.value = '';
         input.style.height = 'auto';
@@ -628,32 +1040,46 @@
         renderMsgDOM(userEntry);
 
         const container = document.getElementById('help-messages');
+
+        // Thinking bubble
         const thinkWrap = document.createElement('div');
-        thinkWrap.style.cssText = 'display:flex;gap:8px;align-items:flex-start';
-        thinkWrap.innerHTML = `${AVATAR}<div class="msg-bubble" style="background:var(--odit-surface);padding:11px 14px;border-radius:12px;border:1px solid var(--odit-border-md);display:flex;gap:6px;align-items:center"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span><span id="think-label" style="font-size:12px;color:var(--odit-text-muted);margin-left:2px"></span></div>`;
+        thinkWrap.className = 'msg-thinking-wrap';
+        thinkWrap.innerHTML = `<div class="msg-ai-avatar">${AI_ICON_SVG}</div><div class="msg-thinking-body"><div style="display:flex;gap:5px;align-items:center"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div><div id="tool-steps-container"></div></div>`;
         container.appendChild(thinkWrap);
         container.scrollTop = container.scrollHeight;
 
         let rawText = '';
         let responseBubble = null;
 
-        function getOrCreateResponseBubble() {
+        function addToolStep(label) {
+            const stepsEl = thinkWrap.querySelector('#tool-steps-container');
+            if (!stepsEl || !label) return;
+            const step = document.createElement('div');
+            step.className = 'tool-step';
+            step.innerHTML = `<div class="tool-step-icon"><svg style="width:8px;height:8px;color:var(--odit-brand)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div><span>${label.replace(/</g,'&lt;')}</span>`;
+            stepsEl.appendChild(step);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function getOrCreateBubble() {
             if (responseBubble) return responseBubble;
             thinkWrap.remove();
             const wrap = document.createElement('div');
-            wrap.style.cssText = 'display:flex;gap:8px;align-items:flex-start';
-            wrap.innerHTML = AVATAR + '<div class="msg-bubble" style="' + MSG_STYLE + ';background:var(--odit-surface);color:var(--odit-text);padding:9px 13px;border-radius:14px;border-top-left-radius:4px;max-width:calc(100% - 34px);border:1px solid var(--odit-border-md);box-shadow:var(--odit-shadow-sm)"></div>';
+            wrap.className = 'msg-ai-wrap';
+            wrap.innerHTML = `<div class="msg-ai-avatar">${AI_ICON_SVG}</div><div class="msg-ai-content msg-bubble"></div>`;
             container.appendChild(wrap);
             responseBubble = wrap.querySelector('.msg-bubble');
             return responseBubble;
         }
+
+        let pendingNavigate = null;
 
         try {
             const resp = await fetch('/api/help/agent', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
-                    message: msg,
+                    message: fullMsg,
                     history: helpHistory,
                     page_context: getPageContext() || null
                 })
@@ -676,89 +1102,101 @@
                     try {
                         const chunk = JSON.parse(payload);
                         if (chunk.type === 'tool_use') {
-                            const label = document.getElementById('think-label');
-                            if (label) label.textContent = chunk.label || '';
+                            addToolStep(chunk.label || chunk.tool || '');
+                        } else if (chunk.type === 'navigate' && chunk.url) {
+                            pendingNavigate = chunk.url;
+                            navigateAgentFrame(chunk.url);
                         } else if (chunk.type === 'text' && chunk.text) {
                             rawText += chunk.text;
-                            const bubble = getOrCreateResponseBubble();
-                            bubble.innerHTML = renderMd(rawText);
+                            getOrCreateBubble().innerHTML = renderMd(rawText);
                             container.scrollTop = container.scrollHeight;
                         }
                     } catch {}
                 }
             }
         } catch(e) {
-            const bubble = getOrCreateResponseBubble();
-            bubble.innerHTML = 'Sorry, something went wrong.';
+            getOrCreateBubble().innerHTML = 'Sorry, something went wrong.';
             rawText = 'Sorry, something went wrong.';
         }
 
-        if (!responseBubble) {
-            thinkWrap.remove();
-        }
+        if (!responseBubble) thinkWrap.remove();
 
-        helpLog.push({ type: 'assistant', rawText });
-        helpHistory.push({ role: 'user', content: msg });
+        const assistantEntry = { type: 'assistant', rawText };
+        helpLog.push(assistantEntry);
+        helpHistory.push({ role: 'user',      content: fullMsg });
         helpHistory.push({ role: 'assistant', content: rawText });
         if (helpHistory.length > 20) helpHistory = helpHistory.slice(-20);
-        saveLog();
-        saveHistory();
 
+        updateActiveChat();
         document.getElementById('help-send-btn').disabled = false;
     }
 
+    // ── Initialise sidebar on page load ───────────────────────────
     function initSidebar() {
-        // Restore sidebar state
-        const state = localStorage.getItem(SIDEBAR_KEY);
-        if (state === 'closed') {
+        loadChats();
+
+        // Restore collapse state
+        if (localStorage.getItem(SIDEBAR_KEY) === 'closed') {
             document.getElementById('help-sidebar').classList.add('collapsed');
         }
 
-        // Restore log and history from session
-        try { helpLog = JSON.parse(sessionStorage.getItem(LOG_KEY) || '[]'); } catch(e) { helpLog = []; }
-        try { helpHistory = JSON.parse(sessionStorage.getItem(HIST_KEY) || '[]'); } catch(e) { helpHistory = []; }
-
-        const ctx = window.__oditPageContext || {};
+        const ctx         = window.__oditPageContext || {};
         const currentPage = ctx.page || null;
-        const lastPage = sessionStorage.getItem(PAGE_KEY);
+        const lastPage    = sessionStorage.getItem(PAGE_KEY);
 
-        if (helpLog.length === 0) {
-            // First visit — show welcome or page greeting
+        if (chats.length === 0 || !activeChatId || !chats.find(c => c.id === activeChatId)) {
+            // No chats yet — create the first one with welcome message
+            const chat = {
+                id: genId(), title: 'New conversation',
+                messages: [], history: [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            chats.unshift(chat);
+            activeChatId = chat.id;
+            localStorage.setItem(ACTIVE_KEY, activeChatId);
+
             const welcomeText = ctx.greeting ||
-                "Hi! I'm the Odit help assistant. Ask me anything about how to use the app — running audits, reading results, understanding issues, exports, settings, or anything else.";
+                "Hi! I'm Odit AI, your agentic audit assistant. I can look up your audit data, explain findings, flag compliance issues, and guide you through the app.";
             const entry = { type: 'assistant', rawText: welcomeText };
             helpLog.push(entry);
             renderMsgDOM(entry);
             helpHistory.push({ role: 'assistant', content: welcomeText });
-            saveLog();
-            saveHistory();
+            chat.messages = [...helpLog];
+            chat.history  = [...helpHistory];
+            saveChats();
+            showSuggestions(true);
         } else {
-            // Re-render persisted messages
-            for (const entry of helpLog) {
-                renderMsgDOM(entry);
-            }
+            // Load the active chat
+            const chat = chats.find(c => c.id === activeChatId);
+            helpLog     = [...chat.messages];
+            helpHistory = [...chat.history];
+            const el = document.getElementById('conv-subtitle');
+            if (el) el.textContent = chat.title;
 
-            // If page changed and we have a greeting, add nav separator + proactive message
+            const container = document.getElementById('help-messages');
+            for (const entry of helpLog) renderMsgDOM(entry);
+            container.scrollTop = container.scrollHeight;
+            showSuggestions(helpLog.length === 0);
+
+            // Page-change greeting
             if (currentPage && currentPage !== lastPage && ctx.greeting && helpLog.length > 0) {
                 const navEntry = { type: 'nav', rawText: currentPage };
                 helpLog.push(navEntry);
                 renderMsgDOM(navEntry);
 
                 setTimeout(() => {
-                    const proactiveEntry = { type: 'assistant', rawText: ctx.greeting };
-                    helpLog.push(proactiveEntry);
-                    renderMsgDOM(proactiveEntry);
+                    const proactive = { type: 'assistant', rawText: ctx.greeting };
+                    helpLog.push(proactive);
+                    renderMsgDOM(proactive);
                     helpHistory.push({ role: 'assistant', content: ctx.greeting });
-                    saveLog();
-                    saveHistory();
-
-                    // Show badge if sidebar is collapsed
+                    updateActiveChat();
                     if (document.getElementById('help-sidebar').classList.contains('collapsed')) {
                         document.getElementById('help-badge').classList.remove('hidden');
                     }
                 }, 350);
 
-                saveLog();
+                updateActiveChat();
             }
         }
 
@@ -767,40 +1205,32 @@
 
     document.addEventListener('DOMContentLoaded', initSidebar);
 
-    // ── Sidebar resize ────────────────────────────────────────────
+    // ── Resize (right-edge drag) ──────────────────────────────────
     (function() {
         const RESIZE_KEY = 'oditSidebarWidth';
-        const handle = document.getElementById('sidebar-resize');
+        const handle  = document.getElementById('sidebar-resize');
         const sidebar = document.getElementById('help-sidebar');
         let startX, startW;
 
-        // Restore saved width
         const savedW = parseInt(localStorage.getItem(RESIZE_KEY));
-        if (savedW && savedW >= 220 && savedW <= 540) {
-            sidebar.style.width = savedW + 'px';
-        }
+        if (savedW && savedW >= 260 && savedW <= 560) sidebar.style.width = savedW + 'px';
 
-        handle.addEventListener('mousedown', function(e) {
+        handle.addEventListener('mousedown', e => {
             e.preventDefault();
-            startX = e.clientX;
-            startW = sidebar.offsetWidth;
-            sidebar.classList.add('resizing');
-            handle.classList.add('active');
+            startX = e.clientX; startW = sidebar.offsetWidth;
+            sidebar.classList.add('resizing'); handle.classList.add('active');
             document.body.style.cursor = 'col-resize';
-
-            function onMove(e) {
-                const delta = startX - e.clientX; // dragging left = wider
-                const newW = Math.min(540, Math.max(220, startW + delta));
+            const onMove = e => {
+                const newW = Math.min(560, Math.max(260, startW + (e.clientX - startX)));
                 sidebar.style.width = newW + 'px';
-            }
-            function onUp() {
-                sidebar.classList.remove('resizing');
-                handle.classList.remove('active');
+            };
+            const onUp = () => {
+                sidebar.classList.remove('resizing'); handle.classList.remove('active');
                 document.body.style.cursor = '';
                 localStorage.setItem(RESIZE_KEY, sidebar.offsetWidth);
                 document.removeEventListener('mousemove', onMove);
                 document.removeEventListener('mouseup', onUp);
-            }
+            };
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
         });

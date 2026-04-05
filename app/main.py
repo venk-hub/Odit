@@ -1,7 +1,9 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
+import asyncio
 import json
 import logging
 import os
@@ -20,10 +22,85 @@ logging.basicConfig(
 )
 logger = logging.getLogger("odit.app")
 
+
+async def _scheduler_loop():
+    """Background task: fire scheduled audits when they come due (checks every 60s)."""
+    from app.database import AsyncSessionLocal
+    from app.models.scheduled_audit import ScheduledAudit
+    from app.models.audit import AuditConfig, AuditRun, AuditStatus
+    from sqlalchemy import select
+    from datetime import datetime, timedelta
+    from urllib.parse import urlparse
+
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                now = datetime.utcnow()
+                result = await db.execute(
+                    select(ScheduledAudit)
+                    .where(ScheduledAudit.is_active == True)
+                    .where(ScheduledAudit.next_run_at <= now)
+                )
+                due = result.scalars().all()
+                for sched in due:
+                    try:
+                        parsed = urlparse(sched.url)
+                        config = AuditConfig(
+                            base_url=sched.url,
+                            mode=sched.mode,
+                            max_pages=sched.max_pages,
+                            max_depth=3,
+                            allowed_domains=[parsed.netloc],
+                            device_type="desktop",
+                            consent_behavior="no_interaction",
+                            expected_vendors=[],
+                            include_patterns=[],
+                            exclude_patterns=[],
+                            seed_urls=[],
+                            journey_instructions=[],
+                            auth_cookies=sched.auth_cookies,
+                        )
+                        db.add(config)
+                        await db.flush()
+                        run = AuditRun(
+                            base_url=sched.url,
+                            mode=sched.mode,
+                            status=AuditStatus.pending,
+                            config_id=config.id,
+                        )
+                        db.add(run)
+                        # Advance next_run_at
+                        if sched.frequency == "daily":
+                            sched.next_run_at = sched.next_run_at + timedelta(days=1)
+                        elif sched.frequency == "weekly":
+                            sched.next_run_at = sched.next_run_at + timedelta(weeks=1)
+                        else:  # monthly
+                            sched.next_run_at = sched.next_run_at + timedelta(days=30)
+                        logger.info(f"Scheduler: launched audit for {sched.url} (schedule {sched.id})")
+                    except Exception as e:
+                        logger.warning(f"Scheduler: failed to launch audit for {sched.url}: {e}")
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"Scheduler loop error: {e}")
+        await asyncio.sleep(60)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(_scheduler_loop())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
 app = FastAPI(
     title="Odit - Tracking Auditor",
     description="Local-first website tracking and analytics implementation auditor",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Mount static files

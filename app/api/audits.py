@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel, HttpUrl
 from typing import Optional, List
 from datetime import datetime
+import os
 import uuid
 
 from app.database import get_db
@@ -269,3 +271,29 @@ async def cancel_audit(audit_id: str, db: AsyncSession = Depends(get_db)):
     run.completed_at = datetime.utcnow()
     await db.commit()
     return {"id": str(run.id), "status": run.status}
+
+
+@router.get("/{audit_id}/live-screenshot")
+async def live_screenshot(audit_id: str):
+    """Return the most recently written screenshot for a running audit."""
+    try:
+        uuid.UUID(audit_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid audit ID")
+
+    data_dir = os.environ.get("DATA_DIR", "/data")
+    screenshots_dir = os.path.join(data_dir, "audits", audit_id, "screenshots")
+
+    if not os.path.isdir(screenshots_dir):
+        raise HTTPException(status_code=404, detail="No screenshots yet")
+
+    pngs = [
+        os.path.join(screenshots_dir, f)
+        for f in os.listdir(screenshots_dir)
+        if f.endswith(".png")
+    ]
+    if not pngs:
+        raise HTTPException(status_code=404, detail="No screenshots yet")
+
+    latest = max(pngs, key=os.path.getmtime)
+    return FileResponse(latest, media_type="image/png", headers={"Cache-Control": "no-store"})

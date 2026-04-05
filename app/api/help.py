@@ -17,11 +17,84 @@ logger = logging.getLogger("odit.help")
 
 router = APIRouter(prefix="/api/help", tags=["help"])
 
-SYSTEM_PROMPT = """You are the built-in help assistant for **Odit** — a local-first website tracking auditor.
+SYSTEM_PROMPT = """You are **Odit AI** — an agentic AI assistant embedded inside the Odit tracking auditor. You are not just a help bot; you are a professional digital analytics engineer who can both answer questions AND take direct action inside the app.
+
+## CORE PRINCIPLES
+
+**ACT, DON'T INSTRUCT** — When a user asks you to do something you have a tool for, DO IT immediately. Never say "paste the URL and click Start Audit" when you can call `start_audit` yourself.
+
+**NAVIGATE the panel as you act** — The right panel is an iframe you can drive. Use `navigate_to` to show the user what's happening as you work:
+- After `start_audit` → always call `navigate_to` with `/audits/{id}` so the user sees live progress
+- After `schedule_audit` → navigate to `/` so they see the audit list
+- When user asks about a specific audit → navigate to `/audits/{id}`
+- When user asks to see the dashboard or home → navigate to `/`
+- When user asks about settings → navigate to `/settings`
+- After `compare_audits` → navigate to the newer audit's detail page
+- For query-only tools (get_issues, get_vendors, get_pages) → do NOT navigate, just answer in chat
+
+`navigate_to` no longer causes a page reload — it updates the right panel iframe independently. The chat stays alive.
+
+Follow the **ReAct pattern**: Reason about what's needed → Act (call a tool) → Observe the result → Reason again → Act again → … → Deliver a clear answer.
+
+## WHAT YOU CAN DO
+
+**Action tools (you can make things happen):**
+- `start_audit` — Start a new website audit crawl (supports auth cookies for logged-in audits).
+- `get_audit_progress` — Check live status/progress of a running audit.
+- `navigate_to` — Navigate the right panel to any page in the app on the user's behalf.
+- `schedule_audit` — Schedule a recurring audit (daily/weekly/monthly).
+- `list_schedules` — List all active scheduled audits.
+- `cancel_schedule` — Cancel a scheduled audit by ID.
+- `compare_audits` — Compare two audits: vendor diff, issue diff, summary.
+
+**Query tools (look up existing data):**
+- `list_audits`, `get_audit`, `get_issues`, `get_vendors`, `get_pages`
+
+## HOW TO HANDLE COMMON REQUESTS
+
+**"Audit [website]" / "Can you audit X?"**
+→ Call `start_audit` immediately with the URL. Then call `navigate_to` with `/audits/{audit_id}` to show them live progress.
+→ Respond: "I've started the audit for [url] and navigated you to the live progress page. I'll be scanning up to 50 pages — ask me anything once it's done."
+
+**"What vendors / issues were found?"**
+→ Call `list_audits` to find the right audit, then `get_vendors` or `get_issues` for data.
+→ Give specific answers from the data — never generic advice.
+
+**"How is my audit going?" / "Is it done?"**
+→ Call `get_audit_progress` with the audit ID.
+
+**"Take me to [page]" / "Navigate to..." / "Open the audit" / "Show me the dashboard"**
+→ Call `navigate_to` with the appropriate path.
+→ App routes: `/` (home/dashboard), `/audits/{id}` (audit detail), `/settings` (settings)
+→ After navigating, briefly tell the user what they're now looking at.
+
+**"Audit [site] as logged-in user" / "use these cookies..."**
+→ Call `start_audit` with the `auth_cookies_json` parameter containing the cookie array.
+
+**"Schedule an audit of [site] every [day/week/month]"**
+→ Call `schedule_audit` immediately. Confirm with: "Done — I've scheduled a [frequency] audit of [url]. [View schedules](/settings)"
+
+**"What are my scheduled audits?" / "Show me my schedules"**
+→ Call `list_schedules` and summarise the results.
+
+**"Cancel/stop the [schedule]"**
+→ Call `cancel_schedule` with the schedule ID.
+
+**"Compare [audit A] and [audit B]" / "What changed between audits?"**
+→ Call `compare_audits` with the two audit IDs. Summarise: new/removed vendors, new/resolved issues.
+
+**General questions about how to use Odit**
+→ Answer directly from your knowledge of the app.
+
+## STYLE
+- Be direct and conversational. One expert sentence beats three generic ones.
+- Use markdown: bullet points, **bold** for key terms, `code` for values/IDs.
+- When you start an audit, always include the link as a markdown hyperlink: `[View progress](/audits/{id})`
+- After starting an audit, tell the user what to expect (time, pages).
+
+---
 
 Odit crawls websites using a real browser (Playwright), intercepts all network traffic via mitmproxy, detects analytics/martech vendors, flags compliance and implementation issues, and generates detailed reports. It runs entirely on the user's machine via Docker Compose.
-
-Answer questions clearly and concisely. Use markdown formatting — bullet points, bold text, short code blocks where helpful. Keep answers focused and practical.
 
 ---
 
@@ -227,6 +300,137 @@ Answer the user's question based on the above. If they ask something not covered
 
 AGENT_TOOLS = [
     {
+        "name": "start_audit",
+        "description": "Start a new website audit crawl. Use this whenever the user asks to audit a URL — don't explain how to do it manually, just do it. Returns the audit ID and a link to view live progress.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The website URL to audit. Add https:// if missing.",
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["quick_scan", "full_crawl"],
+                    "description": "quick_scan = up to 50 pages, ~2 minutes. full_crawl = up to max_pages, more comprehensive. Default: quick_scan",
+                    "default": "quick_scan",
+                },
+                "max_pages": {
+                    "type": "integer",
+                    "description": "Max pages for full_crawl mode (default 200). Ignored for quick_scan.",
+                    "default": 200,
+                },
+                "auth_cookies_json": {
+                    "type": "string",
+                    "description": "Optional JSON string — array of cookie objects to inject before crawling (for logged-in audits). Each object should have 'name', 'value', 'domain' fields. Paste exactly what the user provides.",
+                },
+            },
+            "required": ["url"],
+        },
+    },
+    {
+        "name": "navigate_to",
+        "description": "Navigate the right panel (main app view) to a specific page on behalf of the user. Use this when the user asks to be taken somewhere, or after completing an action where it makes sense to redirect (e.g. after starting an audit, navigate to its progress page).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "App-relative path to navigate to. Examples: '/', '/audits/{id}', '/settings'",
+                },
+                "label": {
+                    "type": "string",
+                    "description": "Human-readable description of the destination, e.g. 'audit progress page'",
+                },
+            },
+            "required": ["path"],
+        },
+    },
+    {
+        "name": "schedule_audit",
+        "description": "Schedule a recurring audit that runs automatically at the specified frequency.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The website URL to audit on schedule.",
+                },
+                "frequency": {
+                    "type": "string",
+                    "enum": ["daily", "weekly", "monthly"],
+                    "description": "How often to run the audit.",
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["quick_scan", "full_crawl"],
+                    "default": "quick_scan",
+                    "description": "Audit mode for each scheduled run.",
+                },
+                "label": {
+                    "type": "string",
+                    "description": "Optional friendly name for this schedule, e.g. 'Weekly CNN check'",
+                },
+            },
+            "required": ["url", "frequency"],
+        },
+    },
+    {
+        "name": "list_schedules",
+        "description": "List all active scheduled audits.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+    {
+        "name": "cancel_schedule",
+        "description": "Cancel (deactivate) a scheduled audit by its ID.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "schedule_id": {
+                    "type": "string",
+                    "description": "UUID of the scheduled audit to cancel.",
+                }
+            },
+            "required": ["schedule_id"],
+        },
+    },
+    {
+        "name": "compare_audits",
+        "description": "Compare two audits of the same (or different) sites. Returns vendor diff (added/removed), issue diff (new/resolved), and a summary of changes.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "audit_id_a": {
+                    "type": "string",
+                    "description": "UUID of the first (older/baseline) audit.",
+                },
+                "audit_id_b": {
+                    "type": "string",
+                    "description": "UUID of the second (newer) audit.",
+                },
+            },
+            "required": ["audit_id_a", "audit_id_b"],
+        },
+    },
+    {
+        "name": "get_audit_progress",
+        "description": "Check the live status and progress of an audit that is pending or running.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "audit_id": {
+                    "type": "string",
+                    "description": "The UUID of the audit run",
+                }
+            },
+            "required": ["audit_id"],
+        },
+    },
+    {
         "name": "list_audits",
         "description": "List the most recent audits with summary stats. Use this to answer questions like 'what audits do I have', 'show me recent audits', or when you need to find an audit ID.",
         "input_schema": {
@@ -310,11 +514,18 @@ AGENT_TOOLS = [
 ]
 
 TOOL_LABELS = {
-    "list_audits": "Looking up your audits...",
-    "get_audit": "Loading audit details...",
-    "get_issues": "Fetching issues...",
-    "get_vendors": "Fetching vendor list...",
-    "get_pages": "Loading pages...",
+    "start_audit":         "Starting audit...",
+    "get_audit_progress":  "Checking audit progress...",
+    "navigate_to":         "Navigating...",
+    "schedule_audit":      "Setting up schedule...",
+    "list_schedules":      "Loading schedules...",
+    "cancel_schedule":     "Cancelling schedule...",
+    "compare_audits":      "Comparing audits...",
+    "list_audits":         "Looking up your audits...",
+    "get_audit":           "Loading audit details...",
+    "get_issues":          "Fetching issues...",
+    "get_vendors":         "Fetching vendors...",
+    "get_pages":           "Loading pages...",
 }
 
 
@@ -413,9 +624,105 @@ async def _execute_tool(tool_name: str, tool_input: dict, db) -> str:
     """Execute a tool call and return a JSON string result."""
     try:
         from sqlalchemy import select, func, desc
-        from app.models import AuditRun, Issue, DetectedVendor, PageVisit, NetworkRequest
+        from app.models import AuditRun, AuditStatus, Issue, DetectedVendor, PageVisit, NetworkRequest
 
-        if tool_name == "list_audits":
+        if tool_name == "start_audit":
+            from urllib.parse import urlparse
+            from app.models import AuditConfig
+
+            url = tool_input.get("url", "").strip()
+            if url and not url.startswith(("http://", "https://")):
+                url = "https://" + url
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return json.dumps({"error": "Invalid URL. Please provide a valid website address."})
+
+            mode = tool_input.get("mode", "quick_scan")
+            if mode not in ("quick_scan", "full_crawl"):
+                mode = "quick_scan"
+            max_pages = 50 if mode == "quick_scan" else int(tool_input.get("max_pages", 200))
+
+            # Parse auth cookies if provided
+            auth_cookies = None
+            auth_cookies_json = tool_input.get("auth_cookies_json", "").strip()
+            if auth_cookies_json:
+                try:
+                    auth_cookies = json.loads(auth_cookies_json)
+                    if not isinstance(auth_cookies, list):
+                        auth_cookies = None
+                except Exception:
+                    auth_cookies = None
+
+            config = AuditConfig(
+                base_url=url,
+                mode=mode,
+                max_pages=max_pages,
+                max_depth=3,
+                allowed_domains=[parsed.netloc],
+                device_type="desktop",
+                consent_behavior="no_interaction",
+                expected_vendors=[],
+                include_patterns=[],
+                exclude_patterns=[],
+                seed_urls=[],
+                journey_instructions=[],
+                auth_cookies=auth_cookies,
+            )
+            db.add(config)
+            await db.flush()
+
+            run = AuditRun(
+                base_url=url,
+                mode=mode,
+                status=AuditStatus.pending,
+                config_id=config.id,
+            )
+            db.add(run)
+            await db.commit()
+            await db.refresh(run)
+
+            return json.dumps({
+                "success": True,
+                "audit_id": str(run.id),
+                "url": url,
+                "mode": mode,
+                "max_pages": max_pages,
+                "status": "pending",
+                "view_url": f"/audits/{run.id}",
+                "auth_injected": auth_cookies is not None,
+            })
+
+        elif tool_name == "get_audit_progress":
+            audit_id = tool_input["audit_id"]
+            result = await db.execute(select(AuditRun).where(AuditRun.id == audit_id))
+            run = result.scalar_one_or_none()
+            if not run:
+                return json.dumps({"error": f"Audit {audit_id} not found."})
+
+            issue_count_result = await db.execute(
+                select(func.count(Issue.id)).where(Issue.audit_run_id == run.id)
+            )
+            vendor_count_result = await db.execute(
+                select(func.count(DetectedVendor.id))
+                .where(DetectedVendor.audit_run_id == run.id)
+                .where(DetectedVendor.page_visit_id == None)
+            )
+
+            return json.dumps({
+                "audit_id": str(run.id),
+                "url": run.base_url,
+                "status": run.status.value,
+                "pages_crawled": run.pages_crawled or 0,
+                "pages_discovered": run.pages_discovered or 0,
+                "pages_failed": run.pages_failed or 0,
+                "issues_found": issue_count_result.scalar() or 0,
+                "vendors_found": vendor_count_result.scalar() or 0,
+                "started_at": run.started_at.isoformat() if run.started_at else None,
+                "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+                "view_url": f"/audits/{run.id}",
+            })
+
+        elif tool_name == "list_audits":
             limit = min(int(tool_input.get("limit", 10)), 20)
             result = await db.execute(
                 select(AuditRun).order_by(desc(AuditRun.created_at)).limit(limit)
@@ -624,6 +931,175 @@ async def _execute_tool(tool_name: str, tool_input: dict, db) -> str:
                 })
             return json.dumps({"audit_id": audit_id, "pages": pages})
 
+        elif tool_name == "navigate_to":
+            path = tool_input.get("path", "/").strip()
+            if not path.startswith("/"):
+                path = "/" + path
+            label = tool_input.get("label", path)
+            return json.dumps({"success": True, "url": path, "label": label})
+
+        elif tool_name == "schedule_audit":
+            from urllib.parse import urlparse
+            from datetime import timedelta
+            from app.models.scheduled_audit import ScheduledAudit
+
+            url = tool_input.get("url", "").strip()
+            if url and not url.startswith(("http://", "https://")):
+                url = "https://" + url
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return json.dumps({"error": "Invalid URL."})
+
+            frequency = tool_input.get("frequency", "weekly")
+            if frequency not in ("daily", "weekly", "monthly"):
+                frequency = "weekly"
+            mode = tool_input.get("mode", "quick_scan")
+            if mode not in ("quick_scan", "full_crawl"):
+                mode = "quick_scan"
+            max_pages = 50 if mode == "quick_scan" else 200
+            label = tool_input.get("label") or f"{frequency.capitalize()} audit of {url}"
+
+            from datetime import datetime, timedelta
+            if frequency == "daily":
+                next_run = datetime.utcnow() + timedelta(days=1)
+            elif frequency == "weekly":
+                next_run = datetime.utcnow() + timedelta(weeks=1)
+            else:
+                next_run = datetime.utcnow() + timedelta(days=30)
+
+            sched = ScheduledAudit(
+                url=url,
+                mode=mode,
+                max_pages=max_pages,
+                frequency=frequency,
+                label=label,
+                is_active=True,
+                next_run_at=next_run,
+            )
+            db.add(sched)
+            await db.commit()
+            await db.refresh(sched)
+
+            return json.dumps({
+                "success": True,
+                "schedule_id": str(sched.id),
+                "url": url,
+                "frequency": frequency,
+                "mode": mode,
+                "label": label,
+                "next_run_at": sched.next_run_at.isoformat(),
+            })
+
+        elif tool_name == "list_schedules":
+            from app.models.scheduled_audit import ScheduledAudit
+
+            result = await db.execute(
+                select(ScheduledAudit)
+                .where(ScheduledAudit.is_active == True)
+                .order_by(ScheduledAudit.next_run_at)
+            )
+            schedules = result.scalars().all()
+            if not schedules:
+                return json.dumps({"schedules": [], "message": "No active scheduled audits."})
+
+            return json.dumps({
+                "schedules": [
+                    {
+                        "id": str(s.id),
+                        "url": s.url,
+                        "frequency": s.frequency,
+                        "mode": s.mode,
+                        "label": s.label,
+                        "next_run_at": s.next_run_at.isoformat(),
+                        "created_at": s.created_at.isoformat(),
+                    }
+                    for s in schedules
+                ]
+            })
+
+        elif tool_name == "cancel_schedule":
+            from app.models.scheduled_audit import ScheduledAudit
+
+            schedule_id = tool_input.get("schedule_id", "").strip()
+            result = await db.execute(
+                select(ScheduledAudit).where(ScheduledAudit.id == schedule_id)
+            )
+            sched = result.scalar_one_or_none()
+            if not sched:
+                return json.dumps({"error": f"Schedule {schedule_id} not found."})
+            sched.is_active = False
+            await db.commit()
+            return json.dumps({
+                "success": True,
+                "schedule_id": schedule_id,
+                "url": sched.url,
+                "message": f"Schedule cancelled. No further audits will be run for {sched.url}.",
+            })
+
+        elif tool_name == "compare_audits":
+            audit_id_a = tool_input.get("audit_id_a", "").strip()
+            audit_id_b = tool_input.get("audit_id_b", "").strip()
+
+            result_a = await db.execute(select(AuditRun).where(AuditRun.id == audit_id_a))
+            result_b = await db.execute(select(AuditRun).where(AuditRun.id == audit_id_b))
+            run_a = result_a.scalar_one_or_none()
+            run_b = result_b.scalar_one_or_none()
+
+            if not run_a:
+                return json.dumps({"error": f"Audit {audit_id_a} not found."})
+            if not run_b:
+                return json.dumps({"error": f"Audit {audit_id_b} not found."})
+
+            # Vendor comparison
+            vend_a = await db.execute(
+                select(DetectedVendor.vendor_key, DetectedVendor.vendor_name, DetectedVendor.category)
+                .where(DetectedVendor.audit_run_id == audit_id_a)
+                .where(DetectedVendor.page_visit_id == None)
+            )
+            vend_b = await db.execute(
+                select(DetectedVendor.vendor_key, DetectedVendor.vendor_name, DetectedVendor.category)
+                .where(DetectedVendor.audit_run_id == audit_id_b)
+                .where(DetectedVendor.page_visit_id == None)
+            )
+            vendors_a = {r[0]: {"name": r[1], "category": r[2]} for r in vend_a}
+            vendors_b = {r[0]: {"name": r[1], "category": r[2]} for r in vend_b}
+
+            added_vendors   = [{"key": k, **v} for k, v in vendors_b.items() if k not in vendors_a]
+            removed_vendors = [{"key": k, **v} for k, v in vendors_a.items() if k not in vendors_b]
+            common_vendors  = [k for k in vendors_a if k in vendors_b]
+
+            # Issue comparison (by title+category as dedup key)
+            issues_a_result = await db.execute(
+                select(Issue.title, Issue.severity, Issue.category)
+                .where(Issue.audit_run_id == audit_id_a)
+            )
+            issues_b_result = await db.execute(
+                select(Issue.title, Issue.severity, Issue.category)
+                .where(Issue.audit_run_id == audit_id_b)
+            )
+            issues_a = {(r[0], r[2]): r[1] for r in issues_a_result}
+            issues_b = {(r[0], r[2]): r[1] for r in issues_b_result}
+
+            new_issues      = [{"title": k[0], "category": k[1], "severity": v} for k, v in issues_b.items() if k not in issues_a]
+            resolved_issues = [{"title": k[0], "category": k[1], "severity": v} for k, v in issues_a.items() if k not in issues_b]
+
+            return json.dumps({
+                "audit_a": {"id": audit_id_a, "url": run_a.base_url, "status": run_a.status.value,
+                            "pages_crawled": run_a.pages_crawled, "created_at": run_a.created_at.isoformat()},
+                "audit_b": {"id": audit_id_b, "url": run_b.base_url, "status": run_b.status.value,
+                            "pages_crawled": run_b.pages_crawled, "created_at": run_b.created_at.isoformat()},
+                "vendors": {
+                    "added": added_vendors,
+                    "removed": removed_vendors,
+                    "unchanged_count": len(common_vendors),
+                },
+                "issues": {
+                    "new": new_issues,
+                    "resolved": resolved_issues,
+                    "unchanged_count": len([k for k in issues_a if k in issues_b]),
+                },
+            })
+
         else:
             return json.dumps({"error": f"Unknown tool: {tool_name}"})
 
@@ -756,6 +1232,14 @@ async def help_agent(payload: HelpChatRequest, db: AsyncSession = Depends(get_db
                             label = TOOL_LABELS.get(tool_block.name, "Working...")
                             yield "data: " + json.dumps({"type": "tool_use", "tool": tool_block.name, "label": label}) + "\n\n"
                             result_str = await _execute_tool(tool_block.name, tool_block.input, db)
+                            # Emit navigation event so the frontend panel navigates
+                            if tool_block.name == "navigate_to":
+                                try:
+                                    nav_data = json.loads(result_str)
+                                    if not nav_data.get("error"):
+                                        yield "data: " + json.dumps({"type": "navigate", "url": nav_data["url"]}) + "\n\n"
+                                except Exception:
+                                    pass
                             tool_results.append({
                                 "type": "tool_result",
                                 "tool_use_id": tool_block.id,

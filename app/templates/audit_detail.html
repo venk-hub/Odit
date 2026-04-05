@@ -22,7 +22,7 @@ window.__oditPageContext = {
         </a>
         <h1 class="text-2xl font-bold leading-tight truncate" style="color:var(--odit-text)">{{ run.base_url | replace("https://", "") | replace("http://", "") }}</h1>
         <p class="text-sm mt-1.5" style="color:var(--odit-text-3)">
-            <time class="odit-reltime" datetime="{{ run.created_at.isoformat() }}" title="{{ run.created_at.strftime('%d %b %Y %H:%M') }}">{{ run.created_at.strftime('%d %b %Y') }}</time>
+            <time class="odit-reltime" datetime="{{ run.created_at.isoformat() }}Z" title="{{ run.created_at.strftime('%d %b %Y %H:%M') }}">{{ run.created_at.strftime('%d %b %Y') }}</time>
             {% if run.pages_crawled %}&nbsp;&middot;&nbsp;{{ run.pages_crawled }} pages{% endif %}
         </p>
     </div>
@@ -194,16 +194,10 @@ document.body.addEventListener('htmx:afterSwap', function(evt) {
 
     // Transition to results view when audit finishes
     if (TERMINAL.has(s)) {
-        const liveView = document.getElementById('live-view');
-        const resultsView = document.getElementById('results-view');
-        if (liveView && !liveView.classList.contains('hidden')) {
-            liveView.classList.add('hidden');
-            resultsView.classList.remove('hidden');
-            // Kick off HTMX loads in the results view
-            htmx.process(document.getElementById('summary-container'));
-        }
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         setFeedDot('done');
+        // Reload the page to show fresh completed results (works in both normal and iframe mode)
+        setTimeout(function() { window.location.reload(); }, 800);
     }
 });
 
