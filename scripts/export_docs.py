@@ -84,6 +84,7 @@ ODIT_STYLES = """
         padding: 0 24px;
     }
     html.dark #docs-nav { background: rgba(0,0,0,0.92); }
+    html.dark .nav-logo img { filter: brightness(0) invert(1); }
     .nav-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.1rem; color: var(--odit-brand); text-decoration: none; }
     .nav-links { display: flex; align-items: center; gap: 8px; }
     .nav-link { color: var(--odit-text-2); border-radius: 8px; padding: 6px 12px; font-size: 0.875rem; font-weight: 500; text-decoration: none; }
