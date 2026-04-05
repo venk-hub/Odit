@@ -141,14 +141,14 @@ window.addEventListener('DOMContentLoaded', function() {
 
 NAV_HTML = """
 <nav id="docs-nav">
-    <a class="nav-logo" href="https://github.com/venk-hub/Odit">
-        <img src="odit.svg" alt="Odit" height="28" width="28" style="object-fit:contain;" />
-        Odit
+    <a class="nav-logo" href="index.html">
+        <img src="odit.svg" alt="Odit" height="26" width="52" style="object-fit:contain;display:block;" />
     </a>
     <div class="nav-links">
+        <a class="nav-link" href="index.html">Home</a>
         <a class="nav-link" href="https://github.com/venk-hub/Odit">GitHub</a>
-        <button id="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">☾</button>
-        <a class="nav-btn" href="https://github.com/venk-hub/Odit#quick-start">Get Started →</a>
+        <button id="dark-toggle" onclick="toggleDark()" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button>
+        <a class="nav-btn" href="https://github.com/venk-hub/Odit#quick-start">Get started →</a>
     </div>
 </nav>
 """
