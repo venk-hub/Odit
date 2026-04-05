@@ -32,7 +32,5 @@ CLAUDE.md
 design_principles.md
 tests/
 
-# Generated docs (built by GitHub Actions, not committed)
-docs/help.html
-docs/screenshots/
-docs/odit.svg
+# Generated docs (built by GitHub Actions, never committed)
+docs/
