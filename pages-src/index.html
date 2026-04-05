@@ -247,26 +247,26 @@
     <div class="two-col two-col-rev" style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;">
       <div>
         <div class="section-tag">What</div>
-        <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 20px;line-height:1.2;">A complete tracking audit in minutes</h2>
+        <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 20px;line-height:1.2;">An AI agent for website tracking audits</h2>
         <p style="color:var(--text-2);line-height:1.75;margin:0 0 20px;font-size:0.975rem;">
-          Odit is a self-hosted auditing tool that runs as a four-container Docker application. It launches a real Chromium browser, routes all traffic through an intercepting proxy, and gives you a full picture of what a website sends — and to whom.
+          Odit reduces the time, effort, and uncertainty in digital implementation reviews. Point it at any website and it autonomously runs the audit, analyses tracking behaviour, compares changes across site versions, and identifies key risks — so you don't have to do it manually.
         </p>
         <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px;">
           <li style="display:flex;align-items:flex-start;gap:10px;font-size:0.9rem;color:var(--text-2);">
             <span style="color:#22c55e;font-size:1rem;flex-shrink:0;margin-top:1px;">✓</span>
-            <span><strong style="color:var(--text);">Vendor detection</strong> — 40+ analytics, tag managers, pixels, and consent tools identified by domain, script, JS globals, and cookies</span>
+            <span><strong style="color:var(--text);">Autonomous audits</strong> — crawls pages, intercepts every network request, and detects 40+ analytics vendors, pixels, and consent tools</span>
           </li>
           <li style="display:flex;align-items:flex-start;gap:10px;font-size:0.9rem;color:var(--text-2);">
             <span style="color:#22c55e;font-size:1rem;flex-shrink:0;margin-top:1px;">✓</span>
-            <span><strong style="color:var(--text);">Issue detection</strong> — 10 built-in rules flag consent violations, PII in URLs, broken scripts, missing CMPs, duplicate signals, and more</span>
+            <span><strong style="color:var(--text);">Tracking behaviour analysis</strong> — AI reads every vendor payload and explains what data is sent, to whom, and why it matters</span>
           </li>
           <li style="display:flex;align-items:flex-start;gap:10px;font-size:0.9rem;color:var(--text-2);">
             <span style="color:#22c55e;font-size:1rem;flex-shrink:0;margin-top:1px;">✓</span>
-            <span><strong style="color:var(--text);">GDPR/CCPA posture</strong> — run with and without consent interaction to verify what fires before and after the cookie banner</span>
+            <span><strong style="color:var(--text);">Version comparison</strong> — run audits before and after a deployment to see exactly what changed</span>
           </li>
           <li style="display:flex;align-items:flex-start;gap:10px;font-size:0.9rem;color:var(--text-2);">
             <span style="color:#22c55e;font-size:1rem;flex-shrink:0;margin-top:1px;">✓</span>
-            <span><strong style="color:var(--text);">AI-powered analysis</strong> — each vendor's network payloads analysed for PII, identifiers, and data flows using Claude</span>
+            <span><strong style="color:var(--text);">Risk identification</strong> — flags consent violations, PII in URLs, missing CMPs, and rogue vendor activity</span>
           </li>
           <li style="display:flex;align-items:flex-start;gap:10px;font-size:0.9rem;color:var(--text-2);">
             <span style="color:#22c55e;font-size:1rem;flex-shrink:0;margin-top:1px;">✓</span>
@@ -288,26 +288,26 @@
   <div class="container">
     <div style="text-align:center;max-width:600px;margin:0 auto 56px;">
       <div class="section-tag">Why</div>
-      <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 16px;line-height:1.2;">Because you can't protect what you can't see</h2>
+      <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 16px;line-height:1.2;">Faster, more confident implementation decisions</h2>
       <p style="color:var(--text-2);line-height:1.7;font-size:0.975rem;margin:0;">
-        Most websites fire dozens of tracking requests users never consented to. Regulators are catching up fast. Odit makes the invisible visible — before your DPO, your clients, or the ICO does.
+        Digital implementation reviews are slow, manual, and easy to get wrong. Odit removes the guesswork — so teams can improve implementation quality, strengthen compliance oversight, and act on evidence instead of assumptions.
       </p>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;">
       <div class="card">
-        <div aria-hidden="true" style="font-size:1.75rem;margin-bottom:14px;">🔍</div>
-        <p class="card-title">Hidden tracking exposed</p>
-        <p class="card-body">Third-party scripts often load other scripts. Odit captures the full chain — not just what's in your tag manager, but everything that fires as a result.</p>
-      </div>
-      <div class="card">
-        <div aria-hidden="true" style="font-size:1.75rem;margin-bottom:14px;">⚖️</div>
-        <p class="card-title">Regulatory pressure is real</p>
-        <p class="card-body">GDPR, CCPA, and ePrivacy fines are increasing. Odit generates evidence-grade reports you can hand directly to your DPO or legal team.</p>
+        <div aria-hidden="true" style="font-size:1.75rem;margin-bottom:14px;">⏱️</div>
+        <p class="card-title">Reviews that used to take days</p>
+        <p class="card-body">Manual implementation audits require opening DevTools, decoding requests, and cross-referencing vendor docs. Odit does all of that automatically, in minutes.</p>
       </div>
       <div class="card">
         <div aria-hidden="true" style="font-size:1.75rem;margin-bottom:14px;">🏗️</div>
-        <p class="card-title">Builds don't match briefs</p>
-        <p class="card-body">Tags get added mid-project without telling engineering. Odit catches what slipped in — PII in URLs, pixels without consent, rogue cookies.</p>
+        <p class="card-title">Implementations drift without warning</p>
+        <p class="card-body">Tags get added, scripts change, and consent logic breaks — often without anyone noticing. Odit catches what slipped in before it becomes a compliance incident.</p>
+      </div>
+      <div class="card">
+        <div aria-hidden="true" style="font-size:1.75rem;margin-bottom:14px;">⚖️</div>
+        <p class="card-title">Compliance needs evidence, not guesses</p>
+        <p class="card-body">GDPR, CCPA, and ePrivacy require proof. Odit generates evidence-grade reports you can hand directly to your DPO, legal team, or governance function.</p>
       </div>
       <div class="card">
         <div aria-hidden="true" style="font-size:1.75rem;margin-bottom:14px;">🔒</div>
@@ -328,41 +328,41 @@
   <div class="container">
     <div style="text-align:center;max-width:600px;margin:0 auto 56px;">
       <div class="section-tag">Who</div>
-      <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 16px;line-height:1.2;">Built for the people responsible for privacy</h2>
+      <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 16px;line-height:1.2;">Built for marketing, analytics, and governance teams</h2>
       <p style="color:var(--text-2);line-height:1.7;font-size:0.975rem;margin:0;">
-        Whether you're writing the code, advising the client, or signing the DPA — Odit gives you the evidence you need.
+        Odit is designed for the people who own implementation quality, compliance oversight, and data governance — not just developers.
       </p>
     </div>
     <div class="three-col" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
       <div class="card">
-        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">💻</div>
-        <p class="card-title">Developers</p>
-        <p class="card-body">Verify your tag manager before go-live. Catch PII in analytics requests. Confirm nothing fires before consent. Diff two deployments side by side.</p>
+        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">📊</div>
+        <p class="card-title">Marketing teams</p>
+        <p class="card-body">Verify your tracking stack is firing correctly before campaigns go live. Debug attribution gaps, confirm consent mode is working, and see exactly what your tags send.</p>
+      </div>
+      <div class="card">
+        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">🔎</div>
+        <p class="card-title">Analytics teams</p>
+        <p class="card-body">Validate implementation quality across properties. Compare tracking behaviour before and after deployments. Identify gaps and discrepancies without digging through raw network logs.</p>
+      </div>
+      <div class="card">
+        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">📋</div>
+        <p class="card-title">Governance and compliance teams</p>
+        <p class="card-body">Strengthen oversight of vendor activity, consent behaviour, and data flows. Generate evidence-grade reports for DPOs, legal teams, and regulators without writing a line of code.</p>
       </div>
       <div class="card">
         <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">🏢</div>
         <p class="card-title">Digital agencies</p>
-        <p class="card-body">Deliver a privacy audit alongside every build. Demonstrate due diligence to clients. Offer compliance-as-a-service without buying enterprise tooling.</p>
-      </div>
-      <div class="card">
-        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">📋</div>
-        <p class="card-title">Privacy and compliance teams</p>
-        <p class="card-body">Generate evidence-grade reports for GDPR Article 30 records. Find vendors missing from your privacy notice. Validate consent implementation end to end.</p>
-      </div>
-      <div class="card">
-        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">🔎</div>
-        <p class="card-title">Security researchers</p>
-        <p class="card-body">Map the full third-party surface of any site. Identify data flows and shared identifiers across vendors. Export HAR files for deeper analysis.</p>
-      </div>
-      <div class="card">
-        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">📊</div>
-        <p class="card-title">Marketing and analytics teams</p>
-        <p class="card-body">See exactly what your stack sends. Debug tracking gaps, verify attribution, and confirm consent mode is working before a campaign goes live.</p>
+        <p class="card-body">Deliver implementation audits alongside every build. Demonstrate due diligence to clients and offer compliance-as-a-service without expensive enterprise tooling.</p>
       </div>
       <div class="card">
         <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">⚖️</div>
         <p class="card-title">DPOs and legal counsel</p>
         <p class="card-body">Get technical evidence without writing code. Ask the AI assistant in plain English and receive structured answers backed by real network captures.</p>
+      </div>
+      <div class="card">
+        <div aria-hidden="true" style="font-size:2rem;margin-bottom:14px;">💻</div>
+        <p class="card-title">Developers</p>
+        <p class="card-body">Verify your tag manager before go-live. Catch PII in analytics requests. Confirm nothing fires before consent. Diff two deployments side by side.</p>
       </div>
     </div>
   </div>
@@ -379,34 +379,34 @@
       </div>
       <div>
         <div class="section-tag">When</div>
-        <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 20px;line-height:1.2;">Use it at every stage of the web lifecycle</h2>
+        <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.02em;margin:0 0 20px;line-height:1.2;">At every stage of the implementation lifecycle</h2>
         <div style="display:flex;flex-direction:column;gap:20px;">
           <div style="display:flex;gap:14px;align-items:flex-start;">
             <div class="step-num">1</div>
             <div>
               <p style="margin:0 0 4px;font-weight:700;font-size:0.95rem;">Before launch</p>
-              <p style="margin:0;font-size:0.875rem;color:var(--text-2);line-height:1.6;">Catch compliance issues before they go live. Verify your consent banner works, no PII leaks in URLs, and your vendor list matches your privacy notice.</p>
+              <p style="margin:0;font-size:0.875rem;color:var(--text-2);line-height:1.6;">Run an implementation review before anything goes live. Verify consent behaviour, check for PII in requests, and confirm your vendor list matches what was agreed.</p>
             </div>
           </div>
           <div style="display:flex;gap:14px;align-items:flex-start;">
             <div class="step-num">2</div>
             <div>
-              <p style="margin:0 0 4px;font-weight:700;font-size:0.95rem;">After every major deployment</p>
-              <p style="margin:0;font-size:0.875rem;color:var(--text-2);line-height:1.6;">New tags get added by marketing without telling engineering. Regular audits catch rogue vendors, broken scripts, and unexpected data flows before they become incidents.</p>
+              <p style="margin:0 0 4px;font-weight:700;font-size:0.95rem;">After a deployment</p>
+              <p style="margin:0;font-size:0.875rem;color:var(--text-2);line-height:1.6;">Compare tracking behaviour before and after a release. See exactly what changed — new vendors, broken scripts, shifts in consent mode — with no manual digging.</p>
             </div>
           </div>
           <div style="display:flex;gap:14px;align-items:flex-start;">
             <div class="step-num">3</div>
             <div>
               <p style="margin:0 0 4px;font-weight:700;font-size:0.95rem;">During a compliance review</p>
-              <p style="margin:0;font-size:0.875rem;color:var(--text-2);line-height:1.6;">Generate an evidence-grade audit report for your DPO, legal team, or regulator. Export to Excel or PDF-ready HTML with one click.</p>
+              <p style="margin:0;font-size:0.875rem;color:var(--text-2);line-height:1.6;">Generate evidence for your DPO, legal team, or regulator. Export audit reports to Excel or PDF-ready HTML — structured, readable, ready to share.</p>
             </div>
           </div>
           <div style="display:flex;gap:14px;align-items:flex-start;">
             <div class="step-num">4</div>
             <div>
-              <p style="margin:0 0 4px;font-weight:700;font-size:0.95rem;">On a schedule</p>
-              <p style="margin:0;font-size:0.875rem;color:var(--text-2);line-height:1.6;">Ask the AI assistant to schedule weekly audits. Get a diff of what changed — new vendors, resolved issues, shifts in consent behaviour — without lifting a finger.</p>
+              <p style="margin:0 0 4px;font-weight:700;font-size:0.95rem;">On an ongoing basis</p>
+              <p style="margin:0;font-size:0.875rem;color:var(--text-2);line-height:1.6;">Ask the AI agent to run regular audits and surface what's changed. Maintain continuous oversight of vendor activity and consent behaviour without manual effort.</p>
             </div>
           </div>
         </div>
