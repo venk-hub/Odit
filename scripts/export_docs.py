@@ -257,11 +257,11 @@ window.addEventListener('DOMContentLoaded', function() {{
 </body>
 </html>"""
 
-    out_path = os.path.join(DOCS_DIR, "index.html")
+    out_path = os.path.join(DOCS_DIR, "help.html")
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
     size_kb = os.path.getsize(out_path) // 1024
-    print(f"  Written: docs/index.html ({size_kb} KB)")
+    print(f"  Written: docs/help.html ({size_kb} KB)")
     print("Done. Commit docs/ and enable GitHub Pages → /docs on main branch.")
 
 
