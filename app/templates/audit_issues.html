@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Issues — {{ run.base_url | replace("https://","") | replace("http://","") }} - Odit{% endblock %}
+
+{% block page_context_script %}
+<script>
+window.__oditPageContext = {
+    page: 'Issues',
+    greeting: 'I\'m looking at the issues for **{{ run.base_url | replace("'", "\\'") | replace('"', '\\"') }}**. {{ issues|length }} issue{% if issues|length != 1 %}s{% endif %} found. What would you like to know?',
+    context: 'User is viewing issues for audit {{ audit_id }}. URL: {{ run.base_url }}. Total issues shown: {{ issues|length }}.'
+};
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="flex items-start justify-between mb-6 gap-4">
+    <div class="min-w-0">
+        <a href="/audits/{{ audit_id }}" class="inline-flex items-center gap-1 text-xs font-medium mb-3 transition-colors" style="color:var(--odit-text-3)" onmouseover="this.style.color='var(--odit-brand)'" onmouseout="this.style.color='var(--odit-text-3)'">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            {{ run.base_url | replace("https://", "") | replace("http://", "") }}
+        </a>
+        <h1 class="text-2xl font-bold leading-tight" style="color:var(--odit-text)">Issues</h1>
+    </div>
+</div>
+
+<div class="odit-card p-6">
+    {% include "partials/issues_table.html" %}
+</div>
+{% endblock %}

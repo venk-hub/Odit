@@ -51,17 +51,41 @@ window.__oditPageContext = {
             {% endif %}
         </div>
 
-        {# Excel download (only format shown) #}
+        {# Report downloads #}
         {% if key_artifacts %}
-        {% for art in key_artifacts %}
-        {% if art.artifact_type == "excel" %}
-        <a href="/api/audits/{{ audit_id }}/exports/{{ art.id }}/download"
-            class="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            Excel
-        </a>
-        {% endif %}
-        {% endfor %}
+        {% set art_map = {} %}
+        {% for art in key_artifacts %}{% set _ = art_map.update({art.artifact_type: art}) %}{% endfor %}
+        <div class="inline-flex items-center rounded-lg overflow-hidden border" style="border-color:var(--odit-border-md)">
+            {% if art_map.get('excel') %}
+            <a href="/api/audits/{{ audit_id }}/exports/{{ art_map['excel'].id }}/download"
+                title="Download Excel workbook (9 sheets)"
+                class="inline-flex items-center gap-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 transition-colors border-r border-emerald-700">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Excel
+            </a>
+            {% endif %}
+            {% if art_map.get('report_html') %}
+            <a href="/api/audits/{{ audit_id }}/exports/{{ art_map['report_html'].id }}/download"
+                title="Download HTML report"
+                class="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 transition-colors border-r" style="color:var(--odit-text-2);background:var(--odit-surface);border-color:var(--odit-border-md)" onmouseover="this.style.color='var(--odit-brand)'" onmouseout="this.style.color='var(--odit-text-2)'">
+                HTML
+            </a>
+            {% endif %}
+            {% if art_map.get('report_md') %}
+            <a href="/api/audits/{{ audit_id }}/exports/{{ art_map['report_md'].id }}/download"
+                title="Download Markdown report"
+                class="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 transition-colors border-r" style="color:var(--odit-text-2);background:var(--odit-surface);border-color:var(--odit-border-md)" onmouseover="this.style.color='var(--odit-brand)'" onmouseout="this.style.color='var(--odit-text-2)'">
+                MD
+            </a>
+            {% endif %}
+            {% if art_map.get('report_json') %}
+            <a href="/api/audits/{{ audit_id }}/exports/{{ art_map['report_json'].id }}/download"
+                title="Download JSON summary"
+                class="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 transition-colors" style="color:var(--odit-text-2);background:var(--odit-surface)" onmouseover="this.style.color='var(--odit-brand)'" onmouseout="this.style.color='var(--odit-text-2)'">
+                JSON
+            </a>
+            {% endif %}
+        </div>
         {% endif %}
 
         <button
@@ -114,7 +138,7 @@ window.__oditPageContext = {
     {# Full summary: AI brief, vendors, issues, cookies, performance #}
     <div id="summary-container"
         hx-get="/partials/audit-summary/{{ audit_id }}"
-        hx-trigger="load"
+        {% if run.status.value in ("completed","failed","cancelled") %}hx-trigger="load"{% endif %}
         hx-swap="innerHTML">
         <div class="text-center py-12 text-sm" style="color:var(--odit-text-3)">Loading results…</div>
     </div>
@@ -196,8 +220,18 @@ document.body.addEventListener('htmx:afterSwap', function(evt) {
     if (TERMINAL.has(s)) {
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         setFeedDot('done');
-        // Reload the page to show fresh completed results (works in both normal and iframe mode)
-        setTimeout(function() { window.location.reload(); }, 800);
+        const liveView = document.getElementById('live-view');
+        const resultsView = document.getElementById('results-view');
+        if (liveView && !liveView.classList.contains('hidden')) {
+            liveView.classList.add('hidden');
+            if (resultsView) {
+                resultsView.classList.remove('hidden');
+                // Fire the HTMX loads for summary + pages
+                htmx.ajax('GET', '/partials/audit-summary/' + AUDIT_ID, {target: '#summary-container', swap: 'innerHTML'});
+                const pagesEl = resultsView.querySelector('[hx-trigger="intersect once"]');
+                if (pagesEl) htmx.trigger(pagesEl, 'intersect');
+            }
+        }
     }
 });
 

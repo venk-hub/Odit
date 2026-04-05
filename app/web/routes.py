@@ -62,7 +62,7 @@ async def audit_detail(request: Request, audit_id: str, db: AsyncSession = Depen
         art_result = await db.execute(
             select(Artifact)
             .where(Artifact.audit_run_id == uid)
-            .where(Artifact.artifact_type.in_(["excel", "report_html", "report_md"]))
+            .where(Artifact.artifact_type.in_(["excel", "report_html", "report_md", "report_json"]))
             .order_by(Artifact.created_at)
         )
         key_artifacts = art_result.scalars().all()
@@ -196,8 +196,10 @@ async def audit_issues(
     severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
     issues = sorted(issues, key=lambda i: severity_order.get(i.severity, 99))
 
+    is_htmx = request.headers.get("HX-Request") == "true"
+    template = "partials/issues_table.html" if is_htmx else "audit_issues.html"
     return templates.TemplateResponse(
-        "partials/issues_table.html",
+        template,
         {
             "request": request,
             "issues": issues,
@@ -254,8 +256,10 @@ async def audit_exports(request: Request, audit_id: str, db: AsyncSession = Depe
     )
     artifacts = artifacts_result.scalars().all()
 
+    is_htmx = request.headers.get("HX-Request") == "true"
+    template = "partials/exports_panel.html" if is_htmx else "audit_exports.html"
     return templates.TemplateResponse(
-        "partials/exports_panel.html",
+        template,
         {"request": request, "artifacts": artifacts, "run": run, "audit_id": audit_id}
     )
 

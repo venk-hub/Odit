@@ -27,6 +27,8 @@ SYSTEM_PROMPT = """You are **Odit AI** — an agentic AI assistant embedded insi
 - After `start_audit` → always call `navigate_to` with `/audits/{id}` so the user sees live progress
 - After `schedule_audit` → navigate to `/` so they see the audit list
 - When user asks about a specific audit → navigate to `/audits/{id}`
+- When user asks to see issues → navigate to `/audits/{id}/issues`
+- When user asks to see exports or downloads → navigate to `/audits/{id}/exports`
 - When user asks to see the dashboard or home → navigate to `/`
 - When user asks about settings → navigate to `/settings`
 - After `compare_audits` → navigate to the newer audit's detail page
@@ -49,6 +51,7 @@ Follow the **ReAct pattern**: Reason about what's needed → Act (call a tool) �
 
 **Query tools (look up existing data):**
 - `list_audits`, `get_audit`, `get_issues`, `get_vendors`, `get_pages`
+- `read_report` — Read the full exported markdown or JSON report for a completed audit. Use this for comprehensive breakdowns, "tell me everything", or when you need details beyond what the individual query tools return (e.g. cookie register, data layer events, performance impact, full issue descriptions).
 
 ## HOW TO HANDLE COMMON REQUESTS
 
@@ -63,9 +66,9 @@ Follow the **ReAct pattern**: Reason about what's needed → Act (call a tool) �
 **"How is my audit going?" / "Is it done?"**
 → Call `get_audit_progress` with the audit ID.
 
-**"Take me to [page]" / "Navigate to..." / "Open the audit" / "Show me the dashboard"**
+**"Take me to [page]" / "Navigate to..." / "Open the audit" / "Show me the dashboard" / "Show me the issues" / "Show me the exports"**
 → Call `navigate_to` with the appropriate path.
-→ App routes: `/` (home/dashboard), `/audits/{id}` (audit detail), `/settings` (settings)
+→ App routes: `/` (home/dashboard), `/audits/{id}` (audit detail), `/audits/{id}/issues` (full issues list), `/audits/{id}/exports` (exports & downloads), `/settings` (settings)
 → After navigating, briefly tell the user what they're now looking at.
 
 **"Audit [site] as logged-in user" / "use these cookies..."**
@@ -336,7 +339,7 @@ AGENT_TOOLS = [
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "App-relative path to navigate to. Examples: '/', '/audits/{id}', '/settings'",
+                    "description": "App-relative path to navigate to. Examples: '/', '/audits/{id}', '/audits/{id}/issues', '/audits/{id}/exports', '/settings'",
                 },
                 "label": {
                     "type": "string",
@@ -511,6 +514,26 @@ AGENT_TOOLS = [
             "required": ["audit_id"],
         },
     },
+    {
+        "name": "read_report",
+        "description": "Read the full exported report for a completed audit. Returns the complete markdown report including executive summary, all vendors, all issues, cookie register, and data layer. Use this when the user asks for a comprehensive breakdown, wants to understand everything that was found, or asks about specific details that require the full report. Prefer this over multiple individual query tools when the user wants a complete picture.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "audit_id": {
+                    "type": "string",
+                    "description": "The UUID of the audit run",
+                },
+                "format": {
+                    "type": "string",
+                    "enum": ["markdown", "json"],
+                    "description": "Report format to read. Use 'markdown' for narrative summaries, 'json' for structured data queries. Default: markdown.",
+                    "default": "markdown",
+                },
+            },
+            "required": ["audit_id"],
+        },
+    },
 ]
 
 TOOL_LABELS = {
@@ -524,6 +547,7 @@ TOOL_LABELS = {
     "list_audits":         "Looking up your audits...",
     "get_audit":           "Loading audit details...",
     "get_issues":          "Fetching issues...",
+    "read_report":         "Reading audit report...",
     "get_vendors":         "Fetching vendors...",
     "get_pages":           "Loading pages...",
 }
@@ -1099,6 +1123,41 @@ async def _execute_tool(tool_name: str, tool_input: dict, db) -> str:
                     "unchanged_count": len([k for k in issues_a if k in issues_b]),
                 },
             })
+
+        elif tool_name == "read_report":
+            from app.models import Artifact
+            audit_id = tool_input["audit_id"]
+            fmt = tool_input.get("format", "markdown")
+
+            artifact_type = "report_md" if fmt == "markdown" else "report_json"
+            art_result = await db.execute(
+                select(Artifact)
+                .where(Artifact.audit_run_id == audit_id)
+                .where(Artifact.artifact_type == artifact_type)
+                .order_by(Artifact.created_at.desc())
+                .limit(1)
+            )
+            artifact = art_result.scalar_one_or_none()
+
+            if not artifact:
+                return json.dumps({"error": f"No {fmt} report found for audit {audit_id}. The audit may not be complete yet."})
+
+            data_dir = os.environ.get("DATA_DIR", "/data")
+            file_path = artifact.file_path
+            if not os.path.isabs(file_path):
+                file_path = os.path.join(data_dir, file_path)
+
+            if not os.path.exists(file_path):
+                return json.dumps({"error": f"Report file not found on disk: {file_path}"})
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Cap at ~40k chars to stay within context limits
+            if len(content) > 40000:
+                content = content[:40000] + "\n\n[Report truncated — showing first 40,000 characters]"
+
+            return json.dumps({"audit_id": audit_id, "format": fmt, "content": content})
 
         else:
             return json.dumps({"error": f"Unknown tool: {tool_name}"})
