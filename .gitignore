@@ -26,5 +26,8 @@ env/
 # Logs
 *.log
 
-# Local agent/principles docs (not for public repo)
+# Local dev/internal files (not for public repo)
 AgentPrinciples.md
+CLAUDE.md
+design_principles.md
+tests/
