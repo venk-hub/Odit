@@ -31,3 +31,6 @@ AgentPrinciples.md
 CLAUDE.md
 design_principles.md
 tests/
+
+# Generated docs (built by GitHub Actions, not committed)
+docs/
