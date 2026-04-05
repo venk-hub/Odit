@@ -33,4 +33,6 @@ design_principles.md
 tests/
 
 # Generated docs (built by GitHub Actions, not committed)
-docs/
+docs/help.html
+docs/screenshots/
+docs/odit.svg
