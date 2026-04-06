@@ -159,7 +159,7 @@ window.__oditPageContext = {
     <div class="mt-8">
         <div style="border-bottom:1px solid var(--odit-border-md)" class="mb-0">
             <nav class="-mb-px flex gap-0" id="explorer-nav">
-                {% for ex_id, ex_label in [("pages","Pages"),("issues","Issues"),("vendors","Vendors")] %}
+                {% for ex_id, ex_label in [("pages","Pages"),("issues","Issues"),("vendors","Vendors"),("activity","Activity")] %}
                 <button
                     onclick="showExplorer('{{ ex_id }}')"
                     id="ex-btn-{{ ex_id }}"
@@ -187,12 +187,15 @@ window.__oditPageContext = {
                 <div class="text-center py-8 text-sm" style="color:var(--odit-text-3)">Loading vendors…</div>
             </div>
         </div>
+        <div id="ex-activity" class="pt-4 hidden">
+            <div id="ex-activity-inner" class="odit-card overflow-hidden text-xs" style="color:var(--odit-text-3);text-align:center;padding:32px;">No activity recorded.</div>
+        </div>
     </div>
 </div>
 
 <script>
 // ── Explorer tab switching ─────────────────────────────────────────
-const EXPLORER_TABS = ['pages', 'issues', 'vendors'];
+const EXPLORER_TABS = ['pages', 'issues', 'vendors', 'activity'];
 function showExplorer(id) {
     EXPLORER_TABS.forEach(t => {
         const pane = document.getElementById('ex-' + t);
@@ -240,10 +243,18 @@ document.body.addEventListener('htmx:afterSwap', function(evt) {
         const liveView = document.getElementById('live-view');
         const resultsView = document.getElementById('results-view');
         if (liveView && !liveView.classList.contains('hidden')) {
+            // Move activity feed into the Activity tab before hiding live view
+            const feed = document.getElementById('activity-feed');
+            const activityInner = document.getElementById('ex-activity-inner');
+            if (feed && activityInner) {
+                activityInner.replaceWith(feed.cloneNode(true));
+                // Remove fixed height so all events are visible in the tab
+                const cloned = document.getElementById('activity-feed');
+                if (cloned) cloned.style.height = 'auto';
+            }
             liveView.classList.add('hidden');
             if (resultsView) {
                 resultsView.classList.remove('hidden');
-                // Fire the HTMX loads for summary + pages
                 htmx.ajax('GET', '/partials/audit-summary/' + AUDIT_ID, {target: '#summary-container', swap: 'innerHTML'});
                 const pagesEl = resultsView.querySelector('[hx-trigger="intersect once"]');
                 if (pagesEl) htmx.trigger(pagesEl, 'intersect');
@@ -345,6 +356,45 @@ if (!isTerminal) {
     pollTimer = setInterval(fetchEvents, 2000);
 } else {
     setFeedDot('done');
+    // Audit already complete on page load — fetch all events into the Activity tab
+    (async function() {
+        try {
+            const resp = await fetch(`/api/audits/${AUDIT_ID}/events?limit=1000`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const events = data.events || [];
+            if (!events.length) return;
+            // Build feed content
+            const activityInner = document.getElementById('ex-activity-inner');
+            if (!activityInner) return;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'odit-card overflow-hidden';
+            const inner = document.createElement('div');
+            inner.className = 'overflow-y-auto text-xs';
+            inner.style.maxHeight = '600px';
+            events.forEach(ev => {
+                const st = EVENT_STYLES[ev.event_type] || DEFAULT_STYLE;
+                const label = ev.event_type.replace(/_/g,' ');
+                const d = new Date(ev.created_at);
+                const t = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+                const row = document.createElement('div');
+                row.className = 'flex gap-2.5 px-4 py-2.5';
+                row.style.cssText = 'border-bottom:1px solid var(--odit-border)';
+                row.innerHTML = `
+                    <div class="flex-shrink-0 pt-1.5"><span class="w-2 h-2 rounded-full block ${st.dot}"></span></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5 mb-0.5">
+                            <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md" style="${st.label}">${label}</span>
+                            <span class="text-[10px] tabular-nums flex-shrink-0" style="color:var(--odit-text-3)">${t}</span>
+                        </div>
+                        <p class="text-[11px] leading-relaxed break-all" style="color:var(--odit-text-2)">${escHtml(ev.message)}</p>
+                    </div>`;
+                inner.appendChild(row);
+            });
+            wrapper.appendChild(inner);
+            activityInner.replaceWith(wrapper);
+        } catch(e) { /* silent */ }
+    })();
 }
 </script>
 
