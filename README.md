@@ -1,9 +1,9 @@
 <div align="center">
   <img src="app/static/odit.svg" alt="Odit" height="72" />
   <br /><br />
-  <strong>Local-first website tracking auditor</strong>
+  <strong>An AI agent for website tracking audits</strong>
   <br />
-  Crawl any site with a real browser, capture every network request, detect martech vendors, flag compliance issues — all on your own machine.
+  Point it at any website. It crawls, intercepts every request, detects vendors, flags compliance risks, and generates a full report — automatically.
   <br /><br />
 
   ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
@@ -18,7 +18,7 @@
 
 ## What is Odit?
 
-Odit is a four-container Docker Compose appliance that turns any website into a complete tracking audit — vendors detected, issues flagged, cookies catalogued, consent behaviour verified, and a full network capture ready to download. No cloud, no subscription, no data leaving your machine.
+Odit is an AI agent for website tracking audits. Give it a URL and it autonomously crawls pages, intercepts every network request, detects tracking vendors, identifies risks across consent, privacy, and vendor activity, and generates a full audit report — all on your own machine. No cloud, no subscription, no data leaving your machine.
 
 ---
 
@@ -42,6 +42,7 @@ Odit is a four-container Docker Compose appliance that turns any website into a 
 - **HTML, Markdown, JSON reports** — shareable and CI-ready
 - **One-click export buttons** — Excel / HTML / MD / JSON download buttons in the audit detail header
 - **Live crawl view** — crossfading screenshot stream while the audit is running
+- **Activity tab** — full event log (vendors detected, requests captured, issues flagged) persisted after the audit completes
 
 ### AI Features *(requires Anthropic API key — set in Settings)*
 - **Agentic AI assistant** — sidebar chat that can take direct action: start audits, check progress, navigate the UI, schedule recurring audits, compare two audits

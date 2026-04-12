@@ -116,6 +116,27 @@ window.__oditPageContext = {
 {# ── LIVE VIEW (running / pending) ───────────────────────────────── #}
 <div id="live-view"{% if run.status.value in ("completed","failed","cancelled") %} class="hidden"{% endif %}>
 
+    {# Screenshot card — lives here permanently, never touched by HTMX #}
+    {% if run.status.value not in ("completed","failed","cancelled") %}
+    <div id="live-screenshot-card" class="odit-card mb-6 overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-2.5 border-b" style="border-color:var(--odit-border)">
+            <span class="w-2 h-2 rounded-full bg-[#3820c4] animate-pulse flex-shrink-0"></span>
+            <span class="text-xs font-semibold" style="color:var(--odit-text-2)">LIVE CRAWL VIEW</span>
+        </div>
+        <div class="relative bg-gray-50" style="min-height:220px; overflow:hidden;">
+            <img id="ss-front" style="width:100%;display:none;object-fit:contain;max-height:480px;transition:opacity 0.35s ease;position:relative;z-index:1;" alt="" />
+            <img id="ss-back"  style="width:100%;display:none;object-fit:contain;max-height:480px;position:absolute;top:0;left:0;z-index:0;opacity:0;" alt="" />
+            <div id="live-screenshot-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:220px;gap:8px;color:var(--odit-text-3);font-size:13px;position:relative;z-index:2;">
+                <svg style="width:16px;height:16px;animation:ss-spin 1s linear infinite" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span id="live-screenshot-label">Crawling — waiting for first screenshot…</span>
+            </div>
+        </div>
+    </div>
+    <style>@keyframes ss-spin{to{transform:rotate(360deg)}}</style>
+    {% endif %}
+
     <div id="overview-progress"
         hx-get="/partials/audit-progress/{{ audit_id }}"
         hx-trigger="load, every 3s"
@@ -263,6 +284,65 @@ document.body.addEventListener('htmx:afterSwap', function(evt) {
     }
 });
 
+// ── Live screenshot polling ───────────────────────────────────────
+(function() {
+    const front = document.getElementById('ss-front');
+    const back  = document.getElementById('ss-back');
+    if (!front || !back) return; // not rendered (audit already complete on load)
+
+    let hasFirst = false;
+    let failCount = 0;
+    let ssInterval = null;
+
+    function loadNext() {
+        const url = '/api/audits/{{ audit_id }}/live-screenshot?t=' + Date.now();
+        back.onload = function() {
+            if (back.naturalWidth < 600 || back.naturalHeight < 200) {
+                back.removeAttribute('src');
+                if (++failCount >= 2) {
+                    const lbl = document.getElementById('live-screenshot-label');
+                    if (lbl) lbl.textContent = 'Crawling\u2026 (live preview unavailable for this site)';
+                }
+                return;
+            }
+            failCount = 0;
+            const placeholder = document.getElementById('live-screenshot-placeholder');
+            if (!hasFirst) {
+                hasFirst = true;
+                front.src = back.src;
+                front.style.display = 'block';
+                front.style.opacity = '1';
+                if (placeholder) placeholder.style.display = 'none';
+            } else {
+                back.style.display = 'block';
+                back.style.opacity = '1';
+                front.style.opacity = '0';
+                setTimeout(function() {
+                    front.src = back.src;
+                    front.style.opacity = '1';
+                    back.style.opacity = '0';
+                    back.style.display = 'none';
+                }, 370);
+            }
+        };
+        back.onerror = function() { back.removeAttribute('src'); };
+        back.src = url;
+    }
+
+    loadNext();
+    ssInterval = setInterval(loadNext, 3000);
+
+    // Stop when audit completes (reuse the TERMINAL transition event)
+    document.body.addEventListener('htmx:afterSwap', function handler(evt) {
+        if (!evt.target.closest('#overview-progress')) return;
+        const statusEl = evt.target.querySelector('[data-status]');
+        if (statusEl && TERMINAL.has(statusEl.dataset.status)) {
+            clearInterval(ssInterval);
+            document.body.removeEventListener('htmx:afterSwap', handler);
+        }
+    });
+})();
+
 // ── Activity feed ─────────────────────────────────────────────────
 const AUDIT_ID = "{{ audit_id }}";
 const INITIAL_STATUS = "{{ run.status.value }}";
@@ -359,7 +439,7 @@ if (!isTerminal) {
     // Audit already complete on page load — fetch all events into the Activity tab
     (async function() {
         try {
-            const resp = await fetch(`/api/audits/${AUDIT_ID}/events?limit=1000`);
+            const resp = await fetch(`/api/audits/${AUDIT_ID}/events?limit=500`);
             if (!resp.ok) return;
             const data = await resp.json();
             const events = data.events || [];
