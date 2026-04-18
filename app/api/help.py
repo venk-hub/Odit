@@ -51,6 +51,7 @@ Follow the **ReAct pattern**: Reason about what's needed → Act (call a tool) �
 
 **Query tools (look up existing data):**
 - `list_audits`, `get_audit`, `get_issues`, `get_vendors`, `get_pages`
+- `get_network_requests` — Query raw captured network requests. Use this to verify specific tracking fired, inspect POST payloads, check what data a vendor sent, or confirm a beacon fired on the right page. Supports filtering by vendor, URL pattern, page, failed-only.
 - `read_report` — Read the full exported markdown or JSON report for a completed audit. Use this for comprehensive breakdowns, "tell me everything", or when you need details beyond what the individual query tools return (e.g. cookie register, data layer events, performance impact, full issue descriptions).
 
 ## HOW TO HANDLE COMMON REQUESTS
@@ -73,6 +74,14 @@ Follow the **ReAct pattern**: Reason about what's needed → Act (call a tool) �
 
 **"Audit [site] as logged-in user" / "use these cookies..."**
 → Call `start_audit` with the `auth_cookies_json` parameter containing the cookie array.
+
+**"Click [element] and check if [vendor] fires" / "Test the Add to Cart tracking" / "Run a journey audit"**
+→ Call `start_audit` with `journey_instructions` as a list of plain-English steps (e.g. `["click the Add to Cart button", "fill the email field with test@example.com"]`). Mode is set automatically to journey_audit.
+→ Once complete, call `get_network_requests` filtered by vendor to confirm what fired during the interaction.
+
+**"Did [vendor] fire?" / "What did [vendor] send?" / "Check if GA4 fired on checkout" / "Show me the Adobe Analytics payload"**
+→ Call `get_network_requests` with the audit_id and relevant vendor_key or url_pattern.
+→ Inspect the post_data field to verify payloads. Explain what the data means in plain English.
 
 **"Schedule an audit of [site] every [day/week/month]"**
 → Call `schedule_audit` immediately. Confirm with: "Done — I've scheduled a [frequency] audit of [url]. [View schedules](/settings)"
@@ -333,8 +342,54 @@ AGENT_TOOLS = [
                     "description": "How to handle cookie consent banners. no_interaction = ignore banners (default, shows pre-consent state). accept_consent = click accept (shows post-consent tracking). reject_consent = click reject.",
                     "default": "no_interaction",
                 },
+                "journey_instructions": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional list of natural language interaction steps to perform on the landing page before crawling — e.g. ['click the Add to Cart button', 'fill the search box with trainers', 'click the first search result']. When provided, the audit runs in journey mode: it executes these steps on the seed URL, captures all network traffic fired during the interactions, then continues crawling. Use this to verify that specific user actions (button clicks, form submissions) trigger the expected tracking.",
+                },
             },
             "required": ["url"],
+        },
+    },
+    {
+        "name": "get_network_requests",
+        "description": "Query captured network requests from a completed audit. Use this to verify whether specific tracking fired, inspect POST payloads, check what data was sent to a vendor, or confirm that a beacon fired on the right page. Returns URL, method, status, vendor, page, and POST body for each matching request.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "audit_id": {
+                    "type": "string",
+                    "description": "The audit ID to query.",
+                },
+                "vendor_key": {
+                    "type": "string",
+                    "description": "Filter by vendor key (e.g. 'google_analytics', 'meta_pixel'). Leave blank for all vendors.",
+                },
+                "url_pattern": {
+                    "type": "string",
+                    "description": "Filter requests whose URL contains this string (e.g. 'collect', 'analytics.google.com'). Case-insensitive.",
+                },
+                "page_url": {
+                    "type": "string",
+                    "description": "Filter requests captured on a specific page URL. Partial match.",
+                },
+                "tracking_only": {
+                    "type": "boolean",
+                    "description": "If true (default), return only tracking-related requests. Set to false to include all network requests.",
+                    "default": True,
+                },
+                "failed_only": {
+                    "type": "boolean",
+                    "description": "If true, return only failed requests (4xx/5xx or network errors).",
+                    "default": False,
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results to return (default 40, max 100).",
+                    "default": 40,
+                },
+            },
+            "required": ["audit_id"],
         },
     },
     {
@@ -556,6 +611,7 @@ TOOL_LABELS = {
     "read_report":         "Reading audit report...",
     "get_vendors":         "Fetching vendors...",
     "get_pages":           "Loading pages...",
+    "get_network_requests": "Querying network requests...",
 }
 
 
@@ -667,10 +723,13 @@ async def _execute_tool(tool_name: str, tool_input: dict, db) -> str:
             if not parsed.scheme or not parsed.netloc:
                 return json.dumps({"error": "Invalid URL. Please provide a valid website address."})
 
+            journey_instructions = tool_input.get("journey_instructions") or []
             mode = tool_input.get("mode", "quick_scan")
-            if mode not in ("quick_scan", "full_crawl"):
+            if journey_instructions:
+                mode = "journey_audit"
+            elif mode not in ("quick_scan", "full_crawl"):
                 mode = "quick_scan"
-            max_pages = 50 if mode == "quick_scan" else int(tool_input.get("max_pages", 200))
+            max_pages = 50 if mode in ("quick_scan", "journey_audit") else int(tool_input.get("max_pages", 200))
 
             # Parse auth cookies if provided
             auth_cookies = None
@@ -695,7 +754,7 @@ async def _execute_tool(tool_name: str, tool_input: dict, db) -> str:
                 include_patterns=[],
                 exclude_patterns=[],
                 seed_urls=[],
-                journey_instructions=[],
+                journey_instructions=journey_instructions,
                 auth_cookies=auth_cookies,
             )
             db.add(config)
@@ -720,6 +779,7 @@ async def _execute_tool(tool_name: str, tool_input: dict, db) -> str:
                 "status": "pending",
                 "view_url": f"/audits/{run.id}",
                 "auth_injected": auth_cookies is not None,
+                "journey_steps": len(journey_instructions),
             })
 
         elif tool_name == "get_audit_progress":
@@ -1164,6 +1224,77 @@ async def _execute_tool(tool_name: str, tool_input: dict, db) -> str:
                 content = content[:40000] + "\n\n[Report truncated — showing first 40,000 characters]"
 
             return json.dumps({"audit_id": audit_id, "format": fmt, "content": content})
+
+        elif tool_name == "get_network_requests":
+            from app.models import NetworkRequest, DetectedVendor, PageVisit
+            from sqlalchemy import and_, or_
+            import uuid as uuid_mod
+
+            audit_id = tool_input["audit_id"]
+            vendor_key = tool_input.get("vendor_key", "").strip()
+            url_pattern = tool_input.get("url_pattern", "").strip()
+            page_url_filter = tool_input.get("page_url", "").strip()
+            tracking_only = tool_input.get("tracking_only", True)
+            failed_only = tool_input.get("failed_only", False)
+            limit = min(int(tool_input.get("limit", 40)), 100)
+
+            try:
+                uid = uuid_mod.UUID(audit_id)
+            except ValueError:
+                return json.dumps({"error": "Invalid audit_id"})
+
+            stmt = (
+                select(NetworkRequest, DetectedVendor.vendor_key, DetectedVendor.name, PageVisit.url)
+                .outerjoin(DetectedVendor, NetworkRequest.vendor_id == DetectedVendor.id)
+                .outerjoin(PageVisit, NetworkRequest.page_visit_id == PageVisit.id)
+                .where(NetworkRequest.audit_run_id == uid)
+            )
+
+            if tracking_only:
+                stmt = stmt.where(NetworkRequest.is_tracking_related == True)
+            if failed_only:
+                stmt = stmt.where(or_(NetworkRequest.failed == True, NetworkRequest.status_code >= 400))
+            if vendor_key:
+                stmt = stmt.where(DetectedVendor.vendor_key == vendor_key)
+            if url_pattern:
+                stmt = stmt.where(NetworkRequest.url.ilike(f"%{url_pattern}%"))
+            if page_url_filter:
+                stmt = stmt.where(PageVisit.url.ilike(f"%{page_url_filter}%"))
+
+            stmt = stmt.order_by(NetworkRequest.captured_at.asc()).limit(limit)
+            rows = (await db.execute(stmt)).all()
+
+            requests = []
+            for row in rows:
+                nr, vkey, vname, purl = row
+                post_snippet = None
+                if nr.post_data:
+                    post_snippet = nr.post_data[:800] + ("…" if len(nr.post_data) > 800 else "")
+                requests.append({
+                    "url": nr.url,
+                    "method": nr.method,
+                    "status_code": nr.status_code,
+                    "failed": nr.failed,
+                    "failure_reason": nr.failure_reason,
+                    "vendor_key": vkey,
+                    "vendor_name": vname,
+                    "page_url": purl,
+                    "post_data": post_snippet,
+                    "timing_ms": nr.timing_ms,
+                })
+
+            return json.dumps({
+                "audit_id": audit_id,
+                "total_returned": len(requests),
+                "filters": {
+                    "vendor_key": vendor_key or None,
+                    "url_pattern": url_pattern or None,
+                    "page_url": page_url_filter or None,
+                    "tracking_only": tracking_only,
+                    "failed_only": failed_only,
+                },
+                "requests": requests,
+            })
 
         else:
             return json.dumps({"error": f"Unknown tool: {tool_name}"})
